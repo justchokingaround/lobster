@@ -6,9 +6,9 @@ base="https://www5.himovies.to"
 query=$(printf "%s" "$query"|tr " " "-")
 movies_results=$(curl -s "${base}/search/${query}"|
   sed -nE '/class="film-name"/ {n; s/.*href="(.*)".*/\1/p;n; s/.*title="(.*)".*/\1/p;d;}'|
-  sed -e 'N;s/\n/{/' -e "s/&#39;/'/g")
-movies_choice=$(printf "%s" "$movies_results"|sed -nE 's_/(.*)/(.*){(.*)_\2{\3 (\1)_p'|
-  fzf -d"{" --with-nth 2..|sed -nE "s_(.*){(.*) \((.*)\)_/\3/\1\t\2_p")
+  sed -e 'N;s/\n/\{/' -e "s/&#39;/'/g")
+movies_choice=$(printf "%s" "$movies_results"|sed -nE 's_/(.*)/(.*)\{(.*)_\2{\3 (\1)_p'|
+  fzf -d"{" --with-nth 2..|sed -nE "s_(.*)\{(.*) \((.*)\)_/\3/\1\t\2_p")
 
 movie_id=$(printf "%s" "$movies_choice"|sed -nE 's_.*/[movie/|tv/].*-([0-9]*).*_\1_p')
 movie_title=$(printf "%s" "$movies_choice"|cut -f2)
