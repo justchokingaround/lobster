@@ -2,6 +2,10 @@
 
 base="https://www5.himovies.to"
 history_file="$HOME/.cache/lobster_history.txt"
+config_file="$HOME/.config/lobster/lobster_config.txt"
+[ ! -d "$HOME/.config/lobster" ] && mkdir -p "$HOME/.config/lobster"
+[ ! -f "$config_file" ] && printf "player=mpv\n" > "$config_file"
+player="$(grep '^player=' "$config_file" | cut -d'=' -f2)" || player="mpv"
 
 yoinkity_yoink() {
   key=$(curl -s "$movie_page"|sed -nE "s@.*recaptcha_site_key = '(.*)'.*@\1@p")
@@ -32,8 +36,16 @@ main() {
         tr -d "\n"|sed -nE 's_.*href="([^"]*)".*UpCloud.*_\1_p')
       provider_id=$(printf "%s" "$movie_page"|sed -nE "s_.*\.([0-9]*)\$_\1_p")
       yoinkity_yoink
-      mpv --sub-files="$subs_links" --force-media-title="$movie_title" "$mpv_link"
-      ;;
+      case $player in
+        iina)
+          iina --no-stdin --keep-running --mpv-sub-files="$subs_links" --mpv-force-media-title="$movie_title" "$mpv_link" ;;
+        *)
+          if uname -a|grep -qE '[Aa]ndroid';then
+            mpv "$mpv_link" > /dev/null 2>&1 &
+          else
+            mpv --sub-files="$subs_links" --force-media-title="$movie_title" "$mpv_link"
+          fi ;;
+      esac ;;
     tv)
       if [ -z "$season_id" ] || [ -z "$episode_id" ]; then
         seasons_ids=$(curl -s "https://www5.himovies.to/ajax/v2/tv/seasons/${movie_id}"|
@@ -55,7 +67,17 @@ main() {
         tr -d "\n"|sed -nE 's_.*data-id="([0-9]*)".*title="Server UpCloud".*_\1_p')
       provider_id=$(printf "%s" "$movie_page"|sed -nE "s_.*\.([0-9]*)\$_\1_p")
       yoinkity_yoink
-      mpv --sub-files="$subs_links" --force-media-title="${movie_title}: S${season_number} Ep ${episode_number}" "$mpv_link"
+      case $player in
+        iina)
+          iina --no-stdin --keep-running --mpv-sub-files="$subs_links" \
+            --mpv-force-media-title="${movie_title}: S${season_number} Ep ${episode_number}" "$mpv_link" ;;
+        *)
+          if uname -a|grep -qE '[Aa]ndroid';then
+            mpv "$mpv_link" > /dev/null 2>&1 &
+          else
+            mpv --sub-files="$subs_links" --force-media-title="${movie_title}: S${season_number} Ep ${episode_number}" "$mpv_link"
+          fi ;;
+      esac
       printf "Press Enter to mark episode as watched or Ctrl-C to exit\n" && read -r
       grep -v "$show_base" "$history_file" > "$history_file.tmp"
       printf "%s\t%s\t%s\t%s: S%s Ep(%s)\n" "$show_base" "$season_id" \
@@ -83,7 +105,7 @@ get_input() {
 }
 
 play_from_history() {
-  selection=$(fzf --cycle --height=12 --with-nth 4.. < "$history_file")
+  selection=$(fzf -1 --cycle --height=12 --with-nth 4.. < "$history_file")
   [ -z "$selection" ] && exit 1
   show_base=$(printf "%s" "$selection"|cut -f1)
   season_id=$(printf "%s" "$selection"|cut  -f2)
@@ -117,14 +139,12 @@ while getopts "cd" opt; do
       while true; do
         play_from_history
         tput clear
-      done
-      ;;
+      done ;;
     d)
       rm -f "$history_file" && printf "History file deleted\n" && exit 1 ;;
     \?)
       printf "Invalid option: -%s\n" "$OPTARG" >&2
-      exit 1
-      ;;
+      exit 1 ;;
   esac
 done
 
