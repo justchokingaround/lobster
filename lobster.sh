@@ -106,7 +106,7 @@ get_input() {
 
 play_from_history() {
   selection=$(fzf -1 --cycle --height=12 --with-nth 4.. < "$history_file")
-  [ -z "$selection" ] && exit 1
+  [ -z "$selection" ] && exit 0
   show_base=$(printf "%s" "$selection"|cut -f1)
   season_id=$(printf "%s" "$selection"|cut  -f2)
   episode_id=$(printf "%s" "$selection"|cut -f3)
@@ -127,13 +127,13 @@ play_from_history() {
   [ -z "$show_base" ] || show_base=$(printf "%s" "$show_base"|cut -f1)
   [ -z "$episode_id" ] && echo "No next episode" && 
     grep -v "$show_base" "$history_file" > "$history_file.tmp" &&
-    mv "$history_file.tmp" "$history_file" && exit 1
+    mv "$history_file.tmp" "$history_file" && exit 0
   media_type="tv"
   continue_history=true
   main
 }
 
-while getopts "cd" opt; do
+while getopts "cduh" opt; do
   case $opt in
     c)
       while true; do
@@ -141,7 +141,28 @@ while getopts "cd" opt; do
         tput clear
       done ;;
     d)
-      rm -f "$history_file" && printf "History file deleted\n" && exit 1 ;;
+      rm -f "$history_file" && printf "History file deleted\n" && exit 0 ;;
+    u)
+      update=$(curl -s "https://raw.githubusercontent.com/justchokingaround/lobster/master/lobster.sh"||die "Connection error")
+      update="$(printf '%s\n' "$update" | diff -u "$(which lobster)" -)"
+      if [ -z "$update" ]; then
+        printf "Script is up to date :)\n"
+      else
+        if printf '%s\n' "$update" | patch "$(which lobster)" - ; then
+          printf "Script has been updated\n"
+        else
+          printf "Can't update for some reason!\n"
+        fi
+      fi
+      exit 0 ;;
+    h)
+      printf "Usage: lobster [arg] <query> \n"
+      printf "Play movies and TV shows from himovies.to\n"
+      printf "  -c, \t\tContinue watching from last episode\n"
+      printf "  -d, \t\tDelete history file\n"
+      printf "  -u, \t\tUpdate script\n"
+      printf "  -h, \t\tDisplay this help and exit\n"
+      exit 0 ;;
     \?)
       printf "Invalid option: -%s\n" "$OPTARG" >&2
       exit 1 ;;
