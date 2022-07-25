@@ -28,6 +28,11 @@ chmod +x "$(brew --prefix)"/bin/lobster
 ```sh
 ~/.config/lobster
 ```
+## Example config file
+```
+player=iina
+subs_language=French
+```
 
 ## Dependencies
 - fzf 

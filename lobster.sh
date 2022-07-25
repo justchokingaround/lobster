@@ -6,8 +6,8 @@ history_file="$HOME/.cache/lobster_history.txt"
 config_file="$HOME/.config/lobster/lobster_config.txt"
 [ ! -d "$HOME/.config/lobster" ] && mkdir -p "$HOME/.config/lobster"
 [ ! -f "$config_file" ] && printf "player=mpv\nsubs_language=English\n" > "$config_file"
-player="$(grep '^player=' "$config_file" | cut -d'=' -f2)" || player="mpv"
-subs_language="$(grep '^subs_language=' "$config_file" | cut -d'=' -f2)" || subs_language="English"
+player="$(grep '^player=' "$config_file"|cut -d'=' -f2)" || player="mpv"
+subs_language="$(grep '^subs_language=' "$config_file"|cut -d'=' -f2)" || subs_language="English"
 
 yoinkity_yoink() {
   key=$(curl -s "$movie_page"|sed -nE "s@.*recaptcha_site_key = '(.*)'.*@\1@p")
