@@ -17,6 +17,13 @@ curl -sL github.com/justchokingaround/lobster/raw/main/lobster.sh -o "$(brew --p
 chmod +x "$(brew --prefix)"/bin/lobster
 ```
 
+### Termux (Android)
+```sh
+pkg up -y && pkg install fzf
+curl -sL github.com/justchokingaround/lobster/raw/main/lobster.sh -o "$PREFIX"/bin/lobster
+chmod +x "$PREFIX"/bin/lobster
+```
+
 ## Arguments
 ```
 -c,  continue from history (works only for TV shows you will need to watch at least one episode for it to work)
