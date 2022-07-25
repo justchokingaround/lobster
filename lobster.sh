@@ -1,11 +1,13 @@
 #!/bin/sh
 
+version="1.0.0"
 base="https://www5.himovies.to"
 history_file="$HOME/.cache/lobster_history.txt"
 config_file="$HOME/.config/lobster/lobster_config.txt"
 [ ! -d "$HOME/.config/lobster" ] && mkdir -p "$HOME/.config/lobster"
-[ ! -f "$config_file" ] && printf "player=mpv\n" > "$config_file"
+[ ! -f "$config_file" ] && printf "player=mpv\nsubs_language=English\n" > "$config_file"
 player="$(grep '^player=' "$config_file" | cut -d'=' -f2)" || player="mpv"
+subs_language="$(grep '^subs_language=' "$config_file" | cut -d'=' -f2)" || subs_language="English"
 
 yoinkity_yoink() {
   key=$(curl -s "$movie_page"|sed -nE "s@.*recaptcha_site_key = '(.*)'.*@\1@p")
@@ -19,12 +21,10 @@ yoinkity_yoink() {
     sed -nE 's_.*"link":".*/(.*)\?z=".*_\1_p')
 
   xml_links=$(curl -s "https://mzzcloud.life/ajax/embed-4/getSources?id=${id}" \
-    -H "X-Requested-With: XMLHttpRequest"|
-    tr "," "\n"|sed -nE 's_.*"file":"([^"]*)".*_\1_p')
-
-  mpv_link=$(printf "%s" "$xml_links"|grep -Eo 'https://.*\.m3u8')
-  subs_links=$(printf "%s" "$xml_links"|grep 'https://.*\.vtt'|
-    sed -e 's/:/\\:/g' -e 'H;1h;$!d;x;y/\n/:/' -e 's/:$//')
+    -H 'X-Requested-With: XMLHttpRequest'|tr '{|}' '\n'|
+    sed -nE 's_.*file":"([^"]*)","type.*_\1_p; s_.*file":"([^"]*)","label":"'$subs_language'.*".*_\1_p')
+  mpv_link=$(printf "%s" "$xml_links"|head -1)
+  subs_links=$(printf "%s" "$xml_links"|sed -n '2,$p'|sed -e 's/:/\\:/g' -e 'H;1h;$!d;x;y/\n/:/' -e 's/:$//')
   [ -z "$mpv_link" ] && printf "No links found\n" && exit 1
   [ -z "$subs_links" ] && printf "No subtitles found\n"
 }
@@ -133,7 +133,7 @@ play_from_history() {
   main
 }
 
-while getopts "cduh" opt; do
+while getopts "cduUvVh" opt; do
   case $opt in
     c)
       while true; do
@@ -142,7 +142,7 @@ while getopts "cduh" opt; do
       done ;;
     d)
       rm -f "$history_file" && printf "History file deleted\n" && exit 0 ;;
-    u)
+    u|U)
       update=$(curl -s "https://raw.githubusercontent.com/justchokingaround/lobster/master/lobster.sh"||die "Connection error")
       update="$(printf '%s\n' "$update" | diff -u "$(which lobster)" -)"
       if [ -z "$update" ]; then
@@ -155,6 +155,8 @@ while getopts "cduh" opt; do
         fi
       fi
       exit 0 ;;
+    v|V)
+      printf "Lobster version: %s\n" "$version" && exit 0 ;;
     h)
       printf "Usage: lobster [arg] <query> \n"
       printf "Play movies and TV shows from himovies.to\n"
