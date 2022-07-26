@@ -78,7 +78,9 @@ main() {
             mpv --sub-files="$subs_links" --force-media-title="${movie_title}: S${season_number} Ep ${episode_number}" "$mpv_link"
           fi ;;
       esac
-      printf "Press Enter to mark episode as watched or Ctrl-C to exit\n" && read -r 1
+      # shellcheck disable=SC2034
+      # shellcheck disable=SC2162
+      printf "Press Enter to mark episode as watched or Ctrl-C to exit\n" && read useless
       grep -v "$show_base" "$history_file" > "$history_file.tmp"
       printf "%s\t%s\t%s\t%s: S%s Ep(%s)\n" "$show_base" "$season_id" \
         "$episode_id" "$movie_title" "$season_number" "$episode_number" >> "$history_file.tmp"
