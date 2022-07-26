@@ -40,8 +40,8 @@ main() {
         iina)
           iina --no-stdin --keep-running --mpv-sub-files="$subs_links" --mpv-force-media-title="$movie_title" "$mpv_link" ;;
         *)
-          if uname -a|grep -qE '[Aa]ndroid';then
-            mpv "$mpv_link" > /dev/null 2>&1 &
+          if uname -a | grep -qE '[Aa]ndroid';then
+            am start --user 0 -a android.intent.action.VIEW -d "$mpv_link" -n is.xyz.mpv/.MPVActivity > /dev/null 2>&1 &
           else
             mpv --sub-files="$subs_links" --force-media-title="$movie_title" "$mpv_link"
           fi ;;
@@ -72,8 +72,8 @@ main() {
           iina --no-stdin --keep-running --mpv-sub-files="$subs_links" \
             --mpv-force-media-title="${movie_title}: S${season_number} Ep ${episode_number}" "$mpv_link" ;;
         *)
-          if uname -a|grep -qE '[Aa]ndroid';then
-            mpv "$mpv_link" > /dev/null 2>&1 &
+          if uname -a | grep -qE '[Aa]ndroid';then
+            am start --user 0 -a android.intent.action.VIEW -d "$mpv_link" -n is.xyz.mpv/.MPVActivity > /dev/null 2>&1 &
           else
             mpv --sub-files="$subs_links" --force-media-title="${movie_title}: S${season_number} Ep ${episode_number}" "$mpv_link"
           fi ;;
