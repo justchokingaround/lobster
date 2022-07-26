@@ -105,7 +105,7 @@ get_input() {
 }
 
 play_from_history() {
-  selection=$(fzf -1 --cycle --height=12 --with-nth 4.. < "$history_file")
+  selection=$(fzf --tac -1 --cycle --height=12 --with-nth 4.. < "$history_file")
   [ -z "$selection" ] && exit 0
   show_base=$(printf "%s" "$selection"|cut -f1)
   season_id=$(printf "%s" "$selection"|cut  -f2)
