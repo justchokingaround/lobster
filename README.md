@@ -26,9 +26,11 @@ chmod +x "$PREFIX"/bin/lobster
 
 ## Arguments
 ```
--c,  continue from history (works only for TV shows you will need to watch at least one episode for it to work)
--d,  delete history
--u,  update script
+-c,           continue from history (works only for TV shows you will need to watch at least one episode for it to work)
+-d,           delete history
+-u, -U        update script
+-v, -V        show script version
+-h            show help
 ```
 
 ## Config file
