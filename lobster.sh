@@ -35,6 +35,9 @@ main() {
       movie_page="$base"$(curl -s "https://www5.himovies.to/ajax/movie/episodes/${movie_id}"|
         tr -d "\n"|sed -nE 's_.*href="([^"]*)".*UpCloud.*_\1_p')
       provider_id=$(printf "%s" "$movie_page"|sed -nE "s_.*\.([0-9]*)\$_\1_p")
+      [ -z "$provider_id" ] && movie_page="$base"$(curl -s "https://www5.himovies.to/ajax/movie/episodes/${movie_id}"|
+        tr -d "\n"|sed -nE 's_.*href="([^"]*)".*Vidcloud.*_\1_p') && provider_id=$(printf "%s" "$movie_page"|
+        sed -nE "s_.*\.([0-9]*)\$_\1_p")
       yoinkity_yoink
       case $player in
         iina)
@@ -78,8 +81,7 @@ main() {
             mpv --sub-files="$subs_links" --force-media-title="${movie_title}: S${season_number} Ep ${episode_number}" "$mpv_link"
           fi ;;
       esac
-      # shellcheck disable=SC2034
-      # shellcheck disable=SC2162
+      # shellcheck disable=SC2034,SC2162
       printf "Press Enter to mark episode as watched or Ctrl-C to exit\n" && read useless
       grep -v "$show_base" "$history_file" > "$history_file.tmp"
       printf "%s\t%s\t%s\t%s: S%s Ep(%s)\n" "$show_base" "$season_id" \
@@ -87,15 +89,20 @@ main() {
       mv "$history_file.tmp" "$history_file"
       ;;
     *)
-      printf "Unknown media type: %s\n" "$media_type" && exit 1
+      exit 1
       ;;
   esac
 }
 
 get_input() {
-  [ -z "$*" ] && printf "Enter a Movie/TV Show name: " && read -r query || query=$*
-  query=$(printf "%s" "$query"|tr " " "-")
-  movies_results=$(curl -s "${base}/search/${query}"|
+  if [ -z "$deez" ]; then
+    [ -z "$*" ] && printf "Enter a Movie/TV Show name: " && read -r query || query=$*
+    query=$(printf "%s" "$query"|tr " " "-")
+    search_params=search/${query}
+  else
+    search_params=$deez
+  fi
+  movies_results=$(curl -s "${base}/${search_params}"|
     sed -nE '/class="film-name"/ {n; s/.*href="(.*)".*/\1/p;n; s/.*title="(.*)".*/\1/p;d;}'|
     sed -e 'N;s/\n/\{/' -e "s/&#39;/'/g")
   movies_choice=$(printf "%s" "$movies_results"|sed -nE 's_/(.*)/(.*)\{(.*)_\2{\3 (\1)_p'|
@@ -135,7 +142,7 @@ play_from_history() {
   main
 }
 
-while getopts "cduUvVh" opt; do
+while getopts "cduUvVht" opt; do
   case $opt in
     c)
       while true; do
@@ -159,12 +166,18 @@ while getopts "cduUvVh" opt; do
       exit 0 ;;
     v|V)
       printf "Lobster version: %s\n" "$version" && exit 0 ;;
+    t)
+      printf "What do you want to watch? (T)V Show or (M)Movie: " && read -r media_type
+      [ "$media_type" = "T" ] || [ "$media_type" = "t" ] && deez="tv-show" || deez="movie"
+      get_input && main && exit 0 ;;
     h)
       printf "Usage: lobster [arg] <query> \n"
       printf "Play movies and TV shows from himovies.to\n"
       printf "  -c, \t\tContinue watching from last episode\n"
       printf "  -d, \t\tDelete history file\n"
       printf "  -u, \t\tUpdate script\n"
+      printf "  -v, \t\tPrint version\n"
+      printf "  -t, \t\tSuggest a trending TV Show or Movie\n"
       printf "  -h, \t\tDisplay this help and exit\n"
       exit 0 ;;
     \?)

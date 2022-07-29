@@ -30,6 +30,7 @@ chmod +x "$PREFIX"/bin/lobster
 -d,           delete history
 -u, -U        update script
 -v, -V        show script version
+-t,           suggest a trending TV Show or Movie
 -h            show help
 ```
 
