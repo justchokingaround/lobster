@@ -1,6 +1,6 @@
 #!/bin/sh
 
-version="1.0.0"
+version="1.0.1"
 base="https://www5.himovies.to"
 history_file="$HOME/.cache/lobster_history.txt"
 config_file="$HOME/.config/lobster/lobster_config.txt"
