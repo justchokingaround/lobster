@@ -43,6 +43,12 @@ chmod +x "$PREFIX"/bin/lobster
 player=iina
 subs_language=French
 ```
+Currently supported players:
+```
+- mpv
+- iina (Mac OS only)
+- vlc (No subtitles)
+```
 
 ## Dependencies
 - fzf 

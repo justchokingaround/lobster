@@ -1,6 +1,6 @@
 #!/bin/sh
 
-version="1.0.1"
+version="1.0.2"
 base="https://www5.himovies.to"
 history_file="$HOME/.cache/lobster_history.txt"
 config_file="$HOME/.config/lobster/lobster_config.txt"
@@ -42,6 +42,12 @@ main() {
       case $player in
         iina)
           iina --no-stdin --keep-running --mpv-sub-files="$subs_links" --mpv-force-media-title="$movie_title" "$mpv_link" ;;
+        vlc)
+          if uname -a | grep -qE '[Aa]ndroid';then
+            am start --user 0 -a android.intent.action.VIEW -d "$mpv_link" -n org.videolan.vlc/org.videolan.vlc.gui.video.VideoPlayerActivity -e "title" "$movie_title" > /dev/null 2>&1 &
+          else
+            vlc "$mpv_link" --meta-title "$movie_title"
+          fi ;;
         *)
           if uname -a | grep -qE '[Aa]ndroid';then
             am start --user 0 -a android.intent.action.VIEW -d "$mpv_link" -n is.xyz.mpv/.MPVActivity > /dev/null 2>&1 &
@@ -74,6 +80,12 @@ main() {
         iina)
           iina --no-stdin --keep-running --mpv-sub-files="$subs_links" \
             --mpv-force-media-title="${movie_title}: S${season_number} Ep ${episode_number}" "$mpv_link" ;;
+        vlc)
+          if uname -a | grep -qE '[Aa]ndroid';then
+            am start --user 0 -a android.intent.action.VIEW -d "$mpv_link" -n org.videolan.vlc/org.videolan.vlc.gui.video.VideoPlayerActivity -e "title" "$movie_title" > /dev/null 2>&1 &
+          else
+            vlc "$mpv_link" --meta-title "$movie_title: S${season_number} Ep ${episode_number}"
+          fi ;;
         *)
           if uname -a | grep -qE '[Aa]ndroid';then
             am start --user 0 -a android.intent.action.VIEW -d "$mpv_link" -n is.xyz.mpv/.MPVActivity > /dev/null 2>&1 &
