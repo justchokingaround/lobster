@@ -1,3 +1,5 @@
+Click on this video to get a demo of the script
+
 [![thumbnail](https://user-images.githubusercontent.com/44473782/182946079-a05a6075-041e-473a-88fa-590f44ac6899.png)](https://youtu.be/j7cI7a-gRUo)
 
 ## Install
