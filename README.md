@@ -1,7 +1,5 @@
 [![thumbnail](https://user-images.githubusercontent.com/44473782/182946079-a05a6075-041e-473a-88fa-590f44ac6899.png)](https://youtu.be/j7cI7a-gRUo)
 
-https://user-images.githubusercontent.com/44473782/180663099-2239a2e9-22d1-4f3d-8baf-3df1d66fecb4.mp4
-
 ## Install
 ### Linux
 ```sh
