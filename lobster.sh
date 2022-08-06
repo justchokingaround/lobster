@@ -1,6 +1,6 @@
 #!/bin/sh
 
-version="2.0.0"
+version="2.0.1"
 base="https://www5.himovies.to"
 history_file="$HOME/.cache/lobster_history.txt"
 config_file="$HOME/.config/lobster/lobster_config.txt"
@@ -131,9 +131,6 @@ main() {
             [ -z "$show_base" ] || show_base=$(printf "%s" "$show_base"|cut -f1)
             if [ -z "$episode_id" ] && [ "$(wc -l < "$history_file")" -lt 2 ]; then
               rm "$history_file" && exit 0
-            else
-              grep -v "$show_base" "$history_file" > "$history_file.tmp" &&
-                mv "$history_file.tmp" "$history_file" && exit 0
             fi
           fi
       fi 
@@ -147,7 +144,7 @@ main() {
   esac
   # shellcheck disable=SC2034,SC2162
   tput clear && printf "Press Enter to continue watching, or Ctrl+C to exit" && read -r useless
-  first_run="" && main
+  first_run="" && play_from_history
 }
 
 get_input() {
