@@ -1,6 +1,6 @@
 #!/bin/sh
 
-version="1.0.2"
+version="2.0.0"
 base="https://www5.himovies.to"
 history_file="$HOME/.cache/lobster_history.txt"
 config_file="$HOME/.config/lobster/lobster_config.txt"
@@ -14,8 +14,7 @@ yoinkity_yoink() {
   co=$(printf "https://www5.himovies.to:443"|base64|tr "=" ".")
   vtoken=$(curl -s "https://www.google.com/recaptcha/api.js?render=$key"|
     sed -nE "s_.*po\.src=.*releases/(.*)/recaptcha.*_\1_p")
-  recaptcha_token=$(curl -s "https://www.google.com/recaptcha/api2/anchor?ar=1&hl=en\
-    &size=invisible&cb=cs3&k=${key}&co=${co}&v=${vtoken}"|
+  recaptcha_token=$(curl -s "https://www.google.com/recaptcha/api2/anchor?ar=1&hl=en&size=invisible&cb=cs3&k=${key}&co=${co}&v=${vtoken}"|
     sed -En 's_.*id="recaptcha-token" value="([^"]*)".*_\1_p')
   id=$(curl -s "https://www5.himovies.to/ajax/get_link/${provider_id}?_token=${recaptcha_token}"|
     sed -nE 's_.*"link":".*/(.*)\?z=".*_\1_p')
@@ -32,13 +31,15 @@ yoinkity_yoink() {
 main() {
   case "$media_type" in
     movie)
-      movie_page="$base"$(curl -s "https://www5.himovies.to/ajax/movie/episodes/${movie_id}"|
-        tr -d "\n"|sed -nE 's_.*href="([^"]*)".*UpCloud.*_\1_p')
-      provider_id=$(printf "%s" "$movie_page"|sed -nE "s_.*\.([0-9]*)\$_\1_p")
-      [ -z "$provider_id" ] && movie_page="$base"$(curl -s "https://www5.himovies.to/ajax/movie/episodes/${movie_id}"|
-        tr -d "\n"|sed -nE 's_.*href="([^"]*)".*Vidcloud.*_\1_p') && provider_id=$(printf "%s" "$movie_page"|
-        sed -nE "s_.*\.([0-9]*)\$_\1_p")
-      yoinkity_yoink
+      if [ -z "$movie_page" ]; then
+        movie_page="$base"$(curl -s "https://www5.himovies.to/ajax/movie/episodes/${movie_id}"|
+          tr -d "\n"|sed -nE 's_.*href="([^"]*)".*UpCloud.*_\1_p')
+        provider_id=$(printf "%s" "$movie_page"|sed -nE "s_.*\.([0-9]*)\$_\1_p")
+        [ -z "$provider_id" ] && movie_page="$base"$(curl -s "https://www5.himovies.to/ajax/movie/episodes/${movie_id}"|
+          tr -d "\n"|sed -nE 's_.*href="([^"]*)".*Vidcloud.*_\1_p') && provider_id=$(printf "%s" "$movie_page"|
+          sed -nE "s_.*\.([0-9]*)\$_\1_p")
+      fi
+    yoinkity_yoink
       case $player in
         iina)
           iina --no-stdin --keep-running --mpv-sub-files="$subs_links" --mpv-force-media-title="$movie_title" "$mpv_link" ;;
@@ -52,9 +53,26 @@ main() {
           if uname -a | grep -qE '[Aa]ndroid';then
             am start --user 0 -a android.intent.action.VIEW -d "$mpv_link" -n is.xyz.mpv/.MPVActivity > /dev/null 2>&1 &
           else
-            mpv --sub-files="$subs_links" --force-media-title="$movie_title" "$mpv_link"
+            [ -z "$resume_from" ] && opts="" || opts="--start=${resume_from}%"
+            printf "Loading %s...\n" "$movie_title"
+            stopped_at=$(mpv "$opts" --sub-files="$subs_links" --force-media-title="$movie_title" "$mpv_link" 2>&1|grep AV|
+              tail -n1|sed -nE 's_.*AV: ([^ ]*) / ([^ ]*) \(([0-9]*)%\).*_\3_p')
           fi ;;
-      esac ;;
+      esac 
+      # shellcheck disable=SC2034,SC2162
+      printf "Press Enter to save movie progress or Ctrl-C to exit (this will not reset your progress)\n" && read useless
+      if [ "$stopped_at" -gt 85 ]; then
+        if [ "$(grep -c "$movie_page" < "$history_file")" -eq 1 ]; then
+          rm "$history_file"
+        else
+          grep -sv "$movie_page" "$history_file" > "$history_file.tmp" && mv "$history_file.tmp" "$history_file"
+        fi
+      else
+        grep -sv "$movie_page" "$history_file" > "$history_file.tmp"
+        printf "%s\t%s\t%s\n" "$movie_page" "$stopped_at" "$movie_title" >> "$history_file.tmp"
+        mv "$history_file.tmp" "$history_file"
+      fi
+      exit 0 ;;
     tv)
       if [ -z "$season_id" ] || [ -z "$episode_id" ]; then
         seasons_ids=$(curl -s "https://www5.himovies.to/ajax/v2/tv/seasons/${movie_id}"|
@@ -90,20 +108,46 @@ main() {
           if uname -a | grep -qE '[Aa]ndroid';then
             am start --user 0 -a android.intent.action.VIEW -d "$mpv_link" -n is.xyz.mpv/.MPVActivity > /dev/null 2>&1 &
           else
-            mpv --sub-files="$subs_links" --force-media-title="${movie_title}: S${season_number} Ep ${episode_number}" "$mpv_link"
+            [ -z "$resume_from" ] && opts="" || opts="--start=${resume_from}%"
+            printf "Loading %s...\n" "$movie_title: S${season_number} Ep ${episode_number}"
+            stopped_at=$(mpv "$opts" --sub-files="$subs_links" --force-media-title="$movie_title: S${season_number} Ep ${episode_number}" "$mpv_link" 2>&1|grep AV|
+              tail -n1|sed -nE 's_.*AV: ([^ ]*) / ([^ ]*) \(([0-9]*)%\).*_\3_p')
           fi ;;
       esac
       # shellcheck disable=SC2034,SC2162
-      printf "Press Enter to mark episode as watched or Ctrl-C to exit\n" && read useless
-      grep -v "$show_base" "$history_file" > "$history_file.tmp"
-      printf "%s\t%s\t%s\t%s: S%s Ep(%s)\n" "$show_base" "$season_id" \
-        "$episode_id" "$movie_title" "$season_number" "$episode_number" >> "$history_file.tmp"
+      printf "Press Enter to save episode progress or Ctrl-C to exit (this will not reset your progress)\n" && read useless
+      if [ "$stopped_at" -gt 85 ]; then
+        episode_id=$(curl -s "https://www5.himovies.to/ajax/v2/season/episodes/${season_id}"|
+          grep 'data-id'|sed -nE "/data-id=\"${episode_id}\"/{n;p;}"|sed -nE 's/.*data-id="([0-9]*)".*/\1/p')
+        movie_id=$(printf "%s" "$selection"|sed -nE 's_.*-([0-9]*).*_\1_p')
+        stopped_at=0 && episode_number=$(( episode_number + 1 ))
+          if [ -z "$episode_id" ]; then
+            season_id=$(curl -s "https://www5.himovies.to/ajax/v2/tv/seasons/${movie_id}"|
+              grep 'data-id'|sed -nE "/data-id=\"${season_id}\"/{n;p;}"|sed -nE 's/^.*data-id="([0-9]*)".*/\1/p')
+            episode_id=$(curl -s "https://www5.himovies.to/ajax/v2/season/episodes/${season_id}"|
+              grep -m1 data-id|sed -nE 's_.*data-id="([0-9]*)".*_\1_p')
+            season_number=$(( season_number + 1 ))
+            episode_number=1
+            [ -z "$show_base" ] || show_base=$(printf "%s" "$show_base"|cut -f1)
+            if [ -z "$episode_id" ] && [ "$(wc -l < "$history_file")" -lt 2 ]; then
+              rm "$history_file" && exit 0
+            else
+              grep -v "$show_base" "$history_file" > "$history_file.tmp" &&
+                mv "$history_file.tmp" "$history_file" && exit 0
+            fi
+          fi
+      fi 
+      grep -sv "$show_base" "$history_file" > "$history_file.tmp"
+      printf "%s\t%s\t%s\t%s\t%s: S%s Ep(%s)\n" "$show_base" "$season_id" \
+        "$episode_id" "$stopped_at" "$movie_title" "$season_number" "$episode_number" >> "$history_file.tmp"
       mv "$history_file.tmp" "$history_file"
       ;;
     *)
-      exit 1
-      ;;
+      exit 1 ;;
   esac
+  # shellcheck disable=SC2034,SC2162
+  tput clear && printf "Press Enter to continue watching, or Ctrl+C to exit" && read -r useless
+  first_run="" && main
 }
 
 get_input() {
@@ -118,7 +162,7 @@ get_input() {
     sed -nE '/class="film-name"/ {n; s/.*href="(.*)".*/\1/p;n; s/.*title="(.*)".*/\1/p;d;}'|
     sed -e 'N;s/\n/\{/' -e "s/&#39;/'/g")
   movies_choice=$(printf "%s" "$movies_results"|sed -nE 's_/(.*)/(.*)\{(.*)_\2{\3 (\1)_p'|
-    fzf --height=12 -d"{" --with-nth 2..|sed -nE "s_(.*)\{(.*) \((.*)\)_/\3/\1\t\2_p")
+    fzf --border -1 --reverse --height=12 -d"{" --with-nth 2..|sed -nE "s_(.*)\{(.*) \((.*)\)_/\3/\1\t\2_p")
 
   movie_id=$(printf "%s" "$movies_choice"|sed -nE 's_.*/[movie/|tv/].*-([0-9]*).*_\1_p')
   movie_title=$(printf "%s" "$movies_choice"|cut -f2)
@@ -126,41 +170,36 @@ get_input() {
 }
 
 play_from_history() {
-  selection=$(fzf --tac -1 --cycle --height=12 --with-nth 4.. < "$history_file")
+  selection=$(fzf --border --reverse --tac -1 --cycle --height=12 -d"\t" --with-nth -1 < "$history_file")
   [ -z "$selection" ] && exit 0
-  show_base=$(printf "%s" "$selection"|cut -f1)
-  season_id=$(printf "%s" "$selection"|cut  -f2)
-  episode_id=$(printf "%s" "$selection"|cut -f3)
-  movie_title=$(printf "%s" "$selection"|cut -f4|sed -nE 's_(.*): S[0-9].*_\1_p')
-  season_number=$(printf "%s" "$selection"|cut -f4|sed -nE 's_.*: S([0-9]*).*_\1_p')
-  episode_number=$(( $(printf "%s" "$selection"|cut -f4|sed -nE 's_.*S[0-9].*Ep\(([0-9]*)\).*_\1_p') + 1 ))
-  episode_id=$(curl -s "https://www5.himovies.to/ajax/v2/season/episodes/${season_id}"|
-    grep 'data-id'|sed -nE "/data-id=\"${episode_id}\"/{n;p;}"|sed -nE 's/.*data-id="([0-9]*)".*/\1/p')
-  movie_id=$(printf "%s" "$selection"|sed -nE 's_.*-([0-9]*).*_\1_p')
-  if [ -z "$episode_id" ]; then
-    season_id=$(curl -s "https://www5.himovies.to/ajax/v2/tv/seasons/${movie_id}"|
-      grep 'data-id'|sed -nE "/data-id=\"${season_id}\"/{n;p;}"|sed -nE 's/^.*data-id="([0-9]*)".*/\1/p')
-    episode_id=$(curl -s "https://www5.himovies.to/ajax/v2/season/episodes/${season_id}"|
-      grep -m1 data-id|sed -nE 's_.*data-id="([0-9]*)".*_\1_p')
-    season_number=$(( $(printf "%s" "$selection"|cut -f4|sed -nE 's_.*S([0-9]*).*_\1_p') + 1 ))
-    episode_number=1
+  if printf "%s" "$selection"|grep -qE '/watch-movie/';then
+    media_type="movie"
+    movie_page=$(printf "%s" "$selection"|cut -f1)
+    provider_id=$(printf "%s" "$movie_page"|sed -nE "s_.*\.([0-9]*)\$_\1_p")
+    resume_from=$(printf "%s" "$selection"|cut -f2)
+    movie_title=$(printf "%s" "$selection"|cut -f3)
+  else
+    media_type="tv"
+    show_base=$(printf "%s" "$selection"|cut -f1)
+    season_id=$(printf "%s" "$selection"|cut  -f2)
+    episode_id=$(printf "%s" "$selection"|cut -f3)
+    resume_from=$(printf "%s" "$selection"|cut -f4)
+    [ "$resume_from" -eq -1 ] && resume_from=0
+    movie_title=$(printf "%s" "$selection"|cut -f5|sed -nE 's_(.*): S[0-9].*_\1_p')
+    season_number=$(printf "%s" "$selection"|cut -f5|sed -nE 's_.*: S([0-9]*).*_\1_p')
+    episode_number=$(printf "%s" "$selection"|cut -f5|sed -nE 's_.*S[0-9].*Ep\(([0-9]*)\).*_\1_p')
   fi
-  [ -z "$show_base" ] || show_base=$(printf "%s" "$show_base"|cut -f1)
-  [ -z "$episode_id" ] && echo "No next episode" && 
-    grep -v "$show_base" "$history_file" > "$history_file.tmp" &&
-    mv "$history_file.tmp" "$history_file" && exit 0
-  media_type="tv"
   continue_history=true
-  main
+  if [ -z "$first_run" ]; then
+    main
+  else
+    first_run=false
+  fi
 }
 
 while getopts "cduUvVht" opt; do
   case $opt in
-    c)
-      while true; do
-        play_from_history
-        tput clear
-      done ;;
+    c) play_from_history ;;
     d)
       rm -f "$history_file" && printf "History file deleted\n" && exit 0 ;;
     u|U)
@@ -183,9 +222,9 @@ while getopts "cduUvVht" opt; do
       [ "$media_type" = "T" ] || [ "$media_type" = "t" ] && deez="tv-show" || deez="movie"
       get_input && main && exit 0 ;;
     h)
-      printf "Usage: lobster [arg] <query> \n"
+      printf "Usage: lobster [arg] \n"
       printf "Play movies and TV shows from himovies.to\n"
-      printf "  -c, \t\tContinue watching from last episode\n"
+      printf "  -c, \t\tContinue watching from last minute saved\n"
       printf "  -d, \t\tDelete history file\n"
       printf "  -u, \t\tUpdate script\n"
       printf "  -v, \t\tPrint version\n"
