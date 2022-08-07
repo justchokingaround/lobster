@@ -2,6 +2,12 @@ Click on this video to get a demo of the script
 
 [![thumbnail](https://user-images.githubusercontent.com/44473782/182946079-a05a6075-041e-473a-88fa-590f44ac6899.png)](https://youtu.be/j7cI7a-gRUo)
 
+# Important
+## Updating from version 1.0.2 or earlier to versions 2.0.0 or later will break your history file, so make sure to back it up manually. 
+<br>
+
+### This update will allow the user to save progress in minutes for both TV Shows and movies. Note that this is only supported by mpv (non Android) at the moment. A movie or TV show episode is automatically marked as completed/updated after the user watches more than 85% of its content
+
 ## Install
 ### Linux
 ```sh
@@ -24,13 +30,14 @@ chmod +x "$PREFIX"/bin/lobster
 
 ## Arguments
 ```
--c,           continue from history (works only for TV shows you will need to watch at least one episode for it to work)
+-c,           continue from history (saves the your progress in minutes)
 -d,           delete history
 -u, -U        update script
 -v, -V        show script version
 -t,           suggest a trending TV Show or Movie
 -h            show help
 ```
+*A movie or TV show episode is automatically marked as completed/updated after the user watches more than 85% of its content*
 
 ## Config file
 ```sh
