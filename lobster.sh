@@ -1,6 +1,6 @@
 #!/bin/sh
 
-version="2.0.1"
+version="2.0.2"
 base="https://www5.himovies.to"
 history_file="$HOME/.cache/lobster_history.txt"
 config_file="$HOME/.config/lobster/lobster_config.txt"
@@ -161,7 +161,7 @@ get_input() {
   movies_choice=$(printf "%s" "$movies_results"|sed -nE 's_/(.*)/(.*)\{(.*)_\2{\3 (\1)_p'|
     fzf --border -1 --reverse --height=12 -d"{" --with-nth 2..|sed -nE "s_(.*)\{(.*) \((.*)\)_/\3/\1\t\2_p")
 
-  movie_id=$(printf "%s" "$movies_choice"|sed -nE 's_.*/[movie/|tv/].*-([0-9]*).*_\1_p')
+  movie_id=$(printf "%s" "$movies_choice"|cut -f1|sed -nE 's_.*/[movie/|tv/].*-([0-9]*).*_\1_p')
   movie_title=$(printf "%s" "$movies_choice"|cut -f2)
   media_type=$(printf "%s" "$movies_choice"|sed -nE 's_.*/([^/]*)/.*_\1_p')
 }
