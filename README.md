@@ -60,7 +60,11 @@ Currently supported players:
 - curl
 - grep
 - sed
+- patch
 - mpv
+- vlc (optional)
+- iina (optional)
+- android vlc & mpv (optional)
 
 ### In case you don't have fzf installed, you can install it like this:
 ```sh
@@ -78,4 +82,3 @@ sudo rm /usr/local/bin/lobster
 ```sh
 rm "$(brew --prefix)"/bin/lobster
 ```
-
