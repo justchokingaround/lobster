@@ -2,6 +2,8 @@ Click on this video to get a demo of the script
 
 [![thumbnail](https://user-images.githubusercontent.com/44473782/182946079-a05a6075-041e-473a-88fa-590f44ac6899.png)](https://youtu.be/j7cI7a-gRUo)
 
+[ Credits to https://github.com/chick2d/ for making the youtube video ]
+
 # Important
 ## Updating from version 1.0.2 or earlier to versions 2.0.0 or later will break your history file, so make sure to back it up manually. 
 <br>
