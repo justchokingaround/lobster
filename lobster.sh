@@ -8,6 +8,9 @@ config_file="$HOME/.config/lobster/lobster_config.txt"
 [ ! -f "$config_file" ] && printf "player=mpv\nsubs_language=English\n" > "$config_file"
 player="$(grep '^player=' "$config_file"|cut -d'=' -f2)" || player="mpv"
 subs_language="$(grep '^subs_language=' "$config_file"|cut -d'=' -f2)" || subs_language="English"
+providers="$(grep '^providers=' $config_file|cut -d '=' -f2)"
+readarray -td, arr_providers <<<"$providers";
+
 
 yoinkity_yoink() {
   key=$(curl -s "$movie_page"|sed -nE "s@.*recaptcha_site_key = '(.*)'.*@\1@p")
@@ -23,22 +26,25 @@ yoinkity_yoink() {
     -H 'X-Requested-With: XMLHttpRequest'|tr '{|}' '\n'|
     sed -nE 's_.*file":"([^"]*)","type.*_\1_p; s_.*file":"([^"]*)","label":"'$subs_language'.*".*_\1_p')
   mpv_link=$(printf "%s" "$xml_links"|head -1)
+  echo "$mpv_link"
   subs_links=$(printf "%s" "$xml_links"|sed -n '2,$p'|sed -e 's/:/\\:/g' -e 'H;1h;$!d;x;y/\n/:/' -e 's/:$//')
   [ -z "$mpv_link" ] && printf "No links found\n" && exit 1
   [ -z "$subs_links" ] && printf "No subtitles found\n"
 }
 
+
 main() {
   case "$media_type" in
     movie)
-      if [ -z "$movie_page" ]; then
+      index=0
+      provider=${arr_providers[index]}
+      while [[ -n "$provider" && -z $provider_id  ]]; do
         movie_page="$base"$(curl -s "https://www5.himovies.to/ajax/movie/episodes/${movie_id}"|
-          tr -d "\n"|sed -nE 's_.*href="([^"]*)".*UpCloud.*_\1_p')
+          tr -d "\n"|sed -nE "s_.*href=\"([^\"]*)\".*$provider.*_\1_p")
         provider_id=$(printf "%s" "$movie_page"|sed -nE "s_.*\.([0-9]*)\$_\1_p")
-        [ -z "$provider_id" ] && movie_page="$base"$(curl -s "https://www5.himovies.to/ajax/movie/episodes/${movie_id}"|
-          tr -d "\n"|sed -nE 's_.*href="([^"]*)".*Vidcloud.*_\1_p') && provider_id=$(printf "%s" "$movie_page"|
-          sed -nE "s_.*\.([0-9]*)\$_\1_p")
-      fi
+        echo $provider
+        [ -z "$provider_id" ] && ((index += 1)) && provider=${arr_providers[index]}
+      done
     yoinkity_yoink
       case $player in
         iina)
@@ -58,7 +64,7 @@ main() {
             stopped_at=$(mpv "$opts" --sub-files="$subs_links" --force-media-title="$movie_title" "$mpv_link" 2>&1|grep AV|
               tail -n1|sed -nE 's_.*AV: ([^ ]*) / ([^ ]*) \(([0-9]*)%\).*_\3_p')
           fi ;;
-      esac 
+      esac
       # shellcheck disable=SC2034,SC2162
       printf "Press Enter to save movie progress or Ctrl-C to exit (this will not reset your progress)\n" && read useless
       if [ "$stopped_at" -gt 85 ]; then
@@ -90,9 +96,15 @@ main() {
         episode_id=$(printf "%s" "$episode_ids"|sed -nE "${episode_number}p")
       fi
       [ -z "$movies_choice" ] || show_base=$(printf "%s" "$movies_choice"|cut -f1)
-      movie_page="${base}${show_base}\."$(curl -s "https://www5.himovies.to/ajax/v2/episode/servers/${episode_id}"|
-        tr -d "\n"|sed -nE 's_.*data-id="([0-9]*)".*title="Server UpCloud".*_\1_p')
-      provider_id=$(printf "%s" "$movie_page"|sed -nE "s_.*\.([0-9]*)\$_\1_p")
+
+      index=0
+      provider=${arr_providers[index]}
+      while [[ -n "$provider" && -z $provider_id ]];do
+
+        movie_page="${base}${show_base}\."$(curl -s "https://www5.himovies.to/ajax/v2/episode/servers/${episode_id}"| tr -d "\n"|sed -nE "s_.*data-id=\"([0-9]*)\".*title=\"Server $provider\".*_\1_p")
+        provider_id=$(printf "%s" "$movie_page"|sed -nE "s_.*\.([0-9]*)\$_\1_p")
+        [ -z "$provider_id" ] && ((index += 1)) && provider=${arr_providers[index]}
+      done
       yoinkity_yoink
       case $player in
         iina)
@@ -133,7 +145,7 @@ main() {
               rm "$history_file" && exit 0
             fi
           fi
-      fi 
+      fi
       grep -sv "$show_base" "$history_file" > "$history_file.tmp"
       printf "%s\t%s\t%s\t%s\t%s: S%s Ep(%s)\n" "$show_base" "$season_id" \
         "$episode_id" "$stopped_at" "$movie_title" "$season_number" "$episode_number" >> "$history_file.tmp"
@@ -162,8 +174,10 @@ get_input() {
     fzf --border -1 --reverse --height=12 -d"{" --with-nth 2..|sed -nE "s_(.*)\{(.*) \((.*)\)_/\3/\1\t\2_p")
 
   movie_id=$(printf "%s" "$movies_choice"|cut -f1|sed -nE 's_.*/[movie/|tv/].*-([0-9]*).*_\1_p')
+  echo "$movie_id"
   movie_title=$(printf "%s" "$movies_choice"|cut -f2)
   media_type=$(printf "%s" "$movies_choice"|sed -nE 's_.*/([^/]*)/.*_\1_p')
+
 }
 
 play_from_history() {
