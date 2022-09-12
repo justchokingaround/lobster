@@ -8,7 +8,7 @@ config_file="$HOME/.config/lobster/lobster_config.txt"
 [ ! -f "$config_file" ] && printf "player=mpv\nsubs_language=English\n" > "$config_file"
 player="$(grep '^player=' "$config_file"|cut -d'=' -f2)" || player="mpv"
 subs_language="$(grep '^subs_language=' "$config_file"|cut -d'=' -f2)" || subs_language="English"
-providers="$(grep '^providers=' $config_file|cut -d '=' -f2)"
+providers="$(grep '^providers=' $config_file|cut -d '=' -f2)" || providers="Openbox,Vidcloud"
 readarray -td, arr_providers <<<"$providers";
 
 
@@ -26,7 +26,6 @@ yoinkity_yoink() {
     -H 'X-Requested-With: XMLHttpRequest'|tr '{|}' '\n'|
     sed -nE 's_.*file":"([^"]*)","type.*_\1_p; s_.*file":"([^"]*)","label":"'$subs_language'.*".*_\1_p')
   mpv_link=$(printf "%s" "$xml_links"|head -1)
-  echo "$mpv_link"
   subs_links=$(printf "%s" "$xml_links"|sed -n '2,$p'|sed -e 's/:/\\:/g' -e 'H;1h;$!d;x;y/\n/:/' -e 's/:$//')
   [ -z "$mpv_link" ] && printf "No links found\n" && exit 1
   [ -z "$subs_links" ] && printf "No subtitles found\n"
@@ -42,7 +41,6 @@ main() {
         movie_page="$base"$(curl -s "https://www5.himovies.to/ajax/movie/episodes/${movie_id}"|
           tr -d "\n"|sed -nE "s_.*href=\"([^\"]*)\".*$provider.*_\1_p")
         provider_id=$(printf "%s" "$movie_page"|sed -nE "s_.*\.([0-9]*)\$_\1_p")
-        echo $provider
         [ -z "$provider_id" ] && ((index += 1)) && provider=${arr_providers[index]}
       done
     yoinkity_yoink
@@ -174,7 +172,6 @@ get_input() {
     fzf --border -1 --reverse --height=12 -d"{" --with-nth 2..|sed -nE "s_(.*)\{(.*) \((.*)\)_/\3/\1\t\2_p")
 
   movie_id=$(printf "%s" "$movies_choice"|cut -f1|sed -nE 's_.*/[movie/|tv/].*-([0-9]*).*_\1_p')
-  echo "$movie_id"
   movie_title=$(printf "%s" "$movies_choice"|cut -f2)
   media_type=$(printf "%s" "$movies_choice"|sed -nE 's_.*/([^/]*)/.*_\1_p')
 
