@@ -8,8 +8,8 @@ config_file="$HOME/.config/lobster/lobster_config.txt"
 [ ! -f "$config_file" ] && printf "player=mpv\nsubs_language=English\n" > "$config_file"
 player="$(grep '^player=' "$config_file"|cut -d'=' -f2)" || player="mpv"
 subs_language="$(grep '^subs_language=' "$config_file"|cut -d'=' -f2)" || subs_language="English"
-providers="$(grep '^providers=' $config_file | cut -d '=' -f2 | tr ',' ' ')" || providers="Openbox Vidcloud"
-arr_providers=($providers)
+providers="$(grep '^providers=' "$config_file" | cut -d '=' -f2)" || providers="Openbox Vidcloud"
+#arr_providers=($providers)
 
 yoinkity_yoink() {
   key=$(curl -s "$movie_page"|sed -nE "s@.*recaptcha_site_key = '(.*)'.*@\1@p")
@@ -20,7 +20,6 @@ yoinkity_yoink() {
     sed -En 's_.*id="recaptcha-token" value="([^"]*)".*_\1_p')
   id=$(curl -s "https://www5.himovies.to/ajax/get_link/${provider_id}?_token=${recaptcha_token}"|
     sed -nE 's_.*"link":".*/(.*)\?z=".*_\1_p')
-
   xml_links=$(curl -s "https://mzzcloud.life/ajax/embed-4/getSources?id=${id}" \
     -H 'X-Requested-With: XMLHttpRequest'|tr '{|}' '\n'|
     sed -nE 's_.*file":"([^"]*)","type.*_\1_p; s_.*file":"([^"]*)","label":"'$subs_language'.*".*_\1_p')
@@ -34,15 +33,16 @@ yoinkity_yoink() {
 main() {
   case "$media_type" in
     movie)
-      index=0
-      provider=${arr_providers[index]}
-      while [[ -n "$provider" && -z "$provider_id"  ]]; do
+      index=1
+      provider=$(echo "$providers" | cut -d ',' -f $index)
+      while [ -n "$provider" ] && [ -z "$provider_id"  ]; do
         movie_page="$base"$(curl -s "https://www5.himovies.to/ajax/movie/episodes/${movie_id}"|
           tr -d "\n"|sed -nE "s_.*href=\"([^\"]*)\".*$provider.*_\1_p")
         provider_id=$(printf "%s" "$movie_page"|sed -nE "s_.*\.([0-9]*)\$_\1_p")
-        [ -z "$provider_id" ] && ((index += 1)) && provider=${arr_providers[index]}
+        echo "$provider"
+        echo "$provider_id"
+        [ -z "$provider_id" ] && index=$((index + 1)) && provider=$(echo "$providers" | cut -d ',' -f $index)
       done
-      echo "Fixed. $provider_id"
     yoinkity_yoink
       case $player in
         iina)
@@ -95,13 +95,12 @@ main() {
       fi
       [ -z "$movies_choice" ] || show_base=$(printf "%s" "$movies_choice"|cut -f1)
 
-      index=0
-      provider=${arr_providers[index]}
-      while [[ -n "$provider" && -z $provider_id ]];do
-
+      index=1
+      provider=$(echo "$providers" | cut -d ',' -f $index)
+      while [ -n "$provider" ] && [ -z "$provider_id" ];do
         movie_page="${base}${show_base}\."$(curl -s "https://www5.himovies.to/ajax/v2/episode/servers/${episode_id}"| tr -d "\n"|sed -nE "s_.*data-id=\"([0-9]*)\".*title=\"Server $provider\".*_\1_p")
         provider_id=$(printf "%s" "$movie_page"|sed -nE "s_.*\.([0-9]*)\$_\1_p")
-        [ -z "$provider_id" ] && ((index += 1)) && provider=${arr_providers[index]}
+        [ -z "$provider_id" ] && index=$((index += 1)) && provider=$(echo "$providers" | cut -d ',' -f $index)
       done
       yoinkity_yoink
       case $player in
