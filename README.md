@@ -14,6 +14,63 @@ curl -sL github.com/justchokingaround/lobster/raw/main/lobster.sh -o "$(brew --p
 chmod +x "$(brew --prefix)"/bin/lobster
 ```
 
+### Windows
+1. Install scoop
+
+
+Open a PowerShell terminal (version 5.1 or later) and run: 
+```sh
+Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
+irm get.scoop.sh | iex
+```
+2. Install git
+```sh
+scoop install git
+```
+3. Install mpv and fzf
+```sh
+scoop bucket add extras
+scoop install mpv
+scoop install fzf
+```
+4. Install git bash
+https://git-scm.com/download/win
+5. (Optional but I highly recommend it) Adding bash to windows terminal.
+
+   a) Install windows terminal from the Microsoft store.
+   
+   b) Open the terminal.
+   
+   c) Open settings.
+   
+   d) Click "Add a new profile"
+   
+   e) Click "New empty profile"
+   
+   f) Click on "name" and rename it to "Git Bash"
+   
+   g) Click on "Command line" and click "Browse..."
+   
+   h) If you installed git using scoop then follow this(else the steps are mostly  the same just a different path)
+      navigate to `C:\User\USERNAME\scoop\apps\git\2.37.1.windows.1\bin\bash.exe`
+      Where USERNAME is your username
+      note that the name `2.37.1.windows.1` might be slightly different on your system
+   
+   j) Click "Open"
+   
+   k) Click "Starting directory" and uncheck "Use parent process directory"
+   
+   l) Click "Save"
+   
+   
+  m) Now you can open gitbash from the windows terminal
+
+6. Download lobster directly to path
+```sh
+curl -sL github.com/justchokingaround/lobster/raw/main/lobster.sh -o /usr/bin/lobster &&
+chmod +x /usr/bin/lobster
+```
+
 ### Termux (Android)
 ```sh
 pkg up -y && pkg install fzf
@@ -74,4 +131,9 @@ sudo rm /usr/local/bin/lobster
 ### Mac
 ```sh
 rm "$(brew --prefix)"/bin/lobster
+```
+
+### Windows
+```sh
+rm /usr/bin/lobster
 ```
