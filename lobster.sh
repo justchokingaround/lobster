@@ -11,12 +11,16 @@ player="$(grep '^player=' "$config_file"|cut -d'=' -f2)" || player="mpv"
 subs_language="$(grep "^subs_language=" "$config_file"|cut -d'=' -f2)" || subs_language="English"
 video_quality="$(grep "^video_quality=" "$config_file"|cut -d'=' -f2)" || video_quality="1080p"
 server="$(grep "^preferred_server=" "$config_file"|cut -d'=' -f2)" || server="vidcloud"
+case "$(uname -s)" in
+	MINGW*|*Msys) separator=';' && path_thing='' ;;
+	*) separator=':' && path_thing="\\" ;;
+esac
 
 play_video() {
   json_data=$(curl -s "$base/watch?episodeId=${episode_id}&mediaId=${media_id}&server=${server}&")
   referrer=$(printf "%s" "$json_data"|tr "{|}" "\n"|sed -nE "s@\"Referer\":\"([^\"]*)\"@\1@p")
   mpv_link=$(printf "%s" "$json_data"|tr "{|}" "\n"|sed -nE "s@\"url\":\"([^\"]*)\",\"quality\":\"$video_quality\",.*@\1@p")
-  subs_links=$(printf "%s" "$json_data"|tr "{|}" "\n"|sed -nE "s@\"url\":\"([^\"]*.vtt)\",\"lang\":\"$subs_language.*@\1@p"|sed -e 's/:/\\:/g' -e 'H;1h;$!d;x;y/\n/:/' -e 's/:$//')
+  subs_links=$(printf "%s" "$json_data"|tr "{|}" "\n"|sed -nE "s@\"url\":\"([^\"]*.vtt)\",\"lang\":\"$subs_language.*@\1@p"|sed -e "s/:/\\$path_thing:/g" -e "H;1h;\$!d;x;y/\n/$separator/" -e "s/$separator\$//")
   [ -z "$mpv_link" ] && printf "No links found\n" && exit 1
   [ -z "$subs_links" ] && printf "No subtitles found\n"
     case $player in
