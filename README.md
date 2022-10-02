@@ -70,6 +70,10 @@ https://git-scm.com/download/win
 curl -sL github.com/justchokingaround/lobster/raw/main/lobster.sh -o /usr/bin/lobster &&
 chmod +x /usr/bin/lobster
 ```
+7. Use lobster (either with git bash or windows terminal)
+```sh
+lobster <args> or lobster [movie/tv show]
+```
 
 ### Termux (Android)
 ```sh
