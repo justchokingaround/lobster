@@ -1,8 +1,5 @@
-# Important
-## Updating from version 1.0.2 or earlier to versions 2.0.0 or later will break your history file, so make sure to back it up manually. 
-<br>
-
-### This update will allow the user to save progress in minutes for both TV Shows and movies. Note that this is only supported by mpv (non Android) at the moment. A movie or TV show episode is automatically marked as completed/updated after the user watches more than 85% of its content
+## v3 works again
+## will document everything soon :tm: (if you wanna go through the code and document it in the readme pls pr i'll be grateful)
 
 ## Install
 ### Linux
