@@ -1,18 +1,19 @@
 #!/bin/sh
 # shellcheck disable=SC2034,SC2162
 
-version="3.0.0"
+version="3.0.1"
 base="https://api.consumet.org/movies/flixhq"
 config_file="$HOME/.config/lobster/lobster_config.txt"
 history_file="$HOME/.config/lobster/lobster_history.txt"
 [ ! -d "$HOME/.config/lobster" ] && mkdir -p "$HOME/.config/lobster"
-[ ! -f "$config_file" ] && printf "player=mpv\nsubs_language=English\nvideo_quality=1080\n" > "$config_file"
+[ ! -f "$config_file" ] && printf "player=mpv\nsubs_language=English\nvideo_quality=1080\npreferred_server=vidcloud\n" > "$config_file"
 player="$(grep '^player=' "$config_file"|cut -d'=' -f2)" || player="mpv"
 subs_language="$(grep "^subs_language=" "$config_file"|cut -d'=' -f2)" || subs_language="English"
 video_quality="$(grep "^video_quality=" "$config_file"|cut -d'=' -f2)" || video_quality="1080p"
+server="$(grep "^preferred_server=" "$config_file"|cut -d'=' -f2)" || server="vidcloud"
 
 play_video() {
-  json_data=$(curl -s "$base/watch?episodeId=${episode_id}&mediaId=${media_id}")
+  json_data=$(curl -s "$base/watch?episodeId=${episode_id}&mediaId=${media_id}&server=${server}&")
   referrer=$(printf "%s" "$json_data"|tr "{|}" "\n"|sed -nE "s@\"Referer\":\"([^\"]*)\"@\1@p")
   mpv_link=$(printf "%s" "$json_data"|tr "{|}" "\n"|sed -nE "s@\"url\":\"([^\"]*)\",\"quality\":\"$video_quality\",.*@\1@p")
   subs_links=$(printf "%s" "$json_data"|tr "{|}" "\n"|sed -nE "s@\"url\":\"([^\"]*.vtt)\",\"lang\":\"$subs_language.*@\1@p"|sed -e 's/:/\\:/g' -e 'H;1h;$!d;x;y/\n/:/' -e 's/:$//')
