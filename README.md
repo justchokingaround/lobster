@@ -18,24 +18,21 @@ chmod +x "$(brew --prefix)"/bin/lobster
 1. Install scoop
 
 
-Open a PowerShell terminal (version 5.1 or later) and run: 
+Open a PowerShell terminal https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell-on-windows?view=powershell-7.2#msi (version 5.1 or later) and run:
 ```sh
 Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
 irm get.scoop.sh | iex
 ```
-2. Install git
-```sh
-scoop install git
-```
-3. Install mpv and fzf
+2. Install git,mpv and fzf
 ```sh
 scoop bucket add extras
-scoop install mpv
-scoop install fzf
+scoop install git mpv fzf
 ```
-4. Install git bash
+3. Install git bash
 https://git-scm.com/download/win
-5. (Optional but I highly recommend it) Adding bash to windows terminal.
+4. Install windows terminal (you don't need to have a microsoft account for that)
+https://learn.microsoft.com/en-us/windows/terminal/install
+5. Adding git bash to windows terminal.
 
    a) Install windows terminal from the Microsoft store.
    
@@ -62,15 +59,17 @@ https://git-scm.com/download/win
    
    l) Click "Save"
    
-   
-  m) Now you can open gitbash from the windows terminal
+   m) Now you can open gitbash from the windows terminal
 
-6. Download lobster directly to path
+6. Clone the repo and go inside it
 ```sh
-curl -sL github.com/justchokingaround/lobster/raw/main/lobster.sh -o /usr/bin/lobster &&
-chmod +x /usr/bin/lobster
+git clone https://github.com/justchokingaround/lobster && cd lobster
 ```
-7. Use lobster (either with git bash or windows terminal)
+7. Add the script to default path for binaries
+```sh
+cp lobster.sh /usr/bin/lobster
+```
+8. Use lobster (either with git bash or windows terminal)
 ```sh
 lobster <args> or lobster [movie/tv show]
 ```
