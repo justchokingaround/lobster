@@ -1,5 +1,7 @@
-## v3 works again
-## will document everything soon :tm: (if you wanna go through the code and document it in the readme pls pr i'll be grateful)
+### If you're upgrading from v2 to v3, please delete your old history and configuration file as they might cause the script to break. That can be done with 
+```sh
+rm ~/.cache/lobster_history.txt && rm ~/.config/lobster/lobster_config.txt
+```
 
 ## Install
 ### Linux
@@ -81,31 +83,46 @@ curl -sL github.com/justchokingaround/lobster/raw/main/lobster.sh -o "$PREFIX"/b
 chmod +x "$PREFIX"/bin/lobster
 ```
 
+## Configuration
+Settings are stored in `~/.config/lobster/lobster_config.txt`. The file is created on first launch with the default options and looks like this
+```
+player=mpv
+subs_language=English
+video_quality=1080
+preferred_server=vidcloud
+```
+
+### Player
+There are 3 available video players to chose from : `mpv`, `iina` or `vlc`.
+### Subtitles Language
+The `subs_language` setting can be any language, e.g. `English`, `French`, `German`, `Spanish` and so on. Please note that not all streams have subtitles in every language, so `English` is the safest option. It is also important to capitalize the first letter of the language, otherwise it might trigger unexpected behavior.
+### Video Quality
+The `video_quality` setting can be set to either `1080`, `720`, `360` or `auto`. `auto` will select the best quality depending on your bandwith
+### Preferred Server
+The `preferred_server` setting can be either `vidcloud` or `upcloud`.
+
+#### Please note: 
+* If any of the above settings is wrong, e.g. if `video_quality` is set to a value like 480, the script will fail with a `No links found` message and nothing will be played. However, if the subs_language is set to a language that is not available, the script will just show a `No subtitles found` message but will play the stream.
+
+## History
+In a similar fashion to how saving your position when you watch videos on YouTube or Netflix, lobster has history support and saves the last minute you watched for a movie or tv show. To use this feature, simply watch a movie or an episode from a tv show, and after you quit mpv press Enter to save the position (there will be a prompt telling you to do that). The next time you want to resume from the last position watched, you can just run 
+```sh
+lobster -c
+```
+which will prompt you to chose which of the saved movies/tv shows you'd like to resume from.
+
+#### Please note:
+* If there is only one entry in the history file, it'll be automatically selected
+* The history file can be found at `~/.config/lobster_history.txt` 
+* A movie or TV show episode is automatically marked as completed/updated after the user watches more than 85% of its content*
+
 ## Arguments
 ```
 -c,           continue from history (saves the your progress in minutes)
 -d,           delete history
 -u, -U        update script
 -v, -V        show script version
--t,           suggest a trending TV Show or Movie
 -h            show help
-```
-*A movie or TV show episode is automatically marked as completed/updated after the user watches more than 85% of its content*
-
-## Config file
-```sh
-~/.config/lobster
-```
-## Example config file
-```
-player=iina
-subs_language=French
-```
-Currently supported players:
-```
-- mpv
-- iina (Mac OS only)
-- vlc (No subtitles)
 ```
 
 ## Dependencies
