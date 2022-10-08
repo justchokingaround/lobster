@@ -1,7 +1,7 @@
 #!/bin/sh
 # shellcheck disable=SC2034,SC2162
 
-version="3.0.1"
+version="3.0.2"
 base="https://api.consumet.org/movies/flixhq"
 config_file="$HOME/.config/lobster/lobster_config.txt"
 history_file="$HOME/.config/lobster/lobster_history.txt"
@@ -53,15 +53,14 @@ history() {
         fi
         episode_id=$(printf "%s" "$tv_show_json"|sed -nE "s@.*\"id\":\"([0-9]*)\",\"title\":\"([^\"]*)\",\"number\":$((episode_number+1)),\"season\":$season_number.*@\1@p")
         stopped_at=0 && episode_number=$((episode_number+1))
-        [ -z "$episode_id" ] ||
-          episode_id=$(printf "%s" "$tv_show_json"|sed -nE "s@.*\"id\":\"([0-9]*)\",\"title\":\"([^\"]*)\",\"number\":1,\"season\":$((season_number+1)).*@1@p")
-          stopped_at=0 && episode_number=1 && season_number=$((season_number+1))
-        [ -z "$episode_id" ] && [ "$(grep -c . < "$history_file")" -lt 1 ] && exit 0
+	[ -z "$episode_id" ] && episode_id=$(printf "%s" "$tv_show_json"|sed -nE "s@.*\"id\":\"([0-9]*)\",\"title\":\"([^\"]*)\",\"number\":1,\"season\":$((season_number+1)).*@\1@p") && 
+		stopped_at=0 && episode_number=1 && season_number=$((season_number+1))
+	[ -z "$episode_id" ] && [ grep -c . < "$history_file" -eq 1 ] && exit 0
         [ -z "$episode_id" ] && grep -sv "$media_id" "$history_file" > "$history_file.tmp" && mv "$history_file.tmp" "$history_file" && exit 0
         grep -sv "$media_id" "$history_file" > "$history_file.tmp"
         printf "%s\t%s\t%s\t%s: S%s Ep(%s)\n" "$media_id" "$episode_id" "$stopped_at" "$movie_title" "$season_number" "$episode_number" >> "$history_file.tmp"
         mv "$history_file.tmp"  "$history_file"
-        [ "$(grep -c . < "$history_file")" -eq 1 ] && rm "$history_file" && exit 0
+	[ -z "$episode_id" ] && [ "$(grep -c . < "$history_file")" -eq 1 ] && rm "$history_file" && exit 0
       else
         grep -sv "$media_id" "$history_file" > "$history_file.tmp"
         [ "$media_type" = "Movie" ] && printf "%s\t%s\t%s\n" "$media_id" "$stopped_at" "$movie_title" >> "$history_file.tmp" ||
