@@ -1,7 +1,7 @@
 #!/bin/sh
 # shellcheck disable=SC2034,SC2162
 
-version="3.0.2"
+version="3.0.3"
 base="https://api.consumet.org/movies/flixhq"
 config_file="$HOME/.config/lobster/lobster_config.txt"
 history_file="$HOME/.config/lobster/lobster_history.txt"
@@ -21,6 +21,7 @@ play_video() {
   referrer=$(printf "%s" "$json_data"|tr "{|}" "\n"|sed -nE "s@\"Referer\":\"([^\"]*)\"@\1@p")
   mpv_link=$(printf "%s" "$json_data"|tr "{|}" "\n"|sed -nE "s@\"url\":\"([^\"]*)\",\"quality\":\"$video_quality\",.*@\1@p")
   subs_links=$(printf "%s" "$json_data"|tr "{|}" "\n"|sed -nE "s@\"url\":\"([^\"]*.vtt)\",\"lang\":\"$subs_language.*@\1@p"|sed -e "s/:/\\$path_thing:/g" -e "H;1h;\$!d;x;y/\n/$separator/" -e "s/$separator\$//")
+  [ -z "$mpv_link" ] && mpv_link=$(printf "%s" "$json_data"|tr "{|}" "\n"|sed -nE "s@\"url\":\"([^\"]*)\",\"quality\":\".*@\1@p"|head -n1)
   [ -z "$mpv_link" ] && printf "No links found\n" && exit 1
   [ -z "$subs_links" ] && printf "No subtitles found\n"
     case $player in
