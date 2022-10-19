@@ -1,7 +1,7 @@
 #!/bin/sh
 # shellcheck disable=SC2034,SC2162
 
-version="3.0.3"
+version="3.0.4"
 base="https://api.consumet.org/movies/flixhq"
 config_file="$HOME/.config/lobster/lobster_config.txt"
 history_file="$HOME/.config/lobster/lobster_history.txt"
@@ -109,7 +109,7 @@ get_input() {
   [ -z "$*" ] && printf "Enter a Movie/TV Show name: " && read -r query || query=$*
   query=$(printf "%s" "$query"|tr " " "-")
   movies_choice=$(curl -s "$base/${query}"|tr "{|}" "\n"|
-    sed -nE "s@\"id\":\"([^\"]*)\",\"title\":\"([^\"]*)\",.*\"type\":\"([a-zA-Z ]*)\"\$@\1\t\2 (\3)@p"|fzf --border -1 --reverse --height=12 --with-nth 2..)
+    sed -nE "s@\"id\":\"([^\"]*)\",\"title\":\"([^\"]*)\",.*\"type\":\"([a-zA-Z ]*)\"\$@\1\t\2 (\3)@p"|fzf --border -1 --reverse --with-nth 2..)
   [ -z "$movies_choice" ] && exit 0
   media_type=$(printf "%s" "$movies_choice"|sed -nE "s_.*\(([a-zA-Z ]*)\)\$_\1_p")
   media_id=$(printf "%s" "$movies_choice"|cut -f1)
@@ -117,7 +117,7 @@ get_input() {
 }
 
 play_from_history() {
-  selection=$(fzf --border --reverse --tac -1 --cycle --height=12 -d"\t" --with-nth -1 < "$history_file")
+  selection=$(fzf --border --reverse --tac -1 --cycle -d"\t" --with-nth -1 < "$history_file")
   [ -z "$selection" ] && exit 0
   if printf "%s" "$selection"|grep -qE '^movie/';then
     media_type="Movie"
