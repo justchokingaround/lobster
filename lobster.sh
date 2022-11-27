@@ -3,9 +3,10 @@
 
 version="3.0.4"
 base="https://api.consumet.org/movies/flixhq"
-config_file="$HOME/.config/lobster/lobster_config.txt"
-history_file="$HOME/.config/lobster/lobster_history.txt"
-[ ! -d "$HOME/.config/lobster" ] && mkdir -p "$HOME/.config/lobster"
+XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
+config_file="$XDG_CONFIG_HOME/lobster/lobster_config.txt"
+history_file="$XDG_CONFIG_HOME/lobster/lobster_history.txt"
+[ ! -d "$XDG_CONFIG_HOME/lobster" ] && mkdir -p "$XDG_CONFIG_HOME/lobster"
 [ ! -f "$config_file" ] && printf "player=mpv\nsubs_language=English\nvideo_quality=1080\npreferred_server=vidcloud\n" > "$config_file"
 player="$(grep '^player=' "$config_file"|cut -d'=' -f2)" || player="mpv"
 subs_language="$(grep "^subs_language=" "$config_file"|cut -d'=' -f2)" || subs_language="English"
