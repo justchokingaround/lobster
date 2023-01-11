@@ -247,7 +247,7 @@ while getopts "cduUvVhws" opt; do
     d)
       rm -f "$history_file" && printf "History file deleted\n" && exit 0 ;;
     u|U)
-      update=$(curl -s "https://raw.githubusercontent.com/justchokingaround/lobster/master/lobster"||die "Connection error")
+      update=$(curl -s "https://raw.githubusercontent.com/justchokingaround/lobster/master/lobster.sh"||die "Connection error")
       update="$(printf "%s\n" "$update"|diff -u "$(which lobster)" -)"
       if [ -z "$update" ]; then
         printf "Script is up to date :)\n"
