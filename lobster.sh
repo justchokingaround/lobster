@@ -200,8 +200,8 @@ download_season() {
   printf "Loading...\n"
   case "$media_type" in
     "Movie")
-      printf "This is a movie, not a TV Show. Please use -d argument instead.\n"
-      exit 0 ;;
+      printf "This is a movie, not a TV Show. Please use -w argument instead.\n"
+      exit 0 ;
     "TV Series")
       tv_show_json=$(curl -s "$base/info?id=${media_id}")
       if [ -z "$season_number" ] || [ -z "$episode_number" ]; then
