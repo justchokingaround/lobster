@@ -1,4 +1,4 @@
-yy### If you're upgrading from v2 to v3, please delete your old history and configuration file as they might cause the script to break. That can be done with 
+### If you're upgrading from v2 to v3, please delete your old history and configuration file as they might cause the script to break. That can be done with 
 ```sh
 rm ~/.cache/lobster_history.txt && rm ~/.config/lobster/lobster_config.txt
 ```
