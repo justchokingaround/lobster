@@ -1,17 +1,19 @@
-#!/bin/sh
+#!/bin/bash
 # shellcheck disable=SC2034,SC2162
 
-version="3.0.4"
+version="3.0.5"
 base="https://api.consumet.org/movies/flixhq"
 XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
-config_file="$XDG_CONFIG_HOME/lobster/lobster_config.txt"
-history_file="$XDG_CONFIG_HOME/lobster/lobster_history.txt"
-[ ! -d "$XDG_CONFIG_HOME/lobster" ] && mkdir -p "$XDG_CONFIG_HOME/lobster"
-[ ! -f "$config_file" ] && printf "player=mpv\nsubs_language=English\nvideo_quality=1080\npreferred_server=vidcloud\n" > "$config_file"
+config_file="$XDG_CONFIG_HOME/lobster-dl/lobster-dl_config.txt"
+history_file="$XDG_CONFIG_HOME/lobster-dl/lobster-dl_history.txt"
+[ ! -d "$XDG_CONFIG_HOME/lobster-dl" ] && mkdir -p "$XDG_CONFIG_HOME/lobster-dl"
+[ ! -f "$config_file" ] && printf "# Default config file for lobster-dl, edit it as you wish.\n# Please, don't add a / at the end.\nvideo_directory="$HOME/Videos"\nplayer=mpv\nsubs_language=English\nvideo_quality=1080\npreferred_server=vidcloud\n" > "$config_file"
 player="$(grep '^player=' "$config_file"|cut -d'=' -f2)" || player="mpv"
 subs_language="$(grep "^subs_language=" "$config_file"|cut -d'=' -f2)" || subs_language="English"
 video_quality="$(grep "^video_quality=" "$config_file"|cut -d'=' -f2)" || video_quality="1080p"
 server="$(grep "^preferred_server=" "$config_file"|cut -d'=' -f2)" || server="vidcloud"
+video_directory="$(grep '^video_directory=' "$config_file"|cut -d'=' -f2)" || video_directory="$HOME/Videos"
+[ ! -d "video_directory" ] && mkdir -p "$video_directory"
 case "$(uname -s)" in
 	MINGW*|*Msys) separator=';' && path_thing='' ;;
 	*) separator=':' && path_thing="\\" ;;
@@ -23,7 +25,7 @@ play_video() {
   mpv_link=$(printf "%s" "$json_data"|tr "{|}" "\n"|sed -nE "s@\"url\":\"([^\"]*)\",\"quality\":\"$video_quality\",.*@\1@p")
   subs_links=$(printf "%s" "$json_data"|tr "{|}" "\n"|sed -nE "s@\"url\":\"([^\"]*.vtt)\",\"lang\":\"$subs_language.*@\1@p"|sed -e "s/:/\\$path_thing:/g" -e "H;1h;\$!d;x;y/\n/$separator/" -e "s/$separator\$//")
   [ -z "$mpv_link" ] && mpv_link=$(printf "%s" "$json_data"|tr "{|}" "\n"|sed -nE "s@\"url\":\"([^\"]*)\",\"quality\":\".*@\1@p"|head -n1)
-  [ -z "$mpv_link" ] && printf "No links found\n" && exit 1
+  [ -z "$mpv_link" ] && printf "No links found\n"
   [ -z "$subs_links" ] && printf "No subtitles found\n"
     case $player in
       iina)
@@ -72,7 +74,6 @@ history() {
 }
 
 main() {
-  printf "Loading...\n"
   case "$media_type" in
     "Movie")
       episode_id=$(curl -s $base/info?id="$media_id"|tr "{|}" "\n"|sed -nE "s@\"id\":\"([0-9]*)\".*@\1@p")
@@ -143,18 +144,115 @@ play_from_history() {
   fi
 }
 
-while getopts "cduUvVh" opt; do
+download() {
+  get_input
+  printf "Loading...\n"
+  case "$media_type" in
+    "Movie")
+      episode_id=$(curl -s $base/info?id="$media_id"|tr "{|}" "\n"|sed -nE "s@\"id\":\"([0-9]*)\".*@\1@p")
+      video_title="$movie_title"
+      [ ! -d "$video_directory/Movies" ] && mkdir -p "$video_directory/Movies"
+      video_directory="$video_directory/Movies"
+      download_video
+      #printf "Press Enter to save movie progress or Ctrl-C to exit (this will not reset your progress)\n" && read useless
+      #history
+      exit 0 ;;
+    "TV Series")
+      tv_show_json=$(curl -s "$base/info?id=${media_id}")
+      if [ -z "$season_number" ] || [ -z "$episode_number" ]; then
+        number_of_seasons=$(printf "%s" "$tv_show_json"|sed -nE "s@.*\"season\":([0-9]*).*@\1@p")
+        [ "$number_of_seasons" -gt 1 ] && printf "Please choose a season number between 1 and %s: " \
+          "$number_of_seasons" && read -r season_number || season_number=1
+        [ -z "$season_number" ] && season_number=$number_of_seasons
+        number_of_episodes_in_season=$(printf "%s" "$tv_show_json"|sed -nE "s@.*\"number\":([0-9]*),\"season\":$season_number.*@\1@p")
+        [ "$number_of_episodes_in_season" -gt 1 ] && printf "Please choose an episode number between 1 and %s: " \
+          "$number_of_episodes_in_season" && read -r episode_number || episode_number=1
+        [ -z "$episode_number" ] && episode_number=$number_of_episodes_in_season
+      fi
+      episode=$(printf "%s" "$tv_show_json"|sed -nE "s@.*\"id\":\"([0-9]*)\",\"title\":\"([^\"]*)\",\"number\":$episode_number,\"season\":$season_number.*@\1\t\2@p")
+      episode_id=$(printf "%s" "$episode"|cut -f1)
+      episode_title=$(printf "%s" "$episode"|cut -f2)
+      video_title="${movie_title} - S${season_number} ${episode_title}"
+      mkdir -p "$video_directory/Series/$movie_title/Season $season_number/"
+      video_directory="$video_directory/Series/$movie_title/Season $season_number"
+      download_video
+      #printf "Press Enter to save episode progress or Ctrl-C to exit (this will not reset your progress)\n" && read useless
+      #history
+      exit 0
+      ;;
+  esac
+}
+
+download_video() {
+  json_data=$(curl -s "$base/watch?episodeId=${episode_id}&mediaId=${media_id}&server=${server}&")
+  referrer=$(printf "%s" "$json_data"|tr "{|}" "\n"|sed -nE "s@\"Referer\":\"([^\"]*)\"@\1@p")
+  mpv_link=$(printf "%s" "$json_data"|tr "{|}" "\n"|sed -nE "s@\"url\":\"([^\"]*)\",\"quality\":\"$video_quality\",.*@\1@p")
+  subs_links=$(printf "%s" "$json_data"|tr "{|}" "\n"|sed -nE "s@\"url\":\"([^\"]*.vtt)\",\"lang\":\"$subs_language.*@\1@p"|sed -e "s/:/\\$path_thing:/g" -e "H;1h;\$!d;x;y/\n/$separator/" -e "s/$separator\$//")
+  [ -z "$mpv_link" ] && mpv_link=$(printf "%s" "$json_data"|tr "{|}" "\n"|sed -nE "s@\"url\":\"([^\"]*)\",\"quality\":\".*@\1@p"|head -n1)
+  [ -z "$mpv_link" ] && printf "No links found\n" && exit 1
+  [ -z "$subs_links" ] && printf "No subtitles found\n"
+  clean_title="${video_title//[^[:alnum:] -]/}"
+  ffmpeg -i "$mpv_link" -c copy -bsf:a aac_adtstoasc "$video_directory/$clean_title".mp4
+}
+
+download_season() {
+  get_input
+  printf "Loading...\n"
+  case "$media_type" in
+    "Movie")
+      printf "This is a movie, not a TV Show. Please use -d argument instead.\n"
+      exit 0 ;;
+    "TV Series")
+      tv_show_json=$(curl -s "$base/info?id=${media_id}")
+      if [ -z "$season_number" ] || [ -z "$episode_number" ]; then
+        number_of_seasons=$(printf "%s" "$tv_show_json"|sed -nE "s@.*\"season\":([0-9]*).*@\1@p")
+        [ "$number_of_seasons" -gt 1 ] && printf "Please choose a season number between 1 and %s: " \
+          "$number_of_seasons" && read -r season_number || season_number=1
+        [ -z "$season_number" ] && season_number=$number_of_seasons
+        number_of_episodes_in_season=$(printf "%s" "$tv_show_json"|sed -nE "s@.*\"number\":([0-9]*),\"season\":$season_number.*@\1@p")
+        #[ "$number_of_episodes_in_season" -gt 1 ] && printf "Please choose an episode number between 1 and %s: " \
+        #  "$number_of_episodes_in_season" && read -r episode_number || episode_number=1
+        #[ -z "$episode_number" ] && episode_number=$number_of_episodes_in_season
+      fi
+      i=1
+      mkdir -p "$video_directory/Series/$movie_title/Season $season_number/"
+      video_directory="$video_directory/Series/$movie_title/Season $season_number"
+      while [[ $i -le $number_of_episodes_in_season ]]
+      do
+        printf "Downloading episode $i from season $season_number\n"
+        episode=$(printf "%s" "$tv_show_json"|sed -nE "s@.*\"id\":\"([0-9]*)\",\"title\":\"([^\"]*)\",\"number\":$i,\"season\":$season_number.*@\1\t\2@p")
+        episode_id=$(printf "%s" "$episode"|cut -f1)
+        episode_title=$(printf "%s" "$episode"|cut -f2)
+        video_title="${movie_title} - S${season_number} ${episode_title}"
+        download_video
+        ((i = i + 1))
+      done
+      #episode=$(printf "%s" "$tv_show_json"|sed -nE "s@.*\"id\":\"([0-9]*)\",\"title\":\"([^\"]*)\",\"number\":$episode_number,\"season\":$season_number.*@\1\t\2@p")
+      #episode_id=$(printf "%s" "$episode"|cut -f1)
+      #episode_title=$(printf "%s" "$episode"|cut -f2)
+      #video_title="${movie_title} - S${season_number} ${episode_ti  tle}"
+      #download_video
+      #printf "Press Enter to save episode progress or Ctrl-C to exit (this will not reset your progress)\n" && read useless
+      #history
+      exit 0
+      ;;
+  esac
+}
+
+while getopts "cduUvVhws" opt; do
   case $opt in
+    w) download ;;
+    s) download_season ;;
     c) play_from_history ;;
     d)
       rm -f "$history_file" && printf "History file deleted\n" && exit 0 ;;
     u|U)
-      update=$(curl -s "https://raw.githubusercontent.com/justchokingaround/lobster/master/lobster.sh"||die "Connection error")
-      update="$(printf "%s\n" "$update"|diff -u "$(which lobster)" -)"
+      update=$(curl -s "https://raw.githubusercontent.com/gaslec/lobster-dl/master/lobster-dl"||die "Connection error")
+      update="$(printf "%s\n" "$update"|diff -u "$(which lobster-dl)" -)"
       if [ -z "$update" ]; then
         printf "Script is up to date :)\n"
       else
-        if printf "%s\n" "$update"|patch "$(which lobster)" - ; then
+        if printf "%s\n" "$update"|patch "$(which lobster-dl)" - ; then
           printf "Script has been updated\n"
         else
           printf "Can't update for some reason!\n"
@@ -162,10 +260,12 @@ while getopts "cduUvVh" opt; do
       fi
       exit 0 ;;
     v|V)
-      printf "Lobster version: %s\n" "$version" && exit 0 ;;
+      printf "lobster-dl version: %s\n" "$version" && exit 0 ;;
     h)
-      printf "Usage: lobster [arg] or lobster [movie/TV show name]\n"
-      printf "Play movies and TV shows from flixhq.to\n"
+      printf "Usage: lobster-dl [arg] or lobster-dl [movie/TV show name]\n"
+      printf "Play and download movies as well as TV shows from flixhq.to\n"
+      printf "  -w, \t\tDownload the video instead of watching it directly\n"
+      printf "  -s, \t\tDownload the entire season instead of just one episode\n"
       printf "  -c, \t\tContinue watching from last minute saved\n"
       printf "  -d, \t\tDelete history file\n"
       printf "  -u, \t\tUpdate script\n"
