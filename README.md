@@ -1,19 +1,19 @@
 ### If you're upgrading from v2 to v3, please delete your old history and configuration file as they might cause the script to break. That can be done with 
 ```sh
-rm ~/.cache/lobster_history.txt && rm ~/.config/lobster/lobster_config.txt
+rm ~/.cache/lobster-dl_history.txt && rm ~/.config/lobster-dl/lobster-dl_config.txt
 ```
 
 ## Install
 ### Linux
 ```sh
-sudo curl -sL github.com/justchokingaround/lobster/raw/main/lobster.sh -o /usr/local/bin/lobster &&
-sudo chmod +x /usr/local/bin/lobster
+sudo curl -sL github.com/gaslec/lobster-dl/raw/main/lobster-dl.sh -o /usr/local/bin/lobster-dl &&
+sudo chmod +x /usr/local/bin/lobster-dl
 ```
 
 ### Mac
 ```sh
-curl -sL github.com/justchokingaround/lobster/raw/main/lobster.sh -o "$(brew --prefix)"/bin/lobster &&
-chmod +x "$(brew --prefix)"/bin/lobster
+curl -sL github.com/gaslec/lobster-dl/raw/main/lobster-dl.sh -o "$(brew --prefix)"/bin/lobster-dl &&
+chmod +x "$(brew --prefix)"/bin/lobster-dl
 ```
 
 ### Windows
@@ -65,26 +65,26 @@ https://learn.microsoft.com/en-us/windows/terminal/install
 
 6. Clone the repo and go inside it
 ```sh
-git clone https://github.com/justchokingaround/lobster && cd lobster
+git clone https://github.com/gaslec/lobster-dl && cd lobster-dl
 ```
 7. Add the script to default path for binaries
 ```sh
-cp lobster.sh /usr/bin/lobster
+cp lobster-dl.sh /usr/bin/lobster-dl
 ```
-8. Use lobster (either with git bash or windows terminal)
+8. Use lobster-dl (either with git bash or windows terminal)
 ```sh
-lobster <args> or lobster [movie/tv show]
+lobster-dl <args> or lobster-dl [movie/tv show]
 ```
 
 ### Termux (Android)
 ```sh
 pkg up -y && pkg install fzf
-curl -sL github.com/justchokingaround/lobster/raw/main/lobster.sh -o "$PREFIX"/bin/lobster
-chmod +x "$PREFIX"/bin/lobster
+curl -sL github.com/gaslec/lobster-dl/raw/main/lobster-dl.sh -o "$PREFIX"/bin/lobster-dl
+chmod +x "$PREFIX"/bin/lobster-dl
 ```
 
 ## Configuration
-Settings are stored in `~/.config/lobster/lobster_config.txt`. The file is created on first launch with the default options and looks like this
+Settings are stored in `~/.config/lobster-dl/lobster-dl_config.txt`. The file is created on first launch with the default options and looks like this
 ```
 player=mpv
 subs_language=English
@@ -105,19 +105,21 @@ The `preferred_server` setting can be either `vidcloud` or `upcloud`.
 * If any of the above settings is wrong, e.g. if `video_quality` is set to a value like 480, the script will fail with a `No links found` message and nothing will be played. However, if the subs_language is set to a language that is not available, the script will just show a `No subtitles found` message but will play the stream.
 
 ## History
-In a similar fashion to how saving your position when you watch videos on YouTube or Netflix, lobster has history support and saves the last minute you watched for a movie or tv show. To use this feature, simply watch a movie or an episode from a tv show, and after you quit mpv press Enter to save the position (there will be a prompt telling you to do that). The next time you want to resume from the last position watched, you can just run 
+In a similar fashion to how saving your position when you watch videos on YouTube or Netflix, lobster-dl has history support and saves the last minute you watched for a movie or tv show. To use this feature, simply watch a movie or an episode from a tv show, and after you quit mpv press Enter to save the position (there will be a prompt telling you to do that). The next time you want to resume from the last position watched, you can just run 
 ```sh
-lobster -c
+lobster-dl -c
 ```
 which will prompt you to chose which of the saved movies/tv shows you'd like to resume from.
 
 #### Please note:
 * If there is only one entry in the history file, it'll be automatically selected
-* The history file can be found at `~/.config/lobster_history.txt` 
+* The history file can be found at `~/.config/lobster-dl_history.txt` 
 * A movie or TV show episode is automatically marked as completed/updated after the user watches more than 85% of its content*
 
 ## Arguments
 ```
+-w,           download movie or episode
+-s,           download full season
 -c,           continue from history (saves the your progress in minutes)
 -d,           delete history
 -u, -U        update script
@@ -132,6 +134,7 @@ which will prompt you to chose which of the saved movies/tv shows you'd like to 
 - sed
 - patch
 - mpv
+- ffmpeg (optional)
 - vlc (optional)
 - iina (optional)
 - android vlc & mpv (optional)
@@ -145,15 +148,15 @@ git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf
 ## Uninstall
 ### Linux
 ```sh
-sudo rm /usr/local/bin/lobster
+sudo rm /usr/local/bin/lobster-dl
 ```
 
 ### Mac
 ```sh
-rm "$(brew --prefix)"/bin/lobster
+rm "$(brew --prefix)"/bin/lobster-dl
 ```
 
 ### Windows
 ```sh
-rm /usr/bin/lobster
+rm /usr/bin/lobster-dl
 ```
