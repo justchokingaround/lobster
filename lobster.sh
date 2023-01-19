@@ -85,6 +85,7 @@ main() {
       history
       exit 0 ;;
     "TV Series")
+      [ "$player" = "download" ] && ask_download && exit 0
       tv_show_json=$(curl -s "$base/info?id=${media_id}")
       if [ -z "$season_number" ] || [ -z "$episode_number" ]; then
         number_of_seasons=$(printf "%s" "$tv_show_json"|sed -nE "s@.*\"season\":([0-9]*).*@\1@p")
@@ -151,9 +152,34 @@ download() {
   main
 }
 
-while getopts "cduUvVhw" opt; do
+ask_download() {
+  tv_show_json=$(curl -s "$base/info?id=${media_id}")
+  if [ -z "$season_number" ] || [ -z "$episode_number" ]; then
+    number_of_seasons=$(printf "%s" "$tv_show_json"|sed -nE "s@.*\"season\":([0-9]*).*@\1@p")
+    [ "$number_of_seasons" -gt 1 ] && printf "Please choose a season number between 1 and %s: " \
+       "$number_of_seasons" && read -r season_number || season_number=1
+    [ -z "$season_number" ] && season_number=$number_of_seasons
+    number_of_episodes_in_season=$(printf "%s" "$tv_show_json"|sed -nE "s@.*\"number\":([0-9]*),\"season\":$season_number.*@\1@p")
+    [ "$number_of_episodes_in_season" -gt 1 ] && printf "To specify a range, use: start_number end_number (Episodes: 1-$number_of_episodes_in_season): " \
+       "$number_of_episodes_in_season" && read -r start end || episode_number=1
+    [ -z "$episode_number" ] && episode_number=$number_of_episodes_in_season
+    fi
+    [ -z "$end" ] && end="$start"
+    while [ "$start" -le "$end" ]; do
+      episode=$(printf "%s" "$tv_show_json"|sed -nE "s@.*\"id\":\"([0-9]*)\",\"title\":\"([^\"]*)\",\"number\":$start,\"season\":$season_number.*@\1\t\2@p")
+      episode_id=$(printf "%s" "$episode"|cut -f1)
+      episode_title=$(printf "%s" "$episode"|cut -f2)
+      video_title="${movie_title} - S${season_number} ${episode_title}"
+      printf "Downloading $video_title\n"
+      play_video
+      start=$((start+1))
+    done
+}
+
+while getopts "cduUvVhwe" opt; do
   case $opt in
     c) play_from_history ;;
+    e) ep_no="$2" && shift 2 ;;
     w) player=download && download ;;
     d)
       rm -f "$history_file" && printf "History file deleted\n" && exit 0 ;;
