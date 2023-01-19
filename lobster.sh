@@ -35,6 +35,9 @@ play_video() {
         else
           vlc "$mpv_link" --http-referrer="$referrer" --meta-title "$video_title"
         fi ;;
+      download)
+        ffmpeg -loglevel error -stats -i "$mpv_link" -c copy "$video_title".mp4
+        ;;
       *)
         if uname -a | grep -qE '[Aa]ndroid';then
           am start --user 0 -a android.intent.action.VIEW -d "$video_title" -n is.xyz.mpv/.MPVActivity > /dev/null 2>&1 &
@@ -143,9 +146,15 @@ play_from_history() {
   fi
 }
 
-while getopts "cduUvVh" opt; do
+download() {
+  get_input "$*"
+  main
+}
+
+while getopts "cduUvVhw" opt; do
   case $opt in
     c) play_from_history ;;
+    w) player=download && download ;;
     d)
       rm -f "$history_file" && printf "History file deleted\n" && exit 0 ;;
     u|U)
