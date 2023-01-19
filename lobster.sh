@@ -179,7 +179,6 @@ ask_download() {
 while getopts "cduUvVhwe" opt; do
   case $opt in
     c) play_from_history ;;
-    e) ep_no="$2" && shift 2 ;;
     w) player=download && download ;;
     d)
       rm -f "$history_file" && printf "History file deleted\n" && exit 0 ;;
@@ -201,6 +200,7 @@ while getopts "cduUvVhwe" opt; do
     h)
       printf "Usage: lobster [arg] or lobster [movie/TV show name]\n"
       printf "Play movies and TV shows from flixhq.to\n"
+      printf "  -w, \t\tDownload a movie or a range of episodes from a TV Series\n"
       printf "  -c, \t\tContinue watching from last minute saved\n"
       printf "  -d, \t\tDelete history file\n"
       printf "  -u, \t\tUpdate script\n"
