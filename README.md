@@ -71,7 +71,13 @@ git clone https://github.com/justchokingaround/lobster && cd lobster
 ```sh
 cp lobster.sh /usr/bin/lobster
 ```
-8. Use lobster (either with git bash or windows terminal)
+
+8. Denote permission to access the file in executable mode
+```sh
+sudo chmod +x /usr/bin/lobster
+```
+
+9. Use lobster (either with git bash or windows terminal)
 ```sh
 lobster <args> or lobster [movie/tv show]
 ```
