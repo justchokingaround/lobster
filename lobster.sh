@@ -197,7 +197,8 @@ play_video() {
 			am start --user 0 -a android.intent.action.VIEW -d "$title" -n is.xyz.mpv/.MPVActivity >/dev/null 2>&1 &
 		else
 			[ -z "$resume_from" ] && opts="" || opts="--start=${resume_from}"
-			nohup mpv "$opts" --sub-file="$subs_links" --force-media-title="$title" --input-ipc-server=/tmp/mpvsocket "$video_link" >/dev/null 2>&1 &
+			[ -n "$subs_links" ] && nohup mpv "$opts" --sub-file="$subs_links" --force-media-title="$title" --input-ipc-server=/tmp/mpvsocket "$video_link" >/dev/null 2>&1 &
+			[ -z "$subs_links" ] && nohup mpv "$opts" --force-media-title="$title" --input-ipc-server=/tmp/mpvsocket "$video_link" >/dev/null 2>&1 &
 			PID=$!
 			while ! ps -p $PID >/dev/null; do
 				sleep 0.1
