@@ -198,8 +198,8 @@ play_video() {
 		if uname -a | grep -qE '[Aa]ndroid'; then
 			am start --user 0 -a android.intent.action.VIEW -d "$title" -n is.xyz.mpv/.MPVActivity >/dev/null 2>&1 &
 		else
-			[ "$resume_from" = "" ] && opts="" || opts="--start=${resume_from}"
-			if [ "$subs_links" = "" ]; then
+			[ -z "$resume_from" ] && opts="" || opts="--start=${resume_from}"
+			if [ -n "$subs_links" ]; then
 				nohup mpv "$opts" --sub-file="$subs_links" --force-media-title="$title" --input-ipc-server=/tmp/mpvsocket "$video_link" >/dev/null 2>&1 &
 			else
 				nohup mpv "$opts" --force-media-title="$title" --input-ipc-server=/tmp/mpvsocket "$video_link" >/dev/null 2>&1 &
@@ -296,16 +296,17 @@ get_links() {
 	json_data=$(curl -s "${provider_link}/ajax/embed-${embed_type}/getSources?id=${source_id}" -H "X-Requested-With: XMLHttpRequest")
 
 	if printf "%s" "$json_data" | tr "{|}" "\n" | sed -nE "s_.*\"file\":\"([^\"]*)\".*_\1_p" | grep -q "https"; then
-		video_link=$(printf "%s" "$json_data" | tr "{|}" "\n" | sed -nE "s_.*\"file\":\"([^\"]*)\".*_\1_p")
+		video_link=$(printf "%s" "$json_data" | tr "{|}" "\n" | sed -nE "s_.*\"file\":\"([^\"]*)\".*_\1_p" | head -1)
 	else
-		video_link=$(printf "%s" "$json_data" | tr "{|}" "\n" | sed -nE "s_.*\"file\":\"([^\"]*)\".*_\1_p" | base64 -d |
+		video_link=$(printf "%s" "$json_data" | tr "{|}" "\n" | sed -nE "s_.*\"file\":\"([^\"]*)\".*_\1_p" | head -1 | base64 -d |
 			openssl enc -aes-256-cbc -d -md md5 -k "$key" 2>/dev/null | sed -nE "s_.*\"file\":\"([^\"]*)\".*_\1_p")
 	fi
-	episode_links=$(printf "%s" "$json_data" | sed -E "s@sources\":\"[^\"]*\"@sources\":\"$video_link\"@")
+	# TODO: Fix this
+	# episode_links=$(printf "%s" "$json_data" | sed -E "s@sources\":\"[^\"]*\"@sources\":\"$video_link\"@")
 
 	[ "$json_output" = "true" ] && printf "%s\n" "$episode_links"
 	[ "$json_output" = "true" ] && exit 0
-	subs_links=$(printf "%s" "$episode_links" | tr "{|}" "\n" | sed -nE "s@\"file\":\"([^\"]*)\".*\"$subs_language.*@\1@p" | head -1)
+	subs_links=$(printf "%s" "$json_data" | tr "{|}" "\n" | sed -nE "s@\"file\":\"([^\"]*)\".*\"$subs_language.*@\1@p" | head -1)
 	#[ $(printf "%s" "$subs_links" | wc -l) -gt 1 ] && subs_links=$(printf "%s" "$subs_links" | sed -e "s/:/\\$path_thing:/g" -e "H;1h;\$!d;x;y/\n/$separator/" -e "s/$separator\$//")
 	[ -z "$subs_links" ] && printf "No subtitles found\n"
 }
