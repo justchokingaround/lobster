@@ -25,7 +25,9 @@ dep_ch() {
 }
 dep_ch "grep" "sed" "awk" "curl" "perl" "fzf" "mpv" || true
 cleanup() {
-	rm -rf "$images_cache_dir" && exit
+	rm -rf "$images_cache_dir"
+	rm /tmp/lobster_position
+	exit
 }
 trap cleanup EXIT INT TERM
 
@@ -196,9 +198,12 @@ play_video() {
 		if uname -a | grep -qE '[Aa]ndroid'; then
 			am start --user 0 -a android.intent.action.VIEW -d "$title" -n is.xyz.mpv/.MPVActivity >/dev/null 2>&1 &
 		else
-			[ -z "$resume_from" ] && opts="" || opts="--start=${resume_from}"
-			[ -n "$subs_links" ] && nohup mpv "$opts" --sub-file="$subs_links" --force-media-title="$title" --input-ipc-server=/tmp/mpvsocket "$video_link" >/dev/null 2>&1 &
-			[ -z "$subs_links" ] && nohup mpv "$opts" --force-media-title="$title" --input-ipc-server=/tmp/mpvsocket "$video_link" >/dev/null 2>&1 &
+			[ "$resume_from" = "" ] && opts="" || opts="--start=${resume_from}"
+			if [ "$subs_links" = "" ]; then
+				nohup mpv "$opts" --sub-file="$subs_links" --force-media-title="$title" --input-ipc-server=/tmp/mpvsocket "$video_link" >/dev/null 2>&1 &
+			else
+				nohup mpv "$opts" --force-media-title="$title" --input-ipc-server=/tmp/mpvsocket "$video_link" >/dev/null 2>&1 &
+			fi
 			PID=$!
 			while ! ps -p $PID >/dev/null; do
 				sleep 0.1
@@ -207,9 +212,10 @@ play_video() {
 
 			while ps -p $PID >/dev/null; do
 				position=$(echo '{ "command": ["get_property", "time-pos"] }' | socat - /tmp/mpvsocket | sed -nE "s@.*\"data\":([0-9\.]*),.*@\1@p")
+				[ "$position" != "" ] && printf "%s" "$position" >/tmp/lobster_position
 				sleep 1
 			done
-			position=$(date -u -d "@$position" +%T)
+			position=$(date -u -r "$(printf "%.0f" "$(cat /tmp/lobster_position)")" "+%H:%M:%S")
 			[ -n "$position" ] && send_notification "Stopped at $position" "5000" "$images_cache_dir/$media_id.jpg"
 		fi
 		;;
