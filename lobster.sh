@@ -121,7 +121,7 @@ select_episode() {
 }
 
 choose_from_list() {
-	list=$(curl -s "https://${base}/search/$query" | sed -nE "s@.*data-src=\"(.*)\".*@\1@p;s@.*<a href=\"(.*watch-.*)\".*@\1@p; s@.*class=\"film-poster-img lazyload\" title=\"(.*)\".*@\1@p;" | sed "N;N;s/\n/{/g" | perl -MHTML::Entities -pe 'decode_entities($_);')
+	list=$(curl -s "https://${base}/search/$query" | sed ':a;N;$!ba;s/\n//g;s/class="film-detail"/\n/g' | sed -nE 's@.*data-src="([^"]*)".*<a href="(.*watch-[^"]*)".*title="([^"]*)".*@\1{\3{\2@p' | perl -MHTML::Entities -pe 'decode_entities($_);')
 	# if the list only contains one entry, then auto select it
 	if [ "$(printf "%s" "$list" | wc -l)" -lt 1 ]; then
 		send_notification "Since only one entry was found, it was automatically selected" "3000"
