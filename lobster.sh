@@ -26,7 +26,7 @@ dep_ch() {
 dep_ch "grep" "sed" "awk" "curl" "perl" "fzf" "mpv" || true
 cleanup() {
 	rm -rf "$images_cache_dir"
-	rm /tmp/lobster_position
+	[ -f /tmp/lobster_position ] && rm /tmp/lobster_position
 	exit
 }
 trap cleanup EXIT INT TERM
@@ -294,11 +294,12 @@ get_links() {
 
 	json_data=$(curl -s "${provider_link}/ajax/embed-${embed_type}/getSources?id=${source_id}" -H "X-Requested-With: XMLHttpRequest")
 
-	if printf "%s" "$json_data" | tr "{|}" "\n" | sed -nE "s_.*\"file\":\"([^\"]*)\".*_\1_p" | grep -q "https"; then
+	if printf "%s" "$json_data" | tr "{|}" "\n" | sed -nE "s_.*\"file\":\"([^\"]*)\".*_\1_p" | grep -q "\.m3u8"; then
 		video_link=$(printf "%s" "$json_data" | tr "{|}" "\n" | sed -nE "s_.*\"file\":\"([^\"]*)\".*_\1_p" | head -1)
 	else
 		key="$(curl -s "https://github.com/enimax-anime/key/blob/e${embed_type}/key.txt" | sed -nE "s_.*js-file-line\">(.*)<.*_\1_p")"
-		video_link=$(printf "%s" "$json_data" | tr "{|}" "\n" | sed -nE "s_.*\"file\":\"([^\"]*)\".*_\1_p" | head -1 | base64 -d |
+		# json_data='{"sources":"U2FsdGVkX1/FFrM4Q3+gr/QZiMDJWG+eemoDuag4k2JQ+pJgP4JljPwS9eTsOUavYqueiW1ZNfy/5wHR9SSeSbSiHnYOFy+OGZ2i6Ua7xRlZAeS34HHauYcQb8bVI/W/7kjc4lqf3TJ5o7VPKK/7MCkyAMGuxi9rKxi1dOPdht5KCCi5tpzPQkogseyYGyHoUZ+mG5ks4FvtQjFxbeaX458VyFoC757MsUZJ1OZj0FGVBlZ0G7VMEzx00c+3IM4cVSqzJqffvJh8hxZ6W8dttKeCGit+WvFWq6/sS/Xxn7Bx4p9tpnpO1uFEiSM7XWPK/PITDDfS3qn5LBF0Lr56e3sYnMEJsqEKrMqin/aJRG9Cqm67kk9N4cFvErzLAJ8w1Fdu7eIPSIKPvm8kboMk9eNRbPBUuokLHwnNo0lX1U5bfg+hKvtPrHz5qYMD1+V0hIIsnf4uNJx/WB5luq4YLuv8sDhv2LsLuwMfnZ5bjLijLNDe0tekWJMV/HvYbwEIM80Jbn5gU8jJhMrn6OVeLC7S/W8fEpCn6UR+V5v8JEc4vljSpOyyMcEK5/TIyIiZ","tracks":[{"file":"https://cc.2cdns.com/30/0d/300da5b98ce4991553bb752f97ffb156/300da5b98ce4991553bb752f97ffb156.vtt","label":"English","kind":"captions","default":true},{"file":"https://prev.2cdns.com/_m_preview/e8/e8c05b70294a004173d8514ed4f6cc6f/thumbnails/sprite.vtt","kind":"thumbnails"}],"server":18}'
+		video_link=$(printf "%s" "$json_data" | tr "{|}" "\n" | sed -nE "s_.*\"sources\":\"([^\"]*)\".*_\1_p" | head -1 | base64 -d |
 			openssl enc -aes-256-cbc -d -md md5 -k "$key" 2>/dev/null | sed -nE "s_.*\"file\":\"([^\"]*)\".*_\1_p")
 	fi
 	# TODO: Fix this
