@@ -194,7 +194,7 @@ play_video() {
 			vlc "$video_link" --meta-title "$title"
 		fi
 		;;
-	*)
+	mpv)
 		if uname -a | grep -qE '[Aa]ndroid'; then
 			am start --user 0 -a android.intent.action.VIEW -d "$title" -n is.xyz.mpv/.MPVActivity >/dev/null 2>&1 &
 		else
@@ -219,6 +219,7 @@ play_video() {
 			[ -n "$position" ] && send_notification "Stopped at $position" "5000" "$images_cache_dir/$media_id.jpg"
 		fi
 		;;
+	*) $player "$video_link" ;;
 	esac
 }
 
