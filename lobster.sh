@@ -152,7 +152,7 @@ choose_from_list() {
 			media_type=$(printf "%s" "$href" | cut -d/ -f2)
 			printf "[%s]\t%s (%s)\x00icon\x1f%s/%s.jpg\n" "$href" "$title" "$media_type" "$images_cache_dir" "$media_id"
 		done | rofi -dmenu -i -p "" -theme "$image_config_path" -mesg "Choose a Movie or TV Show: " -display-columns 2..)
-		media_type=$(printf "%s" "$choice" | sed -nE "s@.*\((.*)\)\$@\1@p")
+		media_type=$(printf "%s" "$choice" | sed -nE "s@.*\((.*)\).*@\1@p")
 		href=$(printf "%s" "$choice" | sed -nE "s@.*\[(.*)\].*@\1@p")
 		media_id=$(printf "%s" "$href" | sed -nE "s@.*-([0-9]*)\$@\1@p")
 		title=$(printf "%s" "$choice" | sed -nE "s@.*\[$href\]\t(.*) \(.*\)@\1@p")
@@ -215,7 +215,8 @@ play_video() {
 				[ "$position" != "" ] && printf "%s" "$position" >/tmp/lobster_position
 				sleep 1
 			done
-			position=$(date -u -r "$(printf "%.0f" "$(cat /tmp/lobster_position)")" "+%H:%M:%S")
+			# position=$(date -u -r "$(printf "%.0f" "$(cat /tmp/lobster_position)")" "+%H:%M:%S")
+      position=$(date -u -d "@$position" +%T)
 			[ -n "$position" ] && send_notification "Stopped at $position" "5000" "$images_cache_dir/$media_id.jpg"
 		fi
 		;;
