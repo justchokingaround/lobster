@@ -100,12 +100,13 @@ lobster <args> or lobster [movie/tv show]
 Settings are stored in `~/.config/lobster/lobster_config.txt`. Here is an example configuration file containing the values that you can change:
 
 ```
-use_external_menu="0"
-image_preview="0"
+history=0
+use_external_menu=0
+image_preview=0
 image_config_path="$HOME/.config/rofi/styles/launcher.rasi"
 subs_language="English"
 player="mpv"
-json_output="0"
+json_output=0
 histfile="$HOME/.local/share/lobster_history.txt"
 cache_dir="/tmp/lobster"
 images_cache_dir="/tmp/lobster-images"
@@ -200,6 +201,11 @@ Also supported as command line arguments: `-j`, `--json`
 </details>
 
 ## History
+
+This feature is disabled by default, to enable it, you need add the following line to the `lobster_config.txt` file:
+```sh
+history=1
+```
 
 In a similar fashion to how saving your position when you watch videos on YouTube or Netflix, lobster has history support and saves the last minute you watched for a Movie or TV Show episode. To use this feature, simply watch a Movie or an episode from a TV Show, and after you quit mpv the history will be automatically updated. The next time you want to resume from the last position watched, you can just run
 
