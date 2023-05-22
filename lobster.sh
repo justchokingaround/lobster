@@ -53,6 +53,7 @@ configuration() {
 	[ -z "$base" ] && base="flixhq.to"
 	[ -z "$player" ] && player="mpv"
   [ -z "$history" ] && history=0
+  [ -z "$quality" ] && quality="1080"
 	[ -z "$subs_language" ] && subs_language="english"
   subs_language="$(printf "%s" "$subs_language" | cut -c2-)"
 	[ -z "$preferred_provider" ] && provider="Vidcloud" || provider="$preferred_provider"
@@ -123,6 +124,8 @@ usage() {
       Specify the provider to watch from (default: Vidcloud) (currently supported: Vidcloud)
     -j, --json
       Outputs the json containing video links, subtitle links, referrers etc. to stdout
+    -q, --quality
+      Specify the video quality (default: 1080)
     --rofi, --dmenu, --external-menu
       Use rofi instead of fzf
     -t, --trending
@@ -144,7 +147,7 @@ usage() {
 
     Some example usages:
      ${0##*/} -i a silent voice --rofi
-     ${0##*/} -l spanish fight club -i -d
+     ${0##*/} -l spanish -q 720 fight club -i -d
      ${0##*/} -l spanish blade runner --json
 
 " "${0##*/}"
@@ -239,6 +242,7 @@ extract_from_json() {
 			openssl enc -aes-256-cbc -d -md md5 -k "$key" 2>/dev/null | sed -nE "s_.*\"file\":\"([^\"]*)\".*_\1_p")
         json_data=$(printf "%s" "$json_data" | sed -e "s|${encrypted_video_link}|${video_link}|")
 	fi
+  video_link=$(printf "%s" "$video_link" | sed -e "s|/playlist.m3u8|/$quality/index.m3u8|")
 
 	[ "$json_output" = "1" ] && printf "%s\n" "$json_data" && exit 0
 	subs_links=$(printf "%s" "$json_data" | tr "{}" "\n" | sed -nE "s@\"file\":\"([^\"]*)\",\"label\":\"(.$subs_language)[,\"\ ].*@\1@p")
@@ -397,7 +401,7 @@ loop() {
     [ "$history" = 1 ] && save_history
     prompt_to_continue
     case "$continue_choice" in
-      "Yes") continue ;;
+      "Yes") resume_from="" && continue ;;
       "Search") 
         query=""
         response=""
@@ -422,7 +426,7 @@ main() {
     if [ "$use_external_menu" = "0" ]; then
       command -v "ueberzugpp" >/dev/null || send_notification "Please install ueberzugpp if you want to use image preview with fzf"
     fi
-    download_thumbnails "$response" "2"
+    download_thumbnails "$response" "3"
     select_desktop_entry ""
   else
     [ "$use_external_menu" = "1" ] && choice=$(printf "%s" "$response" | rofi -dmenu -p "" -mesg "Choose a Movie or TV Show" -display-columns 1)
@@ -498,6 +502,7 @@ while [ $# -gt 0 ]; do
 	-e | --edit) [ -f "$config_file" ] && "$lobster_editor" "$config_file" && exit 0 || exit 0 ;;
 	-p | --provider) preferred_provider="$2" && shift 2 ;;
 	-j | --json) json_output="1" && shift ;;
+  -q | --quality) quality="$2" && shift 2 ;;
   --rofi | --dmenu | --external-menu) use_external_menu="1" && shift ;;
   -t | --trending) trending="1" && shift ;;
   -r | --recent) recent="1" && shift ;;

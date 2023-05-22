@@ -106,6 +106,7 @@ image_preview=0
 image_config_path="$HOME/.config/rofi/styles/launcher.rasi"
 subs_language="English"
 player="mpv"
+quality="1080"
 json_output=0
 histfile="$HOME/.local/share/lobster_history.txt"
 cache_dir="/tmp/lobster"
@@ -187,6 +188,16 @@ There are 3 available video players to chose from : `mpv`, `iina` or `vlc`.
 
 Note that only `mpv` supports the history feature.
 
+### Quality
+
+You can set your preferred quality for the video either in the config file with for example:
+
+```sh
+quality=720
+```
+
+Or with a commandline argument: `lobster -q 720 <movie/tv show>`
+
 ### JSON Output
 
 By setting the value of `json_output` to `1` you can output the json for the currently selected media to stdout, with the decrypted video link.
@@ -247,6 +258,8 @@ which will prompt you to chose which of the saved Movies/TV Showvs you'd like to
       Specify the provider to watch from (default: Vidcloud) (currently supported: Vidcloud)
     -j, --json
       Outputs the json containing video links, subtitle links, referrers etc. to stdout
+    -q, --quality
+      Specify the video quality (default: 1080)
     --rofi, --dmenu, --external-menu
       Use rofi instead of fzf
     -t, --trending
