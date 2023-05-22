@@ -52,19 +52,16 @@ configuration() {
   export Y=$(($(tput lines) / 6))
 	[ -z "$base" ] && base="flixhq.to"
 	[ -z "$player" ] && player="mpv"
+  [ -z "$history" ] && history=0
 	[ -z "$subs_language" ] && subs_language="english"
   subs_language="$(printf "%s" "$subs_language" | cut -c2-)"
 	[ -z "$preferred_provider" ] && provider="Vidcloud" || provider="$preferred_provider"
 	[ -z "$histfile" ] && histfile="$data_dir/lobster_history.txt" && mkdir -p "$(dirname "$histfile")"
 	[ -z "$use_external_menu" ] && use_external_menu="0"
   [ -z "$image_preview" ] && image_preview="0"
-  [ -z "$cache_dir" ] && cache_dir="/tmp/lobster"
   [ -z "$images_cache_dir" ] && images_cache_dir="/tmp/lobster-images"
   [ -z "$applications_dir" ] && applications_dir="$HOME/.local/share/applications/lobster"
   [ -z "$tmp_position" ] && tmp_position="/tmp/lobster_position"
-  test -d "$cache_dir" || mkdir -p "$cache_dir"
-  test -d "$images_cache_dir" || mkdir -p "$images_cache_dir"
-  test -d "$applications_dir" || mkdir -p "$applications_dir"
 }
 
 generate_desktop() {
@@ -101,7 +98,7 @@ nth() {
 
 prompt_to_continue() {
   if [ "$media_type" = "tv" ]; then
-    continue_choice=$(printf "Yes\nNo\nSearch" | launcher "Continue?")
+    continue_choice=$(printf "Yes\nNo\nSearch" | launcher "Continue? ")
   else
     exit 0
   fi
@@ -155,9 +152,9 @@ usage() {
 
 get_input() {
 	if [ "$use_external_menu" = "0" ]; then
-		printf "Enter a query: " && read -r query
+		printf "Search Movie/TV Show: " && read -r query
 	else
-		query=$(printf "" | launcher "Enter a query")
+		query=$(printf "" | launcher "Search Movie/TV Show")
 	fi
 	[ -n "$query" ] && query=$(echo "$query" | tr ' ' '-')
 	[ -z "$query" ] && send_notification "Error" "1000" "" "No query provided" && exit 1
@@ -293,30 +290,38 @@ play_video() {
 		vlc "$video_link" --meta-title "$title"
 		;;
 	mpv)
-    check_history
+    [ -z "$continue_choice" ] && check_history
 		[ -z "$resume_from" ] && opts="" || opts="--start=${resume_from}"
-		if [ -n "$subs_links" ]; then
-			nohup mpv "$opts" $subs_arg="$subs_links" --force-media-title="$title" --input-ipc-server=/tmp/mpvsocket "$video_link" >/dev/null 2>&1 &
-		else
-			nohup mpv "$opts" --force-media-title="$title" --input-ipc-server=/tmp/mpvsocket "$video_link" >/dev/null 2>&1 &
-		fi
-		if [ "$socat_exists" = "true" ]; then
-			PID=$!
-			while ! ps -p $PID >/dev/null; do
-				sleep 0.1
-			done
-			sleep 2
+    if [ "$history" = 1 ]; then
+      if [ -n "$subs_links" ]; then
+        nohup mpv "$opts" $subs_arg="$subs_links" --force-media-title="$title" --input-ipc-server=/tmp/mpvsocket "$video_link" >/dev/null 2>&1 &
+      else
+        nohup mpv "$opts" --force-media-title="$title" --input-ipc-server=/tmp/mpvsocket "$video_link" >/dev/null 2>&1 &
+      fi
+      if [ "$socat_exists" = "true" ]; then
+        PID=$!
+        while ! ps -p $PID >/dev/null; do
+          sleep 0.1
+        done
+        sleep 2
 
-			while ps -p $PID >/dev/null; do
-				position=$(echo '{ "command": ["get_property", "time-pos"] }' | socat - /tmp/mpvsocket | sed -nE "s@.*\"data\":([0-9\.]*),.*@\1@p")
-				[ "$position" != "" ] && printf "%s\n" "$position" >> "$tmp_position"
-        progress=$(echo '{ "command": ["get_property", "percent-pos"] }' | socat - /tmp/mpvsocket | sed -nE "s@.*\"data\":([0-9\.]*),.*@\1@p")
-				sleep 1
-			done
-      last_line=$(sed '/^$/d' "$tmp_position" | tail -1)
-			position=$(date -u -d "@$(printf "%.0f" "$last_line")" "+%H:%M:%S")
-      progress=$(printf "%.0f" "$progress")
-			[ -n "$position" ] && send_notification "Stopped at" "5000" "$images_cache_dir/  $title ($media_type)  $media_id.jpg" "$position"
+        while ps -p $PID >/dev/null; do
+          position=$(echo '{ "command": ["get_property", "time-pos"] }' | socat - /tmp/mpvsocket | sed -nE "s@.*\"data\":([0-9\.]*),.*@\1@p")
+          [ "$position" != "" ] && printf "%s\n" "$position" >> "$tmp_position"
+          progress=$(echo '{ "command": ["get_property", "percent-pos"] }' | socat - /tmp/mpvsocket | sed -nE "s@.*\"data\":([0-9\.]*),.*@\1@p")
+          sleep 1
+        done
+        last_line=$(sed '/^$/d' "$tmp_position" | tail -1)
+        position=$(date -u -d "@$(printf "%.0f" "$last_line")" "+%H:%M:%S")
+        progress=$(printf "%.0f" "$progress")
+          [ -n "$position" ] && send_notification "Stopped at" "5000" "$images_cache_dir/  $title ($media_type)  $media_id.jpg" "$position"
+      fi
+    else 
+        if [ -n "$subs_links" ]; then
+          mpv "$opts" $subs_arg="$subs_links" --force-media-title="$title" "$video_link"
+        else
+          mpv "$opts" --force-media-title="$title"
+        fi
     fi
 		;;
 	*) $player "$video_link" ;;
@@ -389,11 +394,19 @@ loop() {
     [ -z "$video_link" ] && exit 1
     [ "$download" = "1" ] && download_video
     play_video && wait
-    save_history
+    [ "$history" = 1 ] && save_history
     prompt_to_continue
     case "$continue_choice" in
       "Yes") continue ;;
-      "Search") unset query && main ;;
+      "Search") 
+        query=""
+        response=""
+        season_id=""
+        episode_id=""
+        episode_title=""
+        data_id=""
+        main
+        ;;
       *) keep_running="false" && exit ;;
     esac
   done
@@ -497,5 +510,12 @@ while [ $# -gt 0 ]; do
 done
 [ "$trending" = "1" ] && choose_from_trending
 [ "$recent" = "1" ] && choose_from_recent
+
+if [ "$image_preview" = 1 ]; then
+  test -d "$images_cache_dir" || mkdir -p "$images_cache_dir"
+  if [ "$use_external_menu" = 1 ]; then
+    test -d "$applications_dir" || mkdir -p "$applications_dir"
+  fi
+fi
 
 main
