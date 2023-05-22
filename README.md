@@ -121,13 +121,28 @@ By setting this value to `1` you can run the script using `rofi` instead of `fzf
 
 Also supported as command line arguments: `--rofi`, `--dmenu`, `--external-menu`
 
+<details>
+<summary>Showcase</summary>
+   ![image](https://github.com/justchokingaround/lobster/assets/44473782/d1243c17-0ef1-44b3-99a8-f2c4a4ab5da9)
+</details>
+
 ### Image Preview
 
 By setting this value to `1` you can see image previews when selecting an entry.
 
 For `rofi` it will work out of the box, if you have icons enabled in your default configuration (to see how you can use a custom configuration for properly displaying images in the section below).
 
+<details>
+<summary>Showcase</summary>
+   ![image](https://github.com/justchokingaround/lobster/assets/44473782/a8850f00-9491-4f86-939d-2f63bcb36e96)
+</details>
+
 For `fzf` you will need to install [ueberzugpp](https://github.com/jstkdng/ueberzugpp/).
+
+<details>
+<summary>Showcase</summary>
+   ![image](https://github.com/justchokingaround/lobster/assets/44473782/8d8057d8-4d85-4f0e-b6c0-3b7dd5dce557)
+</details>
 
 On Arch Linux you can install it using your aur helper of choice with:
 
@@ -171,6 +186,11 @@ By setting the value of `json_output` to `1` you can output the json for the cur
 
 Also supported as command line arguments: `-j`, `--json`
 
+<details>
+<summary>Showcase</summary>
+![image](https://github.com/justchokingaround/lobster/assets/44473782/8e45e664-7a86-4409-b98c-4a9dcd2a0094)
+</details>
+
 ## History
 
 In a similar fashion to how saving your position when you watch videos on YouTube or Netflix, lobster has history support and saves the last minute you watched for a Movie or TV Show episode. To use this feature, simply watch a Movie or an episode from a TV Show, and after you quit mpv the history will be automatically updated. The next time you want to resume from the last position watched, you can just run
@@ -180,6 +200,14 @@ lobster -c
 ```
 
 which will prompt you to chose which of the saved Movies/TV Showvs you'd like to resume from.
+
+<details>
+<summary>Showcase</summary>
+![image](https://github.com/justchokingaround/lobster/assets/44473782/5ed98fb9-008d-4068-a854-577245cfe1ee)
+![image](https://github.com/justchokingaround/lobster/assets/44473782/cd59329e-a1c8-408a-be48-690db2d52642)
+![image](https://github.com/justchokingaround/lobster/assets/44473782/fae5ea52-4dc4-41ee-b7a2-cbb2476f5819)
+</details>
+
 
 #### Please note:
 
