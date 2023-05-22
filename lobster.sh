@@ -282,9 +282,9 @@ check_history() {
 
 play_video() {
 	case $player in
-	iina)
-		iina --no-stdin --keep-running --mpv-sub-files="$subs_links" \
-			--mpv-force-media-title="$title" "$video_link"
+	iina|celluloid)
+    [ "$player" = "iina" ] && iina --no-stdin --keep-running --mpv-sub-files="$subs_links" --mpv-force-media-title="$title" "$video_link"
+    [ "$player" = "celluloid" ] && celluloid --mpv-sub-files="$subs_links" --mpv-force-media-title="$title" "$video_link" 2>/dev/null
 		;;
 	vlc)
 		vlc "$video_link" --meta-title "$title"
