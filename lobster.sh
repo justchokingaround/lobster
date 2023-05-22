@@ -42,8 +42,10 @@ cleanup() {
 trap cleanup EXIT INT TERM
 
 configuration() {
-	XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
-	[ ! -d "$XDG_CONFIG_HOME/lobster" ] && mkdir -p "$XDG_CONFIG_HOME/lobster"
+  [ -n "$XDG_CONFIG_HOME" ] && config_dir="$XDG_CONFIG_HOME/lobster/" || config_dir="$HOME/.config/lobster/"
+  [ -n "$XDG_DATA_HOME" ] && data_dir="$XDG_DATA_HOME/lobster/" || data_dir="$HOME/.local/share/lobster/"
+	[ ! -d "$config_dir" ] && mkdir -p "$config_dir"
+  [ ! -d "$data_dir" ] && mkdir -p "$data_dir"
 	#shellcheck disable=1090
 	[ -f "$config_file" ] && . "${config_file}"
   export X=$(($(tput cols) - 35))
@@ -53,7 +55,7 @@ configuration() {
 	[ -z "$subs_language" ] && subs_language="english"
   subs_language="$(printf "%s" "$subs_language" | cut -c2-)"
 	[ -z "$preferred_provider" ] && provider="Vidcloud" || provider="$preferred_provider"
-	[ -z "$histfile" ] && histfile="$XDG_DATA_HOME/lobster/lobster_history.txt" && mkdir -p "$(dirname "$histfile")"
+	[ -z "$histfile" ] && histfile="$data_dir/lobster_history.txt" && mkdir -p "$(dirname "$histfile")"
 	[ -z "$use_external_menu" ] && use_external_menu="0"
   [ -z "$image_preview" ] && image_preview="0"
   [ -z "$cache_dir" ] && cache_dir="/tmp/lobster"
