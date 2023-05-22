@@ -71,7 +71,13 @@ git clone https://github.com/justchokingaround/lobster && cd lobster
 ```sh
 cp lobster.sh /usr/bin/lobster
 ```
-8. Use lobster (either with git bash or windows terminal)
+
+8. Denote permission to access the file in executable mode
+```sh
+sudo chmod +x /usr/bin/lobster
+```
+
+9. Use lobster (either with git bash or windows terminal)
 ```sh
 lobster <args> or lobster [movie/tv show]
 ```
@@ -113,7 +119,7 @@ which will prompt you to chose which of the saved movies/tv shows you'd like to 
 
 #### Please note:
 * If there is only one entry in the history file, it'll be automatically selected
-* The history file can be found at `~/.config/lobster_history.txt` 
+* The history file can be found at `~/.config/lobster/lobster_history.txt` 
 * A movie or TV show episode is automatically marked as completed/updated after the user watches more than 85% of its content*
 
 ## Arguments
