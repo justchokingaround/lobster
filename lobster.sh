@@ -42,8 +42,8 @@ cleanup() {
 trap cleanup EXIT INT TERM
 
 configuration() {
-  [ -n "$XDG_CONFIG_HOME" ] && config_dir="$XDG_CONFIG_HOME/lobster/" || config_dir="$HOME/.config/lobster/"
-  [ -n "$XDG_DATA_HOME" ] && data_dir="$XDG_DATA_HOME/lobster/" || data_dir="$HOME/.local/share/lobster/"
+  [ -n "$XDG_CONFIG_HOME" ] && config_dir="$XDG_CONFIG_HOME/lobster" || config_dir="$HOME/.config/lobster"
+  [ -n "$XDG_DATA_HOME" ] && data_dir="$XDG_DATA_HOME/lobster" || data_dir="$HOME/.local/share/lobster"
 	[ ! -d "$config_dir" ] && mkdir -p "$config_dir"
   [ ! -d "$data_dir" ] && mkdir -p "$data_dir"
 	#shellcheck disable=1090
