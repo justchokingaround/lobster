@@ -136,6 +136,8 @@ usage() {
       Shows image previews during media selection (requires ueberzugpp to be installed to work with fzf)
     -l, --language
       Specify the subtitle language
+    -s, --syncplay
+      Use Syncplay to watch with friends
     -u, -U, --update
       Update the script
     -v, -V, --version
@@ -328,6 +330,7 @@ play_video() {
         fi
     fi
 		;;
+  *yncpla*) nohup "syncplay" "$video_link" -- --force-media-title="${title}" >/dev/null 2>&1 & ;;
 	*) $player "$video_link" ;;
 	esac
 }
@@ -508,6 +511,7 @@ while [ $# -gt 0 ]; do
   -r | --recent) recent="1" && shift ;;
   -i | --image-preview) image_preview="1" && shift ;;
 	-l | --language) subs_language="$2" && shift 2 ;;
+  -s | --syncplay) player="syncplay" && shift ;;
 	-u | -U | --update) update_script ;;
 	-v | -V | --version) printf "Lobster Version: %s\n" "$LOBSTER_VERSION" && exit 0 ;;
 	*) query="$(printf "%s" "$query $1" | sed "s/^ //;s/ /-/g")" && shift ;;

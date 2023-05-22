@@ -270,6 +270,8 @@ which will prompt you to chose which of the saved Movies/TV Showvs you'd like to
       Shows image previews during media selection (requires ueberzugpp to be installed to work with fzf)
     -l, --language
       Specify the subtitle language
+    -s, --syncplay
+      Use Syncplay to watch with friends
     -u, -U, --update
       Update the script
     -v, -V, --version
