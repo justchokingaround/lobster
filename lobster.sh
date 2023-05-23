@@ -326,7 +326,7 @@ play_video() {
         if [ -n "$subs_links" ]; then
           mpv "$opts" $subs_arg="$subs_links" --force-media-title="$title" "$video_link"
         else
-          mpv "$opts" --force-media-title="$title"
+          mpv "$opts" --force-media-title="$title" "$video_link"
         fi
     fi
 		;;
