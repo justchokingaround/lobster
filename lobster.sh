@@ -247,7 +247,7 @@ extract_from_json() {
 	[ "$json_output" = "1" ] && printf "%s\n" "$json_data" && exit 0
 	subs_links=$(printf "%s" "$json_data" | tr "{}" "\n" | sed -nE "s@\"file\":\"([^\"]*)\",\"label\":\"(.$subs_language)[,\"\ ].*@\1@p")
 	subs_arg="--sub-file"
-	[ $(printf "%s" "$subs_links" | wc -l) -gt 1 ] && subs_links=$(printf "%s" "$subs_links" | sed -e "s/:/\\$path_thing:/g" -e "H;1h;\$!d;x;y/\n/$separator/" -e "s/$separator\$//") && subs_arg="--sub-files=$subs_links"
+	[ $(printf "%s" "$subs_links" | wc -l) -gt 0 ] && subs_links=$(printf "%s" "$subs_links" | sed -e "s/:/\\$path_thing:/g" -e "H;1h;\$!d;x;y/\n/$separator/" -e "s/$separator\$//") && subs_arg="--sub-files=$subs_links"
 	[ -z "$subs_links" ] && printf "No subtitles found\n"
 }
 
