@@ -15,7 +15,7 @@ send_notification() {
     [ "$json_output" = "1" ] && return
     if [ "$use_external_menu" = "0" ]; then
         [ -z "$4" ] && printf "\33[2K\r\033[1;34m%s\n\033[0m" "$1" && return
-        [ -n "$4" ] && printf "\33[2K\r\033[1;34m%s - %s\033[0m" "$1" "$4" && return
+        [ -n "$4" ] && printf "\33[2K\r\033[1;34m%s - %s\n\033[0m" "$1" "$4" && return
     fi
     [ -z "$2" ] && timeout=3000 || timeout="$2"
     if [ "$notify" = "true" ]; then
@@ -297,12 +297,11 @@ play_video() {
 		;;
 	mpv)
     [ -z "$continue_choice" ] && check_history
-		[ -z "$resume_from" ] && opts="" || opts="--start=${resume_from}"
     if [ "$history" = 1 ]; then
       if [ -n "$subs_links" ]; then
-        nohup mpv "$opts" $subs_arg="$subs_links" --force-media-title="$title" --input-ipc-server=/tmp/mpvsocket "$video_link" >/dev/null 2>&1 &
+        nohup mpv --start="$resume_from" "$subs_arg"="$subs_links" --force-media-title="$title" --input-ipc-server=/tmp/mpvsocket "$video_link" >/dev/null 2>&1 &
       else
-        nohup mpv "$opts" --force-media-title="$title" --input-ipc-server=/tmp/mpvsocket "$video_link" >/dev/null 2>&1 &
+        nohup mpv --start="$resume_from" --force-media-title="$title" --input-ipc-server=/tmp/mpvsocket "$video_link" >/dev/null 2>&1 &
       fi
       if [ "$socat_exists" = "true" ]; then
         PID=$!
@@ -324,9 +323,11 @@ play_video() {
       fi
     else 
         if [ -n "$subs_links" ]; then
-          mpv "$opts" $subs_arg="$subs_links" --force-media-title="$title" "$video_link"
+          [ -z "$resume_from" ] && mpv "$subs_arg"="$subs_links" --force-media-title="$title" "$video_link"
+          [ -n "$resume_from" ] && mpv --start="$resume_from" --force-media-title="$title" "$video_link"
         else
-          mpv "$opts" --force-media-title="$title" "$video_link"
+          [ -z "$resume_from" ] && mpv --force-media-title="$title" "$video_link"
+          [ -n "$resume_from" ] && mpv --start="$resume_from" --force-media-title="$title" "$video_link"
         fi
     fi
 		;;
