@@ -56,7 +56,6 @@ configuration() {
   [ -z "$quality" ] && quality="1080"
 	[ -z "$subs_language" ] && subs_language="english"
   subs_language="$(printf "%s" "$subs_language" | cut -c2-)"
-	[ -z "$preferred_provider" ] && provider="Vidcloud" || provider="$preferred_provider"
 	[ -z "$histfile" ] && histfile="$data_dir/lobster_history.txt" && mkdir -p "$(dirname "$histfile")"
 	[ -z "$use_external_menu" ] && use_external_menu="0"
   [ -z "$image_preview" ] && image_preview="0"
@@ -503,7 +502,7 @@ while [ $# -gt 0 ]; do
   -d | --download) download="1" && shift ;;
 	-h | --help) usage && exit 0 ;;
 	-e | --edit) [ -f "$config_file" ] && "$lobster_editor" "$config_file" && exit 0 || exit 0 ;;
-	-p | --provider) preferred_provider="$2" && shift 2 ;;
+	-p | --provider) provider="$2" && shift 2 ;;
 	-j | --json) json_output="1" && shift ;;
   -q | --quality) quality="$2" && shift 2 ;;
   --rofi | --dmenu | --external-menu) use_external_menu="1" && shift ;;
@@ -517,6 +516,7 @@ while [ $# -gt 0 ]; do
 	*) query="$(printf "%s" "$query $1" | sed "s/^ //;s/ /-/g")" && shift ;;
 	esac
 done
+[ -z "$provider" ] && provider="Vidcloud"
 [ "$trending" = "1" ] && choose_from_trending
 [ "$recent" = "1" ] && choose_from_recent
 
