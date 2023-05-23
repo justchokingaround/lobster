@@ -192,16 +192,16 @@ select_desktop_entry() {
     else
       image_preview_fzf "$1"
       media_id=$(printf "%s" "$choice" | sed -nE "s@.*\/  .*  ([0-9]*)\.jpg@\1@p")
-      title=$(printf "%s" "$choice" | sed -nE "s@.*\/  (.*) \((tv|movie)\)  [0-9]*\.jpg@\1@p")
-      media_type=$(printf "%s" "$choice" | sed -nE "s@.*\/  (.*) \((tv|movie)\)  [0-9]*\.jpg@\2@p")
+      title=$(printf "%s" "$choice" | sed -nE "s@.*\/  (.*) \[.*\] \[.*\] \((tv|movie)\)  [0-9]*\.jpg@\1@p")
+      media_type=$(printf "%s" "$choice" | sed -nE "s@.*\/  (.*) \[.*\] \[.*\] \((tv|movie)\)  [0-9]*\.jpg@\2@p")
     fi
 }
 
 search() {
-    [ "$image_preview" = "1" ] && response=$(curl -s "https://${base}/search/$query" | sed ':a;N;$!ba;s/\n//g;s/class="film-detail"/\n/g' |
-               sed -nE "s@.*img data-src=\"([^\"]*)\".*<a href=\".*/(tv|movie)/watch-.*-([0-9]*)\".*title=\"([^\"]*)\".*@\1\t\3\t\2\t\4@p" | hxunent)
-    [ "$image_preview" = "0" ] && response=$(curl -s "https://${base}/search/$query" | sed ':a;N;$!ba;s/\n//g;s/class="film-detail"/\n/g' |
-      sed -nE "s@.*<a href=\".*/(tv|movie)/watch-.*-([0-9]*)\".*title=\"([^\"]*)\".*@\3 (\1)\t\2@p" | hxunent)
+    [ "$image_preview" = "1" ] && response=$(curl -s "https://${base}/search/$query" | sed ':a;N;$!ba;s/\n//g;s/class="flw-item"/\n/g' | 
+      sed -nE "s@.*img data-src=\"([^\"]*)\".*<a href=\".*/(tv|movie)/watch-.*-([0-9]*)\".*title=\"([^\"]*)\".*class=\"fdi-item\">([^<]*)</span>.*class=\"fdi-item fdi-duration\">([^<]*)</span>.*@\1\t\3\t\2\t\4 [\5] [\6]@p" | hxunent)
+    [ "$image_preview" = "0" ] && response=$(curl -s "https://${base}/search/$query" | sed ':a;N;$!ba;s/\n//g;s/class="flw-item"/\n/g' |
+      sed -nE "s@.*<a href=\".*/(tv|movie)/watch-.*-([0-9]*)\".*title=\"([^\"]*)\".*class=\"fdi-item\">([^<]*)</span>.*class=\"fdi-item fdi-duration\">([^<]*)</span>.*@\3 (\1) [\4] [\5]\t\2@p" | hxunent)
 }
 
 choose_episode() {
@@ -470,18 +470,18 @@ play_from_history() {
 
 # TODO: remove code duplication
 choose_from_trending() {
-    [ "$image_preview" = "1" ] && response=$(curl -s "https://${base}/home" | sed -n '/id="trending-movies"/,/class="block_area block_area_home section-id-02"/p' | sed ':a;N;$!ba;s/\n//g;s/class="film-detail"/\n/g' |
-               sed -nE "s@.*img data-src=\"([^\"]*)\".*<a href=\".*/(tv|movie)/watch-.*-([0-9]*)\".*title=\"([^\"]*)\".*@\1\t\3\t\2\t\4@p" | hxunent)
-    [ "$image_preview" = "0" ] && response=$(curl -s "https://${base}/home" | sed -n '/id="trending-movies"/,/id="trending-tv"/p' | sed ':a;N;$!ba;s/\n//g;s/class="film-detail"/\n/g' |
-      sed -nE "s@.*<a href=\".*/(tv|movie)/watch-.*-([0-9]*)\".*title=\"([^\"]*)\".*@\3 (\1)\t\2@p" | hxunent)
+    [ "$image_preview" = "1" ] && response=$(curl -s "https://${base}/home" | sed -n '/id="trending-movies"/,/class="block_area block_area_home section-id-02"/p' | sed ':a;N;$!ba;s/\n//g;s/class="flw-item"/\n/g' |
+               sed -nE "s@.*img data-src=\"([^\"]*)\".*<a href=\".*/(tv|movie)/watch-.*-([0-9]*)\".*title=\"([^\"]*)\".*class=\"fdi-item\">([^<]*)</span>.*class=\"fdi-item fdi-duration\">([^<]*)</span>.*@\1\t\3\t\2\t\4 [\5] [\6]@p" | hxunent)
+    [ "$image_preview" = "0" ] && response=$(curl -s "https://${base}/home" | sed -n '/id="trending-movies"/,/id="trending-tv"/p' | sed ':a;N;$!ba;s/\n//g;s/class="flw-item"/\n/g' |
+      sed -nE "s@.*<a href=\".*/(tv|movie)/watch-.*-([0-9]*)\".*title=\"([^\"]*)\".*class=\"fdi-item\">([^<]*)</span>.*class=\"fdi-item fdi-duration\">([^<]*)</span>.*@\3 (\1) [\4] [\5]\t\2@p" | hxunent)
     main
 }
 
 choose_from_recent() {
     [ "$image_preview" = "1" ] && response=$(curl -s "https://${base}/home" | sed -n '/class="cat-heading">Latest Movies</,/class="cat-heading">Latest TV Shows</p' | sed ':a;N;$!ba;s/\n//g;s/class="film-detail"/\n/g' |
-               sed -nE "s@.*img data-src=\"([^\"]*)\".*<a href=\".*/(tv|movie)/watch-.*-([0-9]*)\".*title=\"([^\"]*)\".*@\1\t\3\t\2\t\4@p" | hxunent)
+               sed -nE "s@.*img data-src=\"([^\"]*)\".*<a href=\".*/(tv|movie)/watch-.*-([0-9]*)\".*title=\"([^\"]*)\".*class=\"fdi-item\">([^<]*)</span>.*class=\"fdi-item fdi-duration\">([^<]*)</span>.*@\1\t\3\t\2\t\4 [\5] [\6]@p" | hxunent)
     [ "$image_preview" = "0" ] && response=$(curl -s "https://${base}/home" | sed -n '/class="cat-heading">Latest Movies</,/class="cat-heading">Latest TV Shows</p' | sed ':a;N;$!ba;s/\n//g;s/class="film-detail"/\n/g' |
-      sed -nE "s@.*<a href=\".*/(tv|movie)/watch-.*-([0-9]*)\".*title=\"([^\"]*)\".*@\3 (\1)\t\2@p" | hxunent)
+      sed -nE "s@.*<a href=\".*/(tv|movie)/watch-.*-([0-9]*)\".*title=\"([^\"]*)\".*class=\"fdi-item\">([^<]*)</span>.*class=\"fdi-item fdi-duration\">([^<]*)</span>.*@\3 (\1) [\4] [\5]\t\2@p" | hxunent)
     main
 }
 
@@ -522,15 +522,14 @@ while [ $# -gt 0 ]; do
 	*) query="$(printf "%s" "$query $1" | sed "s/^ //;s/ /-/g")" && shift ;;
 	esac
 done
-[ -z "$provider" ] && provider="Vidcloud"
-[ "$trending" = "1" ] && choose_from_trending
-[ "$recent" = "1" ] && choose_from_recent
-
 if [ "$image_preview" = 1 ]; then
   test -d "$images_cache_dir" || mkdir -p "$images_cache_dir"
   if [ "$use_external_menu" = 1 ]; then
     test -d "$applications_dir" || mkdir -p "$applications_dir"
   fi
 fi
+[ -z "$provider" ] && provider="Vidcloud"
+[ "$trending" = "1" ] && choose_from_trending
+[ "$recent" = "1" ] && choose_from_recent
 
 main
