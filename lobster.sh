@@ -96,11 +96,7 @@ nth() {
 }
 
 prompt_to_continue() {
-  if [ "$media_type" = "tv" ]; then
-    continue_choice=$(printf "Yes\nNo\nSearch" | launcher "Continue? ")
-  else
-    exit 0
-  fi
+  continue_choice=$(printf "Yes\nNo\nSearch" | launcher "Continue? ")
 }
 
 usage() {
@@ -262,7 +258,7 @@ get_json() {
 }
 
 check_history() {
-  [ -z "$histfile" ] && return
+  [ -f "$histfile" ] || return
   case $media_type in
     movie)
       if grep -q "$media_id" "$histfile"; then
@@ -408,7 +404,10 @@ loop() {
     [ "$history" = 1 ] && save_history
     prompt_to_continue
     case "$continue_choice" in
-      "Yes") resume_from="" && continue ;;
+      "Yes") 
+        [ "$media_type" = "tv" ] && resume_from="" && continue
+        [ "$media_type" = "movie" ] && exit 1
+        ;;
       "Search") 
         query=""
         response=""
@@ -448,7 +447,7 @@ main() {
 }
 
 play_from_history() {
-  [ -z "$histfile" ] && send_notification "No history file found" "5000" "" && exit 1
+  [ ! -f "$histfile" ] && send_notification "No history file found" "5000" "" && exit 1
   [ "$watched_history" = 1 ] && exit 0
   watched_history=1
   choice=$(tac "$histfile" | nl -w 1 | nth "Choose an entry:")
