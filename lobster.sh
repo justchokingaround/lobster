@@ -477,9 +477,9 @@ choose_from_trending() {
 }
 
 choose_from_recent() {
-    [ "$image_preview" = "1" ] && response=$(curl -s "https://${base}/home" | sed -n '/class="cat-heading">Latest Movies</,/class="cat-heading">Latest TV Shows</p' | sed ':a;N;$!ba;s/\n//g;s/class="film-detail"/\n/g' |
+    [ "$image_preview" = "1" ] && response=$(curl -s "https://${base}/home" | sed -n '/class="cat-heading">Latest Movies</,/class="cat-heading">Latest TV Shows</p' | sed ':a;N;$!ba;s/\n//g;s/class="flw-item"/\n/g' |
                sed -nE "s@.*img data-src=\"([^\"]*)\".*<a href=\".*/(tv|movie)/watch-.*-([0-9]*)\".*title=\"([^\"]*)\".*class=\"fdi-item\">([^<]*)</span>.*@\1\t\3\t\2\t\4 [\5]@p" | hxunent)
-    [ "$image_preview" = "0" ] && response=$(curl -s "https://${base}/home" | sed -n '/class="cat-heading">Latest Movies</,/class="cat-heading">Latest TV Shows</p' | sed ':a;N;$!ba;s/\n//g;s/class="film-detail"/\n/g' |
+    [ "$image_preview" = "0" ] && response=$(curl -s "https://${base}/home" | sed -n '/class="cat-heading">Latest Movies</,/class="cat-heading">Latest TV Shows</p' | sed ':a;N;$!ba;s/\n//g;s/class="flw-item"/\n/g' |
       sed -nE "s@.*<a href=\".*/(tv|movie)/watch-.*-([0-9]*)\".*title=\"([^\"]*)\".*class=\"fdi-item\">([^<]*)</span>.*@\3 (\1) [\4]\t\2@p" | hxunent)
     main
 }
