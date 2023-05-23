@@ -263,6 +263,7 @@ get_json() {
 }
 
 check_history() {
+  [ -z "$histfile" ] && return
   case $media_type in
     movie)
       if grep -q "$media_id" "$histfile"; then
@@ -443,6 +444,7 @@ main() {
 }
 
 play_from_history() {
+  [ -z "$histfile" ] && send_notification "No history file found" "5000" "" && exit 1
   [ "$watched_history" = 1 ] && exit 0
   watched_history=1
   choice=$(tac "$histfile" | nl -w 1 | nth "Choose an entry:")
