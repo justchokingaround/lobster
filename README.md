@@ -1,3 +1,6 @@
+### Showcase
+https://github.com/justchokingaround/lobster/assets/44473782/fbeba934-58e0-4958-b051-a479c9015713
+
 ### If you're upgrading from v3 to v4, please delete your old history and configuration file as they might cause the script to break. That can be done with
 
 ```sh
