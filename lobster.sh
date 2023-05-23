@@ -200,9 +200,9 @@ select_desktop_entry() {
 
 search() {
     [ "$image_preview" = "1" ] && response=$(curl -s "https://${base}/search/$query" | sed ':a;N;$!ba;s/\n//g;s/class="film-detail"/\n/g' |
-               sed -nE "s@.*img data-src=\"([^\"]*)\".*<a href=\".*/(tv|movie)/watch-[a-zA-Z0-9-]*([0-9]*)\".*title=\"([^\"]*)\".*@\1\t\3\t\2\t\4@p" | hxunent)
+               sed -nE "s@.*img data-src=\"([^\"]*)\".*<a href=\".*/(tv|movie)/watch-.*-([0-9]*)\".*title=\"([^\"]*)\".*@\1\t\3\t\2\t\4@p" | hxunent)
     [ "$image_preview" = "0" ] && response=$(curl -s "https://${base}/search/$query" | sed ':a;N;$!ba;s/\n//g;s/class="film-detail"/\n/g' |
-      sed -nE "s@.*<a href=\".*/(tv|movie)/watch-[a-zA-Z0-9-]*([0-9]*)\".*title=\"([^\"]*)\".*@\3 (\1)\t\2@p" | hxunent)
+      sed -nE "s@.*<a href=\".*/(tv|movie)/watch-.*-([0-9]*)\".*title=\"([^\"]*)\".*@\3 (\1)\t\2@p" | hxunent)
 }
 
 choose_episode() {
@@ -467,17 +467,17 @@ play_from_history() {
 # TODO: remove code duplication
 choose_from_trending() {
     [ "$image_preview" = "1" ] && response=$(curl -s "https://${base}/home" | sed -n '/id="trending-movies"/,/class="block_area block_area_home section-id-02"/p' | sed ':a;N;$!ba;s/\n//g;s/class="film-detail"/\n/g' |
-               sed -nE "s@.*img data-src=\"([^\"]*)\".*<a href=\".*/(tv|movie)/watch-[a-zA-Z0-9-]*([0-9]*)\".*title=\"([^\"]*)\".*@\1\t\3\t\2\t\4@p" | hxunent)
+               sed -nE "s@.*img data-src=\"([^\"]*)\".*<a href=\".*/(tv|movie)/watch-.*-([0-9]*)\".*title=\"([^\"]*)\".*@\1\t\3\t\2\t\4@p" | hxunent)
     [ "$image_preview" = "0" ] && response=$(curl -s "https://${base}/home" | sed -n '/id="trending-movies"/,/id="trending-tv"/p' | sed ':a;N;$!ba;s/\n//g;s/class="film-detail"/\n/g' |
-      sed -nE "s@.*<a href=\".*/(tv|movie)/watch-[a-zA-Z0-9-]*([0-9]*)\".*title=\"([^\"]*)\".*@\3 (\1)\t\2@p" | hxunent)
+      sed -nE "s@.*<a href=\".*/(tv|movie)/watch-.*-([0-9]*)\".*title=\"([^\"]*)\".*@\3 (\1)\t\2@p" | hxunent)
     main
 }
 
 choose_from_recent() {
     [ "$image_preview" = "1" ] && response=$(curl -s "https://${base}/home" | sed -n '/class="cat-heading">Latest Movies</,/class="cat-heading">Latest TV Shows</p' | sed ':a;N;$!ba;s/\n//g;s/class="film-detail"/\n/g' |
-               sed -nE "s@.*img data-src=\"([^\"]*)\".*<a href=\".*/(tv|movie)/watch-[a-zA-Z0-9-]*([0-9]*)\".*title=\"([^\"]*)\".*@\1\t\3\t\2\t\4@p" | hxunent)
+               sed -nE "s@.*img data-src=\"([^\"]*)\".*<a href=\".*/(tv|movie)/watch-.*-([0-9]*)\".*title=\"([^\"]*)\".*@\1\t\3\t\2\t\4@p" | hxunent)
     [ "$image_preview" = "0" ] && response=$(curl -s "https://${base}/home" | sed -n '/class="cat-heading">Latest Movies</,/class="cat-heading">Latest TV Shows</p' | sed ':a;N;$!ba;s/\n//g;s/class="film-detail"/\n/g' |
-      sed -nE "s@.*<a href=\".*/(tv|movie)/watch-[a-zA-Z0-9-]*([0-9]*)\".*title=\"([^\"]*)\".*@\3 (\1)\t\2@p" | hxunent)
+      sed -nE "s@.*<a href=\".*/(tv|movie)/watch-.*-([0-9]*)\".*title=\"([^\"]*)\".*@\3 (\1)\t\2@p" | hxunent)
     main
 }
 
