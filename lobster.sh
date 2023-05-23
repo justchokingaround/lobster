@@ -53,7 +53,6 @@ configuration() {
 	[ -z "$base" ] && base="flixhq.to"
 	[ -z "$player" ] && player="mpv"
   [ -z "$history" ] && history=0
-  [ -z "$quality" ] && quality="1080"
 	[ -z "$subs_language" ] && subs_language="english"
   subs_language="$(printf "%s" "$subs_language" | cut -c2-)"
 	[ -z "$histfile" ] && histfile="$data_dir/lobster_history.txt" && mkdir -p "$(dirname "$histfile")"
@@ -243,7 +242,7 @@ extract_from_json() {
 			openssl enc -aes-256-cbc -d -md md5 -k "$key" 2>/dev/null | sed -nE "s_.*\"file\":\"([^\"]*)\".*_\1_p")
         json_data=$(printf "%s" "$json_data" | sed -e "s|${encrypted_video_link}|${video_link}|")
 	fi
-  video_link=$(printf "%s" "$video_link" | sed -e "s|/playlist.m3u8|/$quality/index.m3u8|")
+  [ -n "$quality" ] && video_link=$(printf "%s" "$video_link" | sed -e "s|/playlist.m3u8|/$quality/index.m3u8|")
 
 	[ "$json_output" = "1" ] && printf "%s\n" "$json_data" && exit 0
 	subs_links=$(printf "%s" "$json_data" | tr "{}" "\n" | sed -nE "s@\"file\":\"([^\"]*)\",\"label\":\"(.$subs_language)[,\"\ ].*@\1@p")
@@ -289,8 +288,13 @@ check_history() {
 play_video() {
 	case $player in
 	iina|celluloid)
-    [ "$player" = "iina" ] && iina --no-stdin --keep-running --mpv-sub-files="$subs_links" --mpv-force-media-title="$title" "$video_link"
-    [ "$player" = "celluloid" ] && celluloid --mpv-sub-files="$subs_links" --mpv-force-media-title="$title" "$video_link" 2>/dev/null
+    if [ -n "$subs_links" ];then 
+      [ "$player" = "iina" ] && iina --no-stdin --keep-running --mpv-sub-files="$subs_links" --mpv-force-media-title="$title" "$video_link"
+      [ "$player" = "celluloid" ] && celluloid --mpv-sub-files="$subs_links" --mpv-force-media-title="$title" "$video_link" 2>/dev/null
+    else
+      [ "$player" = "iina" ] && iina --no-stdin --keep-running --mpv-force-media-title="$title" "$video_link"
+      [ "$player" = "celluloid" ] && celluloid --mpv-force-media-title="$title" "$video_link" 2>/dev/null
+    fi
 		;;
 	vlc)
 		vlc "$video_link" --meta-title "$title"
