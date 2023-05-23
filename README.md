@@ -116,6 +116,7 @@ cache_dir="/tmp/lobster"
 images_cache_dir="/tmp/lobster-images"
 applications_dir="$HOME/.local/share/applications/lobster"
 tmp_position="/tmp/lobster_position"
+lobster_editor=lite-xl
 ```
 
 Note: all the values in this sample configuration are the default values, with the exception of `image_config_path`.
@@ -240,11 +241,23 @@ which will prompt you to chose which of the saved Movies/TV Showvs you'd like to
    
 </details>
 
-
 #### Please note:
 
 - The history file can be found at `~/.local/share/lobster/lobster_history.txt`
 - A movie or TV show episode is automatically marked as completed/updated after the user watches more than 90% of its content\*
+
+### Lobster Editor
+
+You can change the value of `lobster_editor` to edit the config file with lobster_editor, when using `lobster -e`
+
+Example:
+
+```sh
+lobster_editor=lite-xl
+```
+
+The default value for this is $EDITOR or if that doesn't exist, then vim.
+
 
 ## Arguments
 
