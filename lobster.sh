@@ -416,6 +416,7 @@ loop() {
         episode_id=""
         episode_title=""
         data_id=""
+        resume_from=""
         main
         ;;
       *) keep_running="false" && exit ;;
