@@ -23,7 +23,7 @@ send_notification() {
         [ -n "$3" ] && notify-send "$1" "$4" -t "$timeout" -i "$3" -h string:x-dunst-stack-tag:vol
     fi
 }
-command -v "hxunent" >/dev/null || send_notification "Please install html-xml-utils"
+command -v "hxunent" >/dev/null || printf "Please install html-xml-utils\n"
 dep_ch() {
 	for dep; do
 		command -v "$dep" >/dev/null || send_notification "Program \"$dep\" not found. Please install it."
