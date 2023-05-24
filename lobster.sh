@@ -91,8 +91,8 @@ nth() {
     [ -z "$stdin" ] && return 1
     prompt="$1"
     [ $# -ne 1 ] && shift
-    line=$(printf "%s" "$stdin" | sed -nE "s@^(.*)\t[0-9:]*\t[0-9]*\t(tv|movie)(.*)@\1 (\2)\t\3@p" | cut -f1-3,6,7 --output-delimiter "|" | launcher "$prompt" | cut -d " " -f 1)
-    [ -n "$line" ] && printf "%s" "$stdin" | grep -E "^$line\|" | cut -f2- || exit 1
+    line=$(printf "%s" "$stdin" | sed -nE "s@^(.*)\t[0-9:]*\t[0-9]*\t(tv|movie)(.*)@\1 (\2)\t\3@p" | cut -f1-3,6,7 --output-delimiter "|" | launcher "$prompt" | cut -d "|" -f 1)
+    [ -n "$line" ] && printf "%s" "$stdin" | sed -nE "s@^$line\t(.*)@\1@p" || exit 1
 }
 
 prompt_to_continue() {
