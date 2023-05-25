@@ -52,6 +52,7 @@ configuration() {
   export Y=$(($(tput lines) / 6))
 	[ -z "$base" ] && base="flixhq.to"
 	[ -z "$player" ] && player="mpv"
+  [ -z "$provider" ] && provider="UpCloud"
   [ -z "$history" ] && history=0
 	[ -z "$subs_language" ] && subs_language="english"
   subs_language="$(printf "%s" "$subs_language" | cut -c2-)"
