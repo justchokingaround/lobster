@@ -11,6 +11,13 @@ rm ~/.config/lobster_history.txt && rm ~/.config/lobster/lobster_config.txt
 
 ### Linux
 
+#### Arch
+NOTE: the `lobster` package is OUT OF DATE, so do not install it! (it has already been flagged as so in the aur, but we need to wait for the maintainer to respond)
+```sh
+paru -S lobster-git
+```
+
+#### Manually
 ```sh
 sudo curl -sL github.com/justchokingaround/lobster/raw/main/lobster.sh -o /usr/local/bin/lobster &&
 sudo chmod +x /usr/local/bin/lobster
