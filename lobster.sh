@@ -5,7 +5,7 @@ lobster_editor=${VISUAL:-${EDITOR:-vim}}
 case "$(uname -s)" in
 MINGW* | *Msys) separator=';' && path_thing='' ;;
 *arwin) sed="gsed" ;;
-*) separator=':' && path_thing="\\" ;;
+*) separator=':' && path_thing="\\" && sed="sed" ;;
 esac
 
 command -v notify-send >/dev/null 2>&1 && notify="true" || notify="false"
