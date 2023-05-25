@@ -13,7 +13,7 @@ command -v notify-send >/dev/null 2>&1 && notify="true" || notify="false"
 command -v socat >/dev/null 2>&1 && socat_exists="true" || socat_exists="false"
 send_notification() {
     [ "$json_output" = "1" ] && return
-    if [ "$use_external_menu" = "0" ]; then
+    if [ "$use_external_menu" = "0" ] || [ "$use_external_menu" = "" ]; then
         [ -z "$4" ] && printf "\33[2K\r\033[1;34m%s\n\033[0m" "$1" && return
         [ -n "$4" ] && printf "\33[2K\r\033[1;34m%s - %s\n\033[0m" "$1" "$4" && return
     fi
@@ -36,7 +36,7 @@ fi
 
 cleanup() {
     rm -rf "$images_cache_dir"
-    rm -rf "$applications_dir"
+    rm -rf $applications_dir/*
     rm "$tmp_position" 2>/dev/null
 }
 trap cleanup EXIT INT TERM
@@ -96,7 +96,11 @@ nth() {
 }
 
 prompt_to_continue() {
-  continue_choice=$(printf "Yes\nNo\nSearch" | launcher "Continue? ")
+  if [ "$media_type" = "tv" ]; then
+    continue_choice=$(printf "Yes\nExit\nSearch" | launcher "Continue? ")
+  else
+    continue_choice=$(printf "Search\nExit" | launcher "Continue? ")
+  fi
 }
 
 usage() {
@@ -299,9 +303,17 @@ play_video() {
     [ -z "$continue_choice" ] && check_history
     if [ "$history" = 1 ]; then
       if [ -n "$subs_links" ]; then
-        nohup mpv --start="$resume_from" "$subs_arg"="$subs_links" --force-media-title="$title" --input-ipc-server=/tmp/mpvsocket "$video_link" >/dev/null 2>&1 &
+        if [ -n "$resume_from" ]; then
+          nohup mpv --start="$resume_from" "$subs_arg"="$subs_links" --force-media-title="$title" --input-ipc-server=/tmp/mpvsocket "$video_link" >/dev/null 2>&1 &
+        else
+          nohup mpv --sub-file="$subs_links" --force-media-title="$title" --input-ipc-server=/tmp/mpvsocket "$video_link" >/dev/null 2>&1 &
+        fi
       else
-        nohup mpv --start="$resume_from" --force-media-title="$title" --input-ipc-server=/tmp/mpvsocket "$video_link" >/dev/null 2>&1 &
+        if [ -n "$resume_from" ]; then
+          nohup mpv --start="$resume_from" --force-media-title="$title" --input-ipc-server=/tmp/mpvsocket "$video_link" >/dev/null 2>&1 &
+        else
+          nohup mpv --force-media-title="$title" --input-ipc-server=/tmp/mpvsocket "$video_link" >/dev/null 2>&1 &
+        fi
       fi
       if [ "$socat_exists" = "true" ]; then
         PID=$!
@@ -405,16 +417,17 @@ loop() {
     [ "$history" = 1 ] && save_history
     prompt_to_continue
     case "$continue_choice" in
-      "Yes") 
-        [ "$media_type" = "tv" ] && resume_from="" && continue
-        [ "$media_type" = "movie" ] && exit 1
-        ;;
+      "Yes") resume_from="" && continue ;;
       "Search") 
+        rm "$images_cache_dir"/*
+        rm "$applications_dir"/*
+        rm "$tmp_position" 2>/dev/null
         query=""
         response=""
         season_id=""
         episode_id=""
         episode_title=""
+        title=""
         data_id=""
         resume_from=""
         main
@@ -509,14 +522,17 @@ while [ $# -gt 0 ]; do
   -d | --download) download="1" && shift ;;
 	-h | --help) usage && exit 0 ;;
 	-e | --edit) [ -f "$config_file" ] && "$lobster_editor" "$config_file" && exit 0 || exit 0 ;;
-	-p | --provider) provider="$2" && shift 2 ;;
+	-p | --provider) 
+    provider="$2"
+    [ -z "$provider" ] && provider="UpCloud" && shift 2 ;;
 	-j | --json) json_output="1" && shift ;;
   -q | --quality) quality="$2" && shift 2 ;;
   --rofi | --dmenu | --external-menu) use_external_menu="1" && shift ;;
   -t | --trending) trending="1" && shift ;;
   -r | --recent) recent="1" && shift ;;
   -i | --image-preview) image_preview="1" && shift ;;
-	-l | --language) subs_language="$2" && shift 2 ;;
+	-l | --language) subs_language="$2" 
+    [ -z "$subs_language" ] && subs_language="english" && shift 2 ;;
   -s | --syncplay) player="syncplay" && shift ;;
 	-u | -U | --update) update_script ;;
 	-v | -V | --version) printf "Lobster Version: %s\n" "$LOBSTER_VERSION" && exit 0 ;;
@@ -529,7 +545,7 @@ if [ "$image_preview" = 1 ]; then
     test -d "$applications_dir" || mkdir -p "$applications_dir"
   fi
 fi
-[ -z "$provider" ] && provider="Vidcloud"
+[ -z "$provider" ] && provider="UpCloud"
 [ "$trending" = "1" ] && choose_from_trending
 [ "$recent" = "1" ] && choose_from_recent
 
