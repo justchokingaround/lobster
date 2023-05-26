@@ -401,10 +401,7 @@ save_history() {
 }
 
 download_video() {
-  dep_ch ffmpeg || true
-  ffmpeg -loglevel error -stats -i "$video_link" -c copy "$title".mp4
-  send_notification "Finished downloading" "5000" "" "$title"
-  exit 1
+  ffmpeg -loglevel error -stats -i "$1" -c copy "$2".mp4
 }
 
 loop() {
@@ -413,7 +410,16 @@ loop() {
     [ -z "$embed_link" ] && exit 1
     get_json
     [ -z "$video_link" ] && exit 1
-    [ "$download" = "1" ] && download_video
+    if [ "$download" = "1" ]; then
+      if [ "$media_type" = "movie" ]; then
+        download_video "$video_link" "$title" || exit 1
+        send_notification "Finished downloading" "5000" "" "$title"
+      else
+        download_video "$video_link" "$title - $season_title - $episode_title" || exit 1
+        send_notification "Finished downloading" "5000" "" "$title - $season_title - $episode_title"
+      fi
+      exit
+    fi
     play_video && wait
     [ "$history" = 1 ] && save_history
     prompt_to_continue
