@@ -1,3 +1,5 @@
+#!/bin/sh
+
 LOBSTER_VERSION="3.9.9"
 
 config_file="$HOME/.config/lobster/lobster_config.txt"
