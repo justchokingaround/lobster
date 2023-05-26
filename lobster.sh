@@ -525,7 +525,8 @@ while [ $# -gt 0 ]; do
 	-e | --edit) [ -f "$config_file" ] && "$lobster_editor" "$config_file" && exit 0 || exit 0 ;;
 	-p | --provider) 
     provider="$2"
-    [ -z "$provider" ] && provider="UpCloud" && shift 2 ;;
+    [ -z "$provider" ] && provider="UpCloud" 
+    shift 2 ;;
 	-j | --json) json_output="1" && shift ;;
   -q | --quality) quality="$2" && shift 2 ;;
   --rofi | --dmenu | --external-menu) use_external_menu="1" && shift ;;
