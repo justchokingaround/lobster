@@ -498,14 +498,21 @@ choose_from_trending() {
     main
 }
 
-choose_from_recent() {
-    [ "$image_preview" = "1" ] && response=$(curl -s "https://${base}/home" | $sed -n '/class="cat-heading">Latest Movies</,/class="cat-heading">Latest TV Shows</p' | $sed ':a;N;$!ba;s/\n//g;s/class="flw-item"/\n/g' |
+choose_from_recent_movie() {
+    [ "$image_preview" = "1" ] && response=$(curl -s "https://${base}/movie" | $sed ':a;N;$!ba;s/\n//g;s/class="flw-item"/\n/g' |
                $sed -nE "s@.*img data-src=\"([^\"]*)\".*<a href=\".*/(tv|movie)/watch-.*-([0-9]*)\".*title=\"([^\"]*)\".*class=\"fdi-item\">([^<]*)</span>.*@\1\t\3\t\2\t\4 [\5]@p" | hxunent)
-    [ "$image_preview" = "0" ] && response=$(curl -s "https://${base}/home" | $sed -n '/class="cat-heading">Latest Movies</,/class="cat-heading">Latest TV Shows</p' | $sed ':a;N;$!ba;s/\n//g;s/class="flw-item"/\n/g' |
+    [ "$image_preview" = "0" ] && response=$(curl -s "https://${base}/movie" |  $sed ':a;N;$!ba;s/\n//g;s/class="flw-item"/\n/g' |
       $sed -nE "s@.*<a href=\".*/(tv|movie)/watch-.*-([0-9]*)\".*title=\"([^\"]*)\".*class=\"fdi-item\">([^<]*)</span>.*@\3 (\1) [\4]\t\2@p" | hxunent)
     main
 }
 
+choose_from_recent_tv() {
+    [ "$image_preview" = "1" ] && response=$(curl -s "https://${base}/tv-show" | $sed ':a;N;$!ba;s/\n//g;s/class="flw-item"/\n/g' |
+               $sed -nE "s@.*img data-src=\"([^\"]*)\".*<a href=\".*/(tv|movie)/watch-.*-([0-9]*)\".*title=\"([^\"]*)\".*class=\"fdi-item\">([^<]*)</span>.*@\1\t\3\t\2\t\4 [\5]@p" | hxunent)
+    [ "$image_preview" = "0" ] && response=$(curl -s "https://${base}/home" |  $sed ':a;N;$!ba;s/\n//g;s/class="flw-item"/\n/g' |
+      $sed -nE "s@.*<a href=\".*/(tv|movie)/watch-.*-([0-9]*)\".*title=\"([^\"]*)\".*class=\"fdi-item\">([^<]*)</span>.*@\3 (\1) [\4]\t\2@p" | hxunent)
+    main
+}
 
 update_script() {
 	update=$(curl -s "https://raw.githubusercontent.com/justchokingaround/lobster/master/lobster.sh" || die "Connection error")
@@ -531,16 +538,40 @@ while [ $# -gt 0 ]; do
 	-e | --edit) [ -f "$config_file" ] && "$lobster_editor" "$config_file" && exit 0 || exit 0 ;;
 	-p | --provider) 
     provider="$2"
-    [ -z "$provider" ] && provider="UpCloud" 
-    shift 2 ;;
+    if [ -z "$provider" ]; then 
+      provider="UpCloud"
+      shift
+    else
+      shift 2
+    fi ;;
 	-j | --json) json_output="1" && shift ;;
-  -q | --quality) quality="$2" && shift 2 ;;
+  -q | --quality) 
+    quality="$2"
+    if [ -z "$quality" ]; then
+      quality="1080"
+      shift
+    else
+      shift 2
+    fi ;;
   --rofi | --dmenu | --external-menu) use_external_menu="1" && shift ;;
   -t | --trending) trending="1" && shift ;;
-  -r | --recent) recent="1" && shift ;;
+  -r | --recent) 
+    recent="$2"
+    if [ -z "$recent" ]; then 
+      recent="movie" 
+      shift
+    else
+      shift 2
+    fi ;;
   -i | --image-preview) image_preview="1" && shift ;;
-	-l | --language) subs_language="$2" 
-    [ -z "$subs_language" ] && subs_language="english" && shift 2 ;;
+	-l | --language) 
+    subs_language="$2" 
+    if [ -z "$subs_language" ]; then
+      subs_language="english"
+      shift
+    else
+      shift 2
+    fi ;;
   -s | --syncplay) player="syncplay" && shift ;;
 	-u | -U | --update) update_script ;;
 	-v | -V | --version) printf "Lobster Version: %s\n" "$LOBSTER_VERSION" && exit 0 ;;
@@ -555,6 +586,7 @@ if [ "$image_preview" = 1 ]; then
 fi
 [ -z "$provider" ] && provider="UpCloud"
 [ "$trending" = "1" ] && choose_from_trending
-[ "$recent" = "1" ] && choose_from_recent
+[ "$recent" = "movie" ] && choose_from_recent_movie
+[ "$recent" = "tv" ] && choose_from_recent_tv
 
 main
