@@ -404,6 +404,7 @@ Please refer to the [wiki](https://github.com/justchokingaround/lobster/wiki/Con
 - patch
 - mpv
 - html-xml-utils (for fixing html encoded characters)
+- rofi (external menu)
 - socat (for getting the player position from the mpv socket)
 - vlc (optional)
 - iina (optional)
