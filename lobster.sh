@@ -562,12 +562,17 @@ EOF
     case "$1" in
     -c | --continue) play_from_history && exit ;;
     -d | --download)
-      download="1" && download_dir="$2"
-      if [ -z "$download_dir" ]; then
-        download_dir="$PWD"
+      download="1"
+      if [ -n "$download_dir" ]; then
         shift
       else
-        shift 2
+        download_dir="$2"
+        if [ -z "$download_dir" ]; then
+          download_dir="$PWD"
+          shift
+        else
+          shift 2
+        fi
       fi
       ;;
     -h | --help) usage && exit 0 ;;
