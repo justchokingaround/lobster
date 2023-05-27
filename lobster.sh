@@ -628,7 +628,7 @@ EOF
     if [ "$use_external_menu" = 1 ]; then
       test -d "$applications" || mkdir -p "$applications"
       mkdir -p "/tmp/lobster/applications/"
-      ln -s "/tmp/lobster/applications/" "$applications" >/dev/null
+      [ ! -L "/tmp/lobster/applications" ] && ln -s "/tmp/lobster/applications/" "$applications" >/dev/null
     fi
   fi
   [ -z "$provider" ] && provider="UpCloud"
