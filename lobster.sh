@@ -1,9 +1,19 @@
 #!/bin/sh
 
-{
-  LOBSTER_VERSION="3.9.9"
+LOBSTER_VERSION="3.9.9"
 
-  config_file="$HOME/.config/lobster/lobster_config.txt"
+config_file="$HOME/.config/lobster/lobster_config.txt"
+lobster_editor=${VISUAL:-${EDITOR:-vim}}
+
+if [ "$1" = "--edit" ] || [ "$1" = "-e" ]; then
+  if [ -f "$config_file" ]; then
+    . "$config_file"
+    "$lobster_editor" "$config_file"
+  fi
+  exit 0
+fi
+
+{
   applications="$HOME/.local/share/applications/lobster"
   images_cache_dir="/tmp/lobster/lobster-images"
   tmp_position="/tmp/lobster/lobster_position"
@@ -120,6 +130,8 @@ EOF
       Continue watching from current history
     -d, --download [path]
       Downloads movie or episode that is selected (if no path is provided, it defaults to the current directory)
+    -e, --edit
+      Edit config file using an editor defined with lobster_editor in the config (\$EDITOR by default)
     -h, --help
       Show this help message and exit
     -i, --image-preview

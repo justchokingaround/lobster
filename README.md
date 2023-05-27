@@ -12,6 +12,7 @@ https://github.com/justchokingaround/lobster/assets/44473782/fbeba934-58e0-4958-
 - [Usage](#usage)
   - [`-c` / `--continue`](#-c----continue-argument)
   - [`-d` / `--download`](#-d----download-path-argument)
+  - [`-e` / `--edit`](#-e----edit-argument)
   - [`-i` / `--image-preview`](#-i----image-preview-argument)
   - [`-j` / `--json`](#-j----json-argument)
   - [`-l` / `--language`](#-l----language-language-argument)
@@ -141,6 +142,8 @@ Options:
       Continue watching from current history
     -d, --download [path]
       Downloads movie or episode that is selected (if no path is provided, it defaults to the current directory)
+    -e, --edit
+      Edit config file using an editor defined with lobster_editor in the config (\$EDITOR by default)
     -h, --help
       Show this help message and exit
     -i, --image-preview
@@ -232,6 +235,10 @@ or using a relative path:
 ```sh
 lobster -d "../rick_and_morty/" rick and morty
 ```
+
+### `-e` / `--edit` argument
+
+By passing this argument you can edit the config file using an editor of your choice. By default it will use the editor defined in the `lobster_config.txt` file, but if you don't have one defined, it will use the `$EDITOR` environment variable (if it's not set, it will default to `vim`).
 
 ### `-i` / `--image-preview` argument
 
