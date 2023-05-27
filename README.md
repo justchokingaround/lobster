@@ -123,10 +123,6 @@ player="mpv"
 quality="1080"
 json_output=0
 histfile="$HOME/.local/share/lobster_history.txt"
-cache_dir="/tmp/lobster"
-images_cache_dir="/tmp/lobster-images"
-applications_dir="$HOME/.local/share/applications/lobster"
-tmp_position="/tmp/lobster_position"
 ```
 
 Note: all the values in this sample configuration are the default values, with the exception of `image_config_path`.
