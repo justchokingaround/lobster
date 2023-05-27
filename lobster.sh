@@ -523,7 +523,7 @@ EOF
   choose_from_recent_tv() {
     [ "$image_preview" = "1" ] && response=$(curl -s "https://${base}/tv-show" | $sed ':a;N;$!ba;s/\n//g;s/class="flw-item"/\n/g' |
       $sed -nE "s@.*img data-src=\"([^\"]*)\".*<a href=\".*/(tv|movie)/watch-.*-([0-9]*)\".*title=\"([^\"]*)\".*class=\"fdi-item\">([^<]*)</span>.*@\1\t\3\t\2\t\4 [\5]@p" | hxunent)
-    [ "$image_preview" = "0" ] && response=$(curl -s "https://${base}/home" | $sed ':a;N;$!ba;s/\n//g;s/class="flw-item"/\n/g' |
+    [ "$image_preview" = "0" ] && response=$(curl -s "https://${base}/tv-show" | $sed ':a;N;$!ba;s/\n//g;s/class="flw-item"/\n/g' |
       $sed -nE "s@.*<a href=\".*/(tv|movie)/watch-.*-([0-9]*)\".*title=\"([^\"]*)\".*class=\"fdi-item\">([^<]*)</span>.*@\3 (\1) [\4]\t\2@p" | hxunent)
     main
   }
