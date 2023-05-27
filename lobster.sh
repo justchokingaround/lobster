@@ -116,44 +116,45 @@ EOF
   If a query is provided, it will be used to search for a Movie/TV Show
 
   Options:
-
     -c, --continue
       Continue watching from current history
-    -d, --download
-      Downloads movie or episode that is selected
+    -d, --download [path]
+      Downloads movie or episode that is selected (if no path is provided, it defaults to the current directory)
     -h, --help
       Show this help message and exit
-    -p, --provider
-      Specify the provider to watch from (default: Vidcloud) (currently supported: Vidcloud)
-    -j, --json
-      Outputs the json containing video links, subtitle links, referrers etc. to stdout
-    -q, --quality
-      Specify the video quality (default: 1080)
-    --rofi, --dmenu, --external-menu
-      Use rofi instead of fzf
-    -t, --trending
-      Lets you select from the most popular movies
-    -r, --recent
-      Lets you select from the most recent movies
     -i, --image-preview
       Shows image previews during media selection (requires ueberzugpp to be installed to work with fzf)
-    -l, --language
-      Specify the subtitle language
+    -j, --json
+      Outputs the json containing video links, subtitle links, referrers etc. to stdout
+    -l, --language [language]
+      Specify the subtitle language (if no language is provided, it defaults to english)
+    --rofi, --dmenu, --external-menu
+      Use rofi instead of fzf
+    -p, --provider
+      Specify the provider to watch from (if no provider is provided, it defaults to UpCloud) (currently supported: Upcloud, Vidcloud)
+    -q, --quality
+      Specify the video quality (if no quality is provided, it defaults to 1080)
+    -r, --recent [movies|tv]
+      Lets you select from the most recent movies or tv shows (if no argument is provided, it defaults to movies)
     -s, --syncplay
       Use Syncplay to watch with friends
+    -t, --trending
+      Lets you select from the most popular movies and shows
     -u, -U, --update
       Update the script
     -v, -V, --version
       Show the version of the script
+    -x, --debug
+      Enable debug mode (prints out debug info to stdout and also saves it to /tmp/lobster.log)
 
-    Note: 
-      All arguments can be specified in the config file as well.
-      If an argument is specified in both the config file and the command line, the command line argument will be used.
+  Note: 
+    All arguments can be specified in the config file as well.
+    If an argument is specified in both the config file and the command line, the command line argument will be used.
 
-    Some example usages:
-     ${0##*/} -i a silent voice --rofi
-     ${0##*/} -l spanish -q 720 fight club -i -d
-     ${0##*/} -l spanish blade runner --json
+  Some example usages:
+    ${0##*/} -i a silent voice --rofi
+    ${0##*/} -l spanish -q 720 fight club -i -d
+    ${0##*/} -l spanish blade runner --json
 
 " "${0##*/}"
   }
@@ -558,37 +559,8 @@ EOF
       fi
       ;;
     -h | --help) usage && exit 0 ;;
-    -p | --provider)
-      provider="$2"
-      if [ -z "$provider" ]; then
-        provider="UpCloud"
-        shift
-      else
-        shift 2
-      fi
-      ;;
-    -j | --json) json_output="1" && shift ;;
-    -q | --quality)
-      quality="$2"
-      if [ -z "$quality" ]; then
-        quality="1080"
-        shift
-      else
-        shift 2
-      fi
-      ;;
-    --rofi | --dmenu | --external-menu) use_external_menu="1" && shift ;;
-    -t | --trending) trending="1" && shift ;;
-    -r | --recent)
-      recent="$2"
-      if [ -z "$recent" ]; then
-        recent="movie"
-        shift
-      else
-        shift 2
-      fi
-      ;;
     -i | --image-preview) image_preview="1" && shift ;;
+    -j | --json) json_output="1" && shift ;;
     -l | --language)
       subs_language="$2"
       if [ -z "$subs_language" ]; then
@@ -598,7 +570,36 @@ EOF
         shift 2
       fi
       ;;
+    --rofi | --dmenu | --external-menu) use_external_menu="1" && shift ;;
+    -p | --provider)
+      provider="$2"
+      if [ -z "$provider" ]; then
+        provider="UpCloud"
+        shift
+      else
+        shift 2
+      fi
+      ;;
+    -q | --quality)
+      quality="$2"
+      if [ -z "$quality" ]; then
+        quality="1080"
+        shift
+      else
+        shift 2
+      fi
+      ;;
+    -r | --recent)
+      recent="$2"
+      if [ -z "$recent" ]; then
+        recent="movie"
+        shift
+      else
+        shift 2
+      fi
+      ;;
     -s | --syncplay) player="syncplay" && shift ;;
+    -t | --trending) trending="1" && shift ;;
     -u | -U | --update) update_script ;;
     -v | -V | --version) send_notification "Lobster Version: %s\n" "$LOBSTER_VERSION" && exit 0 ;;
     -x | --debug) set -x && shift ;;

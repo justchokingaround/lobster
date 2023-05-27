@@ -2,15 +2,32 @@
 
 https://github.com/justchokingaround/lobster/assets/44473782/fbeba934-58e0-4958-b051-a479c9015713
 
-### If you're upgrading from v3 to v4, please delete your old history and configuration file as they might cause the script to break. That can be done with
+## Overview
 
-```sh
-rm ~/.config/lobster_history.txt && rm ~/.config/lobster/lobster_config.txt
-```
+- [Install](#install)
+  - [Arch linux](#arch)
+  - [Linux](#linux)
+  - [Mac](#mac)
+  - [Windows](#windows)
+- [Usage](#usage)
+  - [`-c` / `--continue`](#-c----continue-argument)
+  - [`-d` / `--download`](#-d----download-path-argument)
+  - [`-i` / `--image-preview`](#-i----image-preview-argument)
+  - [`-j` / `--json`](#-j----json-argument)
+  - [`-l` / `--language`](#-l----language-language-argument)
+  - [`--rofi` / `--dmenu` / `--external-menu`](#--rofi----dmenu----external-menu-argument)
+  - [`-p` / `--provider`](#-p----provider-provider-argument)
+  - [`-q` / `--quality`](#-q----quality-quality-argument)
+  - [`-r` / `--recent`](#r----recent-tvmovie-argument)
+  - [`-s` / `--syncplay`](#-s----syncplay-argument)
+  - [`-t` / `--trending`](#-t----trending-argument)
+  - [`-u` / `-U` / `--update`](#u---u----update-argument)
+  - [`-v` / `-V` / `--version`](#v---v----version-argument)
+  - [`-x` / `--debug`](#-x----debug-argument)
+- [Configuration](#configuration)
+- [Uninstall](#uninstall)
 
 ## Install
-
-### Linux
 
 #### Arch
 
@@ -20,7 +37,7 @@ NOTE: the `lobster` package is OUT OF DATE, so do not install it! (it has alread
 paru -S lobster-git
 ```
 
-#### Manually
+#### Linux
 
 ```sh
 sudo curl -sL github.com/justchokingaround/lobster/raw/main/lobster.sh -o /usr/local/bin/lobster &&
@@ -36,6 +53,8 @@ chmod +x "$(brew --prefix)"/bin/lobster
 
 ### Windows
 
+<details>
+<summary>Windows installation instructions</summary>
 1. Install scoop
 
 Open a PowerShell terminal https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell-on-windows?view=powershell-7.2#msi (version 5.1 or later) and run:
@@ -109,42 +128,118 @@ sudo chmod +x /usr/bin/lobster
 lobster <args> or lobster [movie/tv show]
 ```
 
-## Configuration
+</details>
 
-Settings are stored in `~/.config/lobster/lobster_config.txt`. Here is an example configuration file containing the values that you can change:
+## Usage
+
+```txt
+Usage: lobster [options] [query]
+If a query is provided, it will be used to search for a Movie/TV Show
+
+Options:
+    -c, --continue
+      Continue watching from current history
+    -d, --download [path]
+      Downloads movie or episode that is selected (if no path is provided, it defaults to the current directory)
+    -h, --help
+      Show this help message and exit
+    -i, --image-preview
+      Shows image previews during media selection (requires ueberzugpp to be installed to work with fzf)
+    -j, --json
+      Outputs the json containing video links, subtitle links, referrers etc. to stdout
+    -l, --language [language]
+      Specify the subtitle language (if no language is provided, it defaults to english)
+    --rofi, --dmenu, --external-menu
+      Use rofi instead of fzf
+    -p, --provider
+      Specify the provider to watch from (if no provider is provided, it defaults to UpCloud) (currently supported: Upcloud, Vidcloud)
+    -q, --quality
+      Specify the video quality (if no quality is provided, it defaults to 1080)
+    -r, --recent [movies|tv]
+      Lets you select from the most recent movies or tv shows (if no argument is provided, it defaults to movies)
+    -s, --syncplay
+      Use Syncplay to watch with friends
+    -t, --trending
+      Lets you select from the most popular movies and shows
+    -u, -U, --update
+      Update the script
+    -v, -V, --version
+      Show the version of the script
+    -x, --debug
+      Enable debug mode (prints out debug info to stdout and also saves it to /tmp/lobster.log)
+
+  Note:
+    All arguments can be specified in the config file as well.
+    If an argument is specified in both the config file and the command line, the command line argument will be used.
+
+  Some example usages:
+    lobster -i a silent voice --rofi
+    lobster -l spanish -q 720 fight club -i -d
+    lobster -l spanish blade runner --json
 
 ```
-history=0
-use_external_menu=0
-image_preview=0
-image_config_path="$HOME/.config/rofi/styles/launcher.rasi"
-subs_language="English"
-player="mpv"
-quality="1080"
-json_output=0
-histfile="$HOME/.local/share/lobster_history.txt"
+
+### `-c` / `--continue` argument
+
+This feature is disabled by default because it relies on history, to enable it, you need add the following line to the `lobster_config.txt` file:
+
+```sh
+history=1
 ```
 
-Note: all the values in this sample configuration are the default values, with the exception of `image_config_path`.
+In a similar fashion to how saving your position when you watch videos on YouTube or Netflix works, lobster has history support and saves the last minute you watched for a Movie or TV Show episode. To use this feature, simply watch a Movie or an Episode from a TV Show, and after you quit mpv the history will be automatically updated. The next time you want to resume from the last position watched, you can just run
 
-### External Menu
+```sh
+lobster -c
+```
 
-By setting this value to `1` you can run the script using `rofi` instead of `fzf`.
-
-Also supported as command line arguments: `--rofi`, `--dmenu`, `--external-menu`
+which will prompt you to chose which of the saved Movies/TV Shows you'd like to resume from.
+Upon the completion of a movie or an episode, the corresponding entry is either deleted (in case of a movie, or the last episode of a show), or it is updated to the next available episode (if it's the last episode of a season, it will update to the first episode of the next season).
 
 <details>
 <summary>Showcase</summary>
    
-   ![image](https://github.com/justchokingaround/lobster/assets/44473782/d1243c17-0ef1-44b3-99a8-f2c4a4ab5da9)
+![image](https://github.com/justchokingaround/lobster/assets/44473782/5ed98fb9-008d-4068-a854-577245cfe1ee)
+   
+![image](https://github.com/justchokingaround/lobster/assets/44473782/cd59329e-a1c8-408a-be48-690db2d52642)
+   
+![image](https://github.com/justchokingaround/lobster/assets/44473782/fae5ea52-4dc4-41ee-b7a2-cbb2476f5819)
    
 </details>
 
-### Image Preview
+#### Please note:
 
-By setting this value to `1` you can see image previews when selecting an entry.
+- The history file can be found at `~/.local/share/lobster/lobster_history.txt`
+- A movie or TV show episode is automatically marked as completed/updated after the user watches more than 90% of its content
 
-For `rofi` it will work out of the box, if you have icons enabled in your default configuration (to see how you can use a custom configuration for properly displaying images in the section below).
+### `-d` / `--download` `<path>` argument
+
+This option lets you use lobster as you normally would, with the exception that instead of playing the video in your player of choice, it will instead download the video. If no path is specified when passing this argument, then it will download to the current working directory, as an example, it would look like this:
+
+```sh
+lobster -d rick and morty
+```
+
+If you want to specify a path to which you would like to download the video, you can do so by passing an additional parameter to the `-d` or `--download` argument, for instance:
+using a full path:
+
+```sh
+lobster -d "/home/chomsky/tv_shows/rick_and_morty/" rick and morty
+```
+
+or using a relative path:
+
+```sh
+lobster -d "../rick_and_morty/" rick and morty
+```
+
+### `-i` / `--image-preview` argument
+
+By passing this argument you can see image previews when selecting an entry.
+
+For `rofi` it will work out of the box, if you have icons enabled in your default configuration.
+
+Example using my custom rofi configuration (to customize how your rofi image preview looks, please check the [configuration](#configuration) section)
 
 <details>
 <summary>Showcase</summary>
@@ -162,6 +257,9 @@ For `fzf` you will need to install [ueberzugpp](https://github.com/jstkdng/ueber
    
 </details>
 
+<details>
+<summary>Installation instructions for ueberzugpp</summary>
+
 On Arch Linux you can install it using your aur helper of choice with:
 
 ```sh
@@ -178,113 +276,124 @@ rm ueberzugpp
 
 In other cases, you can build it from [source](https://github.com/jstkdng/ueberzugpp/#build-from-source).
 
-Also supported as command line arguments: `-i`, `--image-preview`
+</details>
 
-### Image Config Path
+### `-j` / `--json` argument
 
-In the case that you use `rofi` with image preview (that means that `use_external_menu` and `image_preview` are both set to `1`), you have the ability to point to a specific config file to be used only for when rofi runs in the mode where it displays images (it will not affect other prompts). An example of such a configuration, and then one I use in the demo can be found here:
+By passing this argument, you can output the json for the currently selected media to stdout, with the decrypted video link.
 
-https://github.com/justchokingaround/dotfiles/blob/main/rofi/styles/launcher.rasi
+### `-l` / `--language` `<language>` argument
 
-### Subtitles Language
+By passing this argument, you can specify your preferred language for the subtitles of a video. If no parameter is specified, it will default to `english`.
 
-The `subs_language` setting can be any language, e.g. `English`, `French`, `German`, `Spanish` and so on. Please note that not all streams have subtitles in every language, so `English` is the safest option.
-
-Also supported as command line arguments: `-l`, `--language`
-
-### Player
-
-There are 3 available video players to chose from : `mpv`, `iina` or `vlc`.
-
-Note that only `mpv` supports the history feature.
-
-### Quality
-
-You can set your preferred quality for the video either in the config file with for example:
+Example use case:
 
 ```sh
-quality=720
+lobster seven -l spanish
 ```
 
-Or with a commandline argument: `lobster -q 720 <movie/tv show>`
+This is also valid, and will use english as the defined subtitles language:
 
-### JSON Output
+```sh
+lobster -l weathering with you
+```
 
-By setting the value of `json_output` to `1` you can output the json for the currently selected media to stdout, with the decrypted video link.
+### `--rofi` / `--dmenu` / `--external-menu` argument
 
-Also supported as command line arguments: `-j`, `--json`
+By passing this argument, you can use rofi instead of fzf to interact with the lobster script.
+
+This is the recommended way to use lobster, and is a core philosophy of this script. My use case is that I have a keybind in my WM configuration that calls lobster, that way I can watch Movies and TV Shows without ever even opening the terminal.
+
+Here is an example of that looks like (without image preview):
 
 <details>
 <summary>Showcase</summary>
    
-![image](https://github.com/justchokingaround/lobster/assets/44473782/8e45e664-7a86-4409-b98c-4a9dcd2a0094)
+   ![image](https://github.com/justchokingaround/lobster/assets/44473782/d1243c17-0ef1-44b3-99a8-f2c4a4ab5da9)
    
 </details>
 
-## History
+### `-p` / `--provider` `<provider>` argument
 
-This feature is disabled by default, to enable it, you need add the following line to the `lobster_config.txt` file:
+By passing this argument, you can specify a preferred provider. The script currently supports the following providers: `UpCloud`, `Vidcloud`. If you don't pass any provider in the parameters, it will default to `UpCloud`.
 
-```sh
-history=1
-```
-
-In a similar fashion to how saving your position when you watch videos on YouTube or Netflix, lobster has history support and saves the last minute you watched for a Movie or TV Show episode. To use this feature, simply watch a Movie or an episode from a TV Show, and after you quit mpv the history will be automatically updated. The next time you want to resume from the last position watched, you can just run
+Example use case:
 
 ```sh
-lobster -c
+lobster -p Vidcloud shawshank redemption
 ```
 
-which will prompt you to chose which of the saved Movies/TV Showvs you'd like to resume from.
+This is also valid, but will use `UpCloud` instead:
 
-<details>
-<summary>Showcase</summary>
-   
-![image](https://github.com/justchokingaround/lobster/assets/44473782/5ed98fb9-008d-4068-a854-577245cfe1ee)
-   
-![image](https://github.com/justchokingaround/lobster/assets/44473782/cd59329e-a1c8-408a-be48-690db2d52642)
-   
-![image](https://github.com/justchokingaround/lobster/assets/44473782/fae5ea52-4dc4-41ee-b7a2-cbb2476f5819)
-   
-</details>
-
-#### Please note:
-
-- The history file can be found at `~/.local/share/lobster/lobster_history.txt`
-- A movie or TV show episode is automatically marked as completed/updated after the user watches more than 90% of its content\*
-
-## Arguments
-
+```sh
+lobster -p shawshank redemption
 ```
- -c, --continue
-      Continue watching from current history
-    -d, --download
-      Downloads movie or episode that is selected
-    -h, --help
-      Show this help message and exit
-    -p, --provider
-      Specify the provider to watch from (default: Vidcloud) (currently supported: Vidcloud)
-    -j, --json
-      Outputs the json containing video links, subtitle links, referrers etc. to stdout
-    -q, --quality
-      Specify the video quality (default: 1080)
-    --rofi, --dmenu, --external-menu
-      Use rofi instead of fzf
-    -t, --trending
-      Lets you select from the most popular movies
-    -r, --recent
-      Lets you select from the most recent movies
-    -i, --image-preview
-      Shows image previews during media selection (requires ueberzugpp to be installed to work with fzf)
-    -l, --language
-      Specify the subtitle language
-    -s, --syncplay
-      Use Syncplay to watch with friends
-    -u, -U, --update
-      Update the script
-    -v, -V, --version
-      Show the version of the script
+
+### `-q` / `--quality` `<quality>` argument
+
+By passing this argument, you can specify a preferred quality for the video (if those are present in the source). If you don't pass any quality in the parameters, it will default to `1080`.
+
+Example use case:
+
+```sh
+lobster -q 720 the godfather
 ```
+
+This is also valid, but will use `1080` instead:
+
+```sh
+lobster the godfather -q
+```
+
+### `-r` / `--recent` `<tv|movie>` argument
+
+By passing this argument, you can see watch most recently released movies and TV shows. You can specify if you want to see movies or TV shows by passing the `tv` or `movie` parameter. If you don't pass any parameter, it will default to `movie`.
+
+Example use case:
+
+```sh
+lobster -r tv
+```
+
+This is also valid, but will use `movie` instead:
+
+```sh
+lobster -r
+```
+
+### `-s` / `--syncplay` argument
+
+By passing this argument, you can use [syncplay](https://syncplay.pl/) to watch videos with your friends. This will only work if you have syncplay installed and configured.
+
+### `-t` / `--trending` argument
+
+By passing this argument, you can see the most trending movies and TV shows.
+
+### `-u` / `-U` / `--update` argument
+
+By passing this argument, you can update the script to the latest version.
+
+Note: you will most likely need to run this with `sudo`
+
+Example use case:
+
+```sh
+sudo lobster -u
+```
+
+### `-v` / `-V` / `--version` argument
+
+By passing this argument, you can see the current version of the script. This is useful if you want to check if you have the latest version installed.
+
+### `-x` / `--debug` argument
+
+By passing this argument, you can see the debug output of the script. This will redirect all the stderr output to stdout, printing it to the terminal, while also saving it to a log file: `/tmp/lobter.log`
+
+Note: fzf prints the finder to stderr, so this will also be redirected to stdout, and by extension printed to the terminal and saved to the log file.
+
+## Configuration
+
+Please refer to the [wiki](https://github.com/justchokingaround/lobster/wiki/Configuration) for information on how to configure the script using the config file.
 
 ## Dependencies
 
@@ -307,6 +416,12 @@ git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf
 ```
 
 ## Uninstall
+
+### Arch Linux
+
+```sh
+paru -R lobster
+```
 
 ### Linux
 
