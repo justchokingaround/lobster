@@ -6,6 +6,7 @@ https://github.com/justchokingaround/lobster/assets/44473782/fbeba934-58e0-4958-
 
 - [Install](#install)
   - [Arch linux](#arch)
+  - [Debian linux](#debian)
   - [Linux](#linux)
   - [Mac](#mac)
   - [Windows](#windows)
@@ -36,6 +37,35 @@ NOTE: the `lobster` package is OUT OF DATE, so do not install it! (it has alread
 
 ```sh
 paru -S lobster-git
+```
+
+#### Debian (using makedeb and mist)
+
+Here are the full installation instructions for Debian:
+
+Install the dependencies:
+
+```sh
+sudo apt update && sudo apt upgrade && sudo apt install git && sudo apt install wget
+```
+
+During this step write `makedeb` and enter, when prompted:
+
+```sh
+bash -ci "$(wget -qO - 'https://shlink.makedeb.org/install')"
+```
+
+```sh
+wget -qO - 'https://proget.makedeb.org/debian-feeds/prebuilt-mpr.pub' | gpg --dearmor | sudo tee /usr/share/keyrings/prebuilt-mpr-archive-keyring.gpg 1> /dev/null
+echo "deb [arch=amd64 signed-by=/usr/share/keyrings/prebuilt-mpr-archive-keyring.gpg] https://proget.makedeb.org prebuilt-mpr $(lsb_release -cs)" | sudo tee /etc/apt/sources.list.d/prebuilt-mpr.list
+sudo apt update && sudo apt install mist
+```
+
+During this step when prompted to `Review files for 'lobster-git'? [Y/n]`, write `n` and enter.
+
+```sh
+mist update && mist install lobster-git
+
 ```
 
 #### Linux
