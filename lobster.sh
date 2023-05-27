@@ -618,4 +618,4 @@ EOF
   [ "$recent" = "tv" ] && choose_from_recent_tv
 
   main
-} 2>&1 | tee /tmp/lobster.log
+} 2>&1 | tee /tmp/lobster.log 2>/dev/null
