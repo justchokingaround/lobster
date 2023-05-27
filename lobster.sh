@@ -16,7 +16,7 @@ fi
 {
   applications="$HOME/.local/share/applications/lobster"
   images_cache_dir="/tmp/lobster/lobster-images"
-  tmp_position="/tmp/lobster/lobster_position"
+  tmp_position="/tmp/lobster_position"
   case "$(uname -s)" in
   MINGW* | *Msys) separator=';' && path_thing='' ;;
   *arwin) sed="gsed" ;;
