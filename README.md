@@ -250,7 +250,7 @@ Upon the completion of a movie or an episode, the corresponding entry is either 
 This option lets you use lobster as you normally would, with the exception that instead of playing the video in your player of choice, it will instead download the video. If no path is specified when passing this argument, then it will download to the current working directory, as an example, it would look like this:
 
 ```sh
-lobster -d rick and morty
+lobster rick and morty -d
 ```
 
 If you want to specify a path to which you would like to download the video, you can do so by passing an additional parameter to the `-d` or `--download` argument, for instance:
