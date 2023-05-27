@@ -6,8 +6,8 @@ https://github.com/justchokingaround/lobster/assets/44473782/fbeba934-58e0-4958-
 
 - [Install](#install)
   - [Arch linux](#arch)
-  - [Debian linux](#debian)
-  - [Linux](#linux)
+  - [Debian linux](#debian-using-makedeb-and-mist)
+  - [Linux](#linux-from-source)
   - [Mac](#mac)
   - [Windows](#windows)
 - [Usage](#usage)
@@ -68,7 +68,7 @@ mist update && mist install lobster-git
 
 ```
 
-#### Linux
+#### Linux (from source)
 
 ```sh
 sudo curl -sL github.com/justchokingaround/lobster/raw/main/lobster.sh -o /usr/local/bin/lobster &&
