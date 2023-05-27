@@ -44,14 +44,14 @@ sudo curl -sL github.com/justchokingaround/lobster/raw/main/lobster.sh -o /usr/l
 sudo chmod +x /usr/local/bin/lobster
 ```
 
-### Mac
+#### Mac
 
 ```sh
 curl -sL github.com/justchokingaround/lobster/raw/main/lobster.sh -o "$(brew --prefix)"/bin/lobster &&
 chmod +x "$(brew --prefix)"/bin/lobster
 ```
 
-### Windows
+#### Windows
 
 <details>
 <summary>Windows installation instructions</summary>
