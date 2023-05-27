@@ -55,6 +55,7 @@
     export Y=$(($(tput lines) / 6))
     [ -z "$base" ] && base="flixhq.to"
     [ -z "$player" ] && player="mpv"
+    [ -z "$download_dir" ] && download_dir="$PWD"
     [ -z "$provider" ] && provider="UpCloud"
     [ -z "$history" ] && history=0
     [ -z "$subs_language" ] && subs_language="english"
@@ -405,7 +406,7 @@ EOF
   }
 
   download_video() {
-    ffmpeg -loglevel error -stats -i "$1" -c copy "$2".mp4
+    ffmpeg -loglevel error -stats -i "$1" -c copy "$3/$2".mp4 -i "$4"
   }
 
   loop() {
@@ -416,11 +417,21 @@ EOF
       [ -z "$video_link" ] && exit 1
       if [ "$download" = "1" ]; then
         if [ "$media_type" = "movie" ]; then
-          download_video "$video_link" "$title" || exit 1
-          send_notification "Finished downloading" "5000" "" "$title"
+          if [ "$image_preview" = 1 ]; then
+            download_video "$video_link" "$title" "$download_dir" "$images_cache_dir/  $title ($media_type)  $media_id.jpg" || exit 1
+            send_notification "Finished downloading" "5000" "$images_cache_dir/  $title ($media_type)  $media_id.jpg" "$title"
+          else
+            download_video "$video_link" "$title" "$download_dir" || exit 1
+            send_notification "Finished downloading" "5000" "" "$title"
+          fi
         else
-          download_video "$video_link" "$title - $season_title - $episode_title" || exit 1
-          send_notification "Finished downloading" "5000" "" "$title - $season_title - $episode_title"
+          if [ "$image_preview" = 1 ]; then
+            download_video "$video_link" "$title - $season_title - $episode_title" "$download_dir" "$images_cache_dir/  $title ($media_type)  $media_id.jpg" || exit 1
+            send_notification "Finished downloading" "5000" "$images_cache_dir/  $title - $season_title - $episode_title ($media_type)  $media_id.jpg" "$title - $season_title - $episode_title"
+          else
+            download_video "$video_link" "$title - $season_title - $episode_title" "$download_dir" || exit 1
+            send_notification "Finished downloading" "5000" "" "$title - $season_title - $episode_title"
+          fi
         fi
         exit
       fi
@@ -538,7 +549,15 @@ EOF
   while [ $# -gt 0 ]; do
     case "$1" in
     -c | --continue) play_from_history && exit ;;
-    -d | --download) download="1" && shift ;;
+    -d | --download)
+      download="1" && download_dir="$2"
+      if [ -z "$download_dir" ]; then
+        download_dir="$PWD"
+        shift
+      else
+        shift 2
+      fi
+      ;;
     -h | --help) usage && exit 0 ;;
     -p | --provider)
       provider="$2"
