@@ -1,4 +1,5 @@
 ### Showcase
+
 https://github.com/justchokingaround/lobster/assets/44473782/fbeba934-58e0-4958-b051-a479c9015713
 
 ### If you're upgrading from v3 to v4, please delete your old history and configuration file as they might cause the script to break. That can be done with
@@ -12,12 +13,15 @@ rm ~/.config/lobster_history.txt && rm ~/.config/lobster/lobster_config.txt
 ### Linux
 
 #### Arch
+
 NOTE: the `lobster` package is OUT OF DATE, so do not install it! (it has already been flagged as so in the aur, but we need to wait for the maintainer to respond)
+
 ```sh
 paru -S lobster-git
 ```
 
 #### Manually
+
 ```sh
 sudo curl -sL github.com/justchokingaround/lobster/raw/main/lobster.sh -o /usr/local/bin/lobster &&
 sudo chmod +x /usr/local/bin/lobster
@@ -123,7 +127,6 @@ cache_dir="/tmp/lobster"
 images_cache_dir="/tmp/lobster-images"
 applications_dir="$HOME/.local/share/applications/lobster"
 tmp_position="/tmp/lobster_position"
-lobster_editor=lite-xl
 ```
 
 Note: all the values in this sample configuration are the default values, with the exception of `image_config_path`.
@@ -225,6 +228,7 @@ Also supported as command line arguments: `-j`, `--json`
 ## History
 
 This feature is disabled by default, to enable it, you need add the following line to the `lobster_config.txt` file:
+
 ```sh
 history=1
 ```
@@ -253,19 +257,6 @@ which will prompt you to chose which of the saved Movies/TV Showvs you'd like to
 - The history file can be found at `~/.local/share/lobster/lobster_history.txt`
 - A movie or TV show episode is automatically marked as completed/updated after the user watches more than 90% of its content\*
 
-### Lobster Editor
-
-You can change the value of `lobster_editor` to edit the config file with lobster_editor, when using `lobster -e`
-
-Example:
-
-```sh
-lobster_editor=lite-xl
-```
-
-The default value for this is $EDITOR or if that doesn't exist, then vim.
-
-
 ## Arguments
 
 ```
@@ -275,8 +266,6 @@ The default value for this is $EDITOR or if that doesn't exist, then vim.
       Downloads movie or episode that is selected
     -h, --help
       Show this help message and exit
-    -e, --edit
-      Edit config file using an editor defined with lobster_editor in the config ($EDITOR by default)
     -p, --provider
       Specify the provider to watch from (default: Vidcloud) (currently supported: Vidcloud)
     -j, --json

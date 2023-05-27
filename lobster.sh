@@ -4,7 +4,6 @@
   LOBSTER_VERSION="3.9.9"
 
   config_file="$HOME/.config/lobster/lobster_config.txt"
-  lobster_editor=${VISUAL:-${EDITOR:-vim}}
   case "$(uname -s)" in
   MINGW* | *Msys) separator=';' && path_thing='' ;;
   *arwin) sed="gsed" ;;
@@ -41,7 +40,7 @@
     rm -rf "$images_cache_dir"
     rm -rf $applications_dir/*
     rm "$tmp_position" 2>/dev/null
-    set +x
+    set +x && exec 2>&-
   }
   trap cleanup EXIT INT TERM
 
@@ -123,8 +122,6 @@ EOF
       Downloads movie or episode that is selected
     -h, --help
       Show this help message and exit
-    -e, --edit
-      Edit config file using an editor defined with lobster_editor in the config (\$EDITOR by default)
     -p, --provider
       Specify the provider to watch from (default: Vidcloud) (currently supported: Vidcloud)
     -j, --json
@@ -543,7 +540,6 @@ EOF
     -c | --continue) play_from_history && exit ;;
     -d | --download) download="1" && shift ;;
     -h | --help) usage && exit 0 ;;
-    -e | --edit) [ -f "$config_file" ] && "$lobster_editor" "$config_file" && exit 0 || exit 0 ;;
     -p | --provider)
       provider="$2"
       if [ -z "$provider" ]; then
