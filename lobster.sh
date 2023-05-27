@@ -543,7 +543,7 @@ EOF
   }
 
   configuration
-  # [ "$debug" = 1 ] && set -x
+  [ "$debug" = 1 ] && set -x
   while [ $# -gt 0 ]; do
     case "$1" in
     -c | --continue) play_from_history && exit ;;
