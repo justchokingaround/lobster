@@ -4,6 +4,9 @@
   LOBSTER_VERSION="3.9.9"
 
   config_file="$HOME/.config/lobster/lobster_config.txt"
+  applications="$HOME/.local/share/applications/lobster"
+  images_cache_dir="/tmp/lobster/lobster-images"
+  tmp_position="/tmp/lobster/lobster_position"
   case "$(uname -s)" in
   MINGW* | *Msys) separator=';' && path_thing='' ;;
   *arwin) sed="gsed" ;;
@@ -37,9 +40,8 @@
   fi
 
   cleanup() {
-    rm -rf "$images_cache_dir"
-    rm -rf $applications_dir
-    rm "$tmp_position" 2>/dev/null
+    rm -rf "$applications"
+    [ "$debug" != 1 ] && rm -rf /tmp/lobster/ 2>/dev/null
     set +x && exec 2>&-
   }
   trap cleanup EXIT INT TERM
@@ -63,9 +65,6 @@
     [ -z "$histfile" ] && histfile="$data_dir/lobster_history.txt" && mkdir -p "$(dirname "$histfile")"
     [ -z "$use_external_menu" ] && use_external_menu="0"
     [ -z "$image_preview" ] && image_preview="0"
-    [ -z "$images_cache_dir" ] && images_cache_dir="/tmp/lobster-images"
-    [ -z "$applications_dir" ] && applications_dir="$HOME/.local/share/applications/lobster"
-    [ -z "$tmp_position" ] && tmp_position="/tmp/lobster_position"
     [ -z "$debug" ] && debug=0
   }
 
@@ -172,7 +171,7 @@ EOF
     printf "%s\n" "$1" | while read -r cover_url id type title; do
       curl -s -o "$images_cache_dir/  $title ($type)  $id.jpg" "$cover_url" &
       if [ "$use_external_menu" = "1" ]; then
-        entry="$applications_dir"/"$id.desktop"
+        entry=/tmp/lobster/applications/"$id.desktop"
         generate_desktop "$title ($type)" "$images_cache_dir/  $title ($type)  $id.jpg" >"$entry" &
       fi
     done
@@ -442,7 +441,6 @@ EOF
       "Yes") resume_from="" && continue ;;
       "Search")
         rm "$images_cache_dir"/*
-        rm "$applications_dir"/*
         rm "$tmp_position" 2>/dev/null
         query=""
         response=""
@@ -545,7 +543,7 @@ EOF
   }
 
   configuration
-  [ "$debug" = 1 ] && set -x
+  # [ "$debug" = 1 ] && set -x
   while [ $# -gt 0 ]; do
     case "$1" in
     -c | --continue) play_from_history && exit ;;
@@ -609,7 +607,9 @@ EOF
   if [ "$image_preview" = 1 ]; then
     test -d "$images_cache_dir" || mkdir -p "$images_cache_dir"
     if [ "$use_external_menu" = 1 ]; then
-      test -d "$applications_dir" || mkdir -p "$applications_dir"
+      test -d "$applications" || mkdir -p "$applications"
+      mkdir -p "/tmp/lobster/applications/"
+      ln -s "/tmp/lobster/applications/" "$applications" >/dev/null
     fi
   fi
   [ -z "$provider" ] && provider="UpCloud"
