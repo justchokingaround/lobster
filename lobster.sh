@@ -38,7 +38,7 @@
 
   cleanup() {
     rm -rf "$images_cache_dir"
-    rm -rf $applications_dir/*
+    rm -rf $applications_dir*
     rm "$tmp_position" 2>/dev/null
     set +x && exec 2>&-
   }
