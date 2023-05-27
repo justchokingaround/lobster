@@ -42,6 +42,7 @@
   cleanup() {
     rm -rf "$applications"
     [ "$debug" != 1 ] && rm -rf /tmp/lobster/ 2>/dev/null
+    [ "$remove_tmp_lobster" = 1 ] && rm -rf /tmp/lobster/ 2>/dev/null
     set +x && exec 2>&-
   }
   trap cleanup EXIT INT TERM
