@@ -626,9 +626,8 @@ EOF
   if [ "$image_preview" = 1 ]; then
     test -d "$images_cache_dir" || mkdir -p "$images_cache_dir"
     if [ "$use_external_menu" = 1 ]; then
-      test -d "$applications" || mkdir -p "$applications"
       mkdir -p "/tmp/lobster/applications/"
-      [ ! -L "/tmp/lobster/applications" ] && ln -s "/tmp/lobster/applications/" "$applications" >/dev/null
+      [ ! -L "$applications" ] && ln -sf "/tmp/lobster/applications/" "$applications"
     fi
   fi
   [ -z "$provider" ] && provider="UpCloud"
