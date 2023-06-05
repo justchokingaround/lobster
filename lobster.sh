@@ -255,6 +255,7 @@ EOF
     else
       key="$(curl -s "https://github.com/enimax-anime/key/blob/e${embed_type}/key.txt" | $sed -nE "s_.*js-file-line\">(.*)<.*_\1_p")"
       encrypted_video_link=$(printf "%s" "$json_data" | tr "{|}" "\n" | $sed -nE "s_.*\"sources\":\"([^\"]*)\".*_\1_p" | head -1)
+      # ty @CoolnsX for helping me with figuring out how to implement aes in openssl
       video_link=$(printf "%s" "$encrypted_video_link" | base64 -d |
         openssl enc -aes-256-cbc -d -md md5 -k "$key" 2>/dev/null | $sed -nE "s_.*\"file\":\"([^\"]*)\".*_\1_p")
       json_data=$(printf "%s" "$json_data" | $sed -e "s|${encrypted_video_link}|${video_link}|")
@@ -418,7 +419,7 @@ EOF
   }
 
   download_video() {
-    ffmpeg -loglevel error -stats -i "$1" -c copy "$3/$2".mp4 -i "$4"
+    ffmpeg -loglevel error -stats -i "$1" -c copy "$3/$2".mp4
   }
 
   loop() {
@@ -617,7 +618,7 @@ EOF
     -s | --syncplay) player="syncplay" && shift ;;
     -t | --trending) trending="1" && shift ;;
     -u | -U | --update) update_script ;;
-    -v | -V | --version) send_notification "Lobster Version: %s\n" "$LOBSTER_VERSION" && exit 0 ;;
+    -v | -V | --version) send_notification "Lobster Version: $LOBSTER_VERSION" && exit 0 ;;
     -x | --debug) set -x && shift ;;
     *) query="$(printf "%s" "$query $1" | $sed "s/^ //;s/ /-/g")" && shift ;;
     esac
