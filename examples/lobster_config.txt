@@ -12,5 +12,5 @@ image_preview=0
 debug=0
 
 download_video() {
-  ffmpeg -loglevel error -stats -i "$1" -c copy "$3/$2".mp4 -i "$4"
+  ffmpeg -loglevel error -stats -i "$1" -c copy "$3/$2".mp4
 }
