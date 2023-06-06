@@ -27,6 +27,7 @@ https://github.com/justchokingaround/lobster/assets/44473782/fbeba934-58e0-4958-
   - [`-v` / `-V` / `--version`](#v---v----version-argument)
   - [`-x` / `--debug`](#-x----debug-argument)
 - [Configuration](#configuration)
+- [Contributing](#contributing)
 - [Uninstall](#uninstall)
 
 ## Install
@@ -58,9 +59,11 @@ bash -ci "$(wget -qO - 'https://shlink.makedeb.org/install')"
 ```sh
 wget -qO - 'https://proget.makedeb.org/debian-feeds/prebuilt-mpr.pub' | gpg --dearmor | sudo tee /usr/share/keyrings/prebuilt-mpr-archive-keyring.gpg 1> /dev/null
 ```
+
 ```
 echo "deb [arch=amd64 signed-by=/usr/share/keyrings/prebuilt-mpr-archive-keyring.gpg] https://proget.makedeb.org prebuilt-mpr $(lsb_release -cs)" | sudo tee /etc/apt/sources.list.d/prebuilt-mpr.list
 ```
+
 ```
 sudo apt update && sudo apt install mist
 ```
@@ -440,6 +443,23 @@ Note: fzf prints the finder to stderr, so this will also be redirected to stdout
 ## Configuration
 
 Please refer to the [wiki](https://github.com/justchokingaround/lobster/wiki/Configuration) for information on how to configure the script using the config file.
+
+## Contributing
+
+All contributions are welcome, and I will to review them as soon as possible. If you want to contribute, please follow the following recommendations:
+
+- All help is appreciated, even if it's just a typo fix, or a small improvement
+- You do not need to be a programmer to contribute, you can also help by opening issues, or by testing the script and reporting bugs
+- You do not need to be very experienced with shell scripting to contribute, I will gladly help you with any questions you might have, and I will also review your code
+- If you are unsure about something, please open an issue first, start a discussion or message me personally
+- Please make sure that your code is POSIX compliant (no bashisms)
+- Please make sure that your code passes `shellcheck`
+- Please use `shfmt` to format your code
+- If you are adding a new feature, please make sure that it is configurable (either through the config file and/or through command line arguments)
+- I recommend reading the philosophy section of the README, to get a better understanding of the project (TODO)
+
+You can find the current roadmap here, which contains TODOs and the current progress of the project:
+https://github.com/users/justchokingaround/projects/2/views/1?query=is%3Aopen+sort%3Aupdated-desc
 
 ## Dependencies
 
