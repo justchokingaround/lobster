@@ -354,8 +354,8 @@ EOF
         fi
       else
         if [ -n "$subs_links" ]; then
-          [ -z "$resume_from" ] && mpv "$subs_arg"="$subs_links" --force-media-title="$displayed_title" "$video_link"
-          [ -n "$resume_from" ] && mpv --start="$resume_from" --force-media-title="$displayed_title" "$video_link"
+          [ -z "$resume_from" ] && mpv "$subs_arg"="$subs_links" --force-media-title="$displayed_title" "$video_link" >/dev/null 2>&1
+          [ -n "$resume_from" ] && mpv --start="$resume_from" --force-media-title="$displayed_title" "$video_link" >/dev/null 2>&1
         else
           [ -z "$resume_from" ] && mpv --force-media-title="$displayed_title" "$video_link"
           [ -n "$resume_from" ] && mpv --start="$resume_from" --force-media-title="$displayed_title" "$video_link"
