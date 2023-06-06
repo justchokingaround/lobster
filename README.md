@@ -195,6 +195,8 @@ Options:
       Specify the provider to watch from (if no provider is provided, it defaults to UpCloud) (currently supported: Upcloud, Vidcloud)
     -q, --quality
       Specify the video quality (if no quality is provided, it defaults to 1080)
+    --quiet
+      Suppress the output from mpv when playing a video
     -r, --recent [movies|tv]
       Lets you select from the most recent movies or tv shows (if no argument is provided, it defaults to movies)
     -s, --syncplay
