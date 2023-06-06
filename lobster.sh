@@ -196,7 +196,7 @@ EOF
     ueberzugpp layer --no-stdin --silent --use-escape-codes --pid-file "$UB_PID_FILE"
     UB_PID="$(cat "$UB_PID_FILE")"
     export SOCKET=/tmp/ueberzugpp-"$UB_PID".socket
-    choice=$(ls "$images_cache_dir"/* | fzf -i -q "$1" --print-query --preview='ueberzugpp cmd -s $SOCKET -i fzfpreview -a add -x $X -y $Y --max-width $FZF_PREVIEW_COLUMNS --max-height $FZF_PREVIEW_LINES -f {}' --reverse --with-nth 2 -d "  " --preview-window=30%)
+    choice=$(ls "$images_cache_dir"/* | fzf -i -q "$1" --preview='ueberzugpp cmd -s $SOCKET -i fzfpreview -a add -x $X -y $Y --max-width $FZF_PREVIEW_COLUMNS --max-height $FZF_PREVIEW_LINES -f {}' --reverse --with-nth 2 -d "  " --preview-window=30%)
     ueberzugpp cmd -s "$SOCKET" -a exit
   }
 
@@ -280,7 +280,10 @@ EOF
   }
 
   check_history() {
-    [ -f "$histfile" ] || return
+    if [ ! -f "$histfile" ]; then
+      [ "$image_preview" = "1" ] && send_notification "Now Playing" "5000" "$images_cache_dir/  $title ($media_type)  $media_id.jpg" "$title"
+      [ "$json_output" != "1" ] && send_notification "Now Playing" "5000" "" "$title"
+    fi
     case $media_type in
     movie)
       if grep -q "$media_id" "$histfile"; then
