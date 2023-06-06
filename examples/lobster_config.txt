@@ -10,6 +10,7 @@ histfile="$HOME/.local/share/lobster/lobster_history.txt"
 use_external_menu=0
 image_preview=0
 debug=0
+quiet_output=0
 
 download_video() {
   ffmpeg -loglevel error -stats -i "$1" -c copy "$3/$2".mp4

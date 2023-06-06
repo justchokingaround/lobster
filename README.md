@@ -20,6 +20,7 @@ https://github.com/justchokingaround/lobster/assets/44473782/fbeba934-58e0-4958-
   - [`--rofi` / `--dmenu` / `--external-menu`](#--rofi----dmenu----external-menu-argument)
   - [`-p` / `--provider`](#-p----provider-provider-argument)
   - [`-q` / `--quality`](#-q----quality-quality-argument)
+  - [`--quiet`](#--quiet-argument)
   - [`-r` / `--recent`](#r----recent-tvmovie-argument)
   - [`-s` / `--syncplay`](#-s----syncplay-argument)
   - [`-t` / `--trending`](#-t----trending-argument)
@@ -392,6 +393,16 @@ This is also valid, but will use `1080` instead:
 
 ```sh
 lobster the godfather -q
+```
+
+### `--quiet` argument
+
+By passing this argument, you can suppress the output of mpv, when playing a video.
+
+Example use case:
+
+```sh
+lobster --quiet fight club
 ```
 
 ### `-r` / `--recent` `<tv|movie>` argument

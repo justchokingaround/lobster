@@ -357,11 +357,21 @@ EOF
         fi
       else
         if [ -n "$subs_links" ]; then
-          [ -z "$resume_from" ] && mpv "$subs_arg"="$subs_links" --force-media-title="$displayed_title" "$video_link" >/dev/null 2>&1
-          [ -n "$resume_from" ] && mpv --start="$resume_from" --force-media-title="$displayed_title" "$video_link" >/dev/null 2>&1
+          if [ "$quiet_output" = 1 ]; then
+            [ -z "$resume_from" ] && mpv "$subs_arg"="$subs_links" --force-media-title="$displayed_title" "$video_link" >/dev/null 2>&1
+            [ -n "$resume_from" ] && mpv --start="$resume_from" --force-media-title="$displayed_title" "$video_link" >/dev/null 2>&1
+          else
+            [ -z "$resume_from" ] && mpv "$subs_arg"="$subs_links" --force-media-title="$displayed_title" "$video_link"
+            [ -n "$resume_from" ] && mpv --start="$resume_from" --force-media-title="$displayed_title" "$video_link"
+          fi
         else
-          [ -z "$resume_from" ] && mpv --force-media-title="$displayed_title" "$video_link"
-          [ -n "$resume_from" ] && mpv --start="$resume_from" --force-media-title="$displayed_title" "$video_link"
+          if [ "$quiet_output" = 1 ]; then
+            [ -z "$resume_from" ] && mpv --force-media-title="$displayed_title" "$video_link" >/dev/null 2>&1
+            [ -n "$resume_from" ] && mpv --start="$resume_from" --force-media-title="$displayed_title" "$video_link" >/dev/null 2>&1
+          else
+            [ -z "$resume_from" ] && mpv --force-media-title="$displayed_title" "$video_link"
+            [ -n "$resume_from" ] && mpv --start="$resume_from" --force-media-title="$displayed_title" "$video_link"
+          fi
         fi
       fi
       ;;
@@ -609,6 +619,7 @@ EOF
         shift 2
       fi
       ;;
+    --quiet) quiet_output="1" && shift ;;
     -r | --recent)
       recent="$2"
       if [ -z "$recent" ]; then
