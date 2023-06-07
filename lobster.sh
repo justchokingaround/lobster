@@ -1,6 +1,6 @@
 #!/bin/sh
 
-LOBSTER_VERSION="3.9.9"
+LOBSTER_VERSION="4.0.0"
 
 config_file="$HOME/.config/lobster/lobster_config.txt"
 lobster_editor=${VISUAL:-${EDITOR:-vim}}
@@ -203,7 +203,11 @@ EOF
 
     image_preview_fzf() {
         UB_PID_FILE="/tmp/.$(uuidgen)"
-        ueberzugpp layer --no-stdin --silent --use-escape-codes --pid-file "$UB_PID_FILE" >/dev/null
+        if [ -z "$ueberzug_output" ]; then
+            ueberzugpp layer --no-stdin --silent --use-escape-codes --pid-file "$UB_PID_FILE"
+        else
+            ueberzugpp layer -o "$ueberzug_output" --no-stdin --silent --use-escape-codes --pid-file "$UB_PID_FILE"
+        fi
         UB_PID="$(cat "$UB_PID_FILE")"
         LOBSTER_UEBERZUG_SOCKET=/tmp/ueberzugpp-"$UB_PID".socket
         choice=$(ls "$images_cache_dir"/* | fzf -i -q "$1" --cycle --preview-window=$preview_window_size --preview="ueberzugpp cmd -s $LOBSTER_UEBERZUG_SOCKET -i fzfpreview -a add -x $ueberzug_x -y $ueberzug_y --max-width $ueberzug_max_width --max-height $ueberzug_max_height -f {}" --reverse --with-nth 2 -d "  ")
