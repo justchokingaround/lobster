@@ -22,6 +22,17 @@ fi
         *arwin) sed="gsed" ;;
         *) separator=':' && path_thing="\\" && sed="sed" ;;
     esac
+    cleanup() {
+        [ "$debug" != 1 ] && rm -rf /tmp/lobster/ 2>/dev/null
+        # only set the remove_tmp_lobster variable to 1 if you understand how the script works
+        [ "$remove_tmp_lobster" = 1 ] && rm -rf /tmp/lobster/ 2>/dev/null
+        if [ "$image_preview" = "1" ] && [ "$use_external_menu" = "0" ]; then
+            killall ueberzugpp 2>/dev/null
+            rm /tmp/ueberzugpp-* 2>/dev/null
+        fi
+        set +x && exec 2>&-
+    }
+    trap cleanup EXIT INT TERM
 
     command -v notify-send >/dev/null 2>&1 && notify="true" || notify="false"
     command -v socat >/dev/null 2>&1 && socat_exists="true" || socat_exists="false"
@@ -49,13 +60,6 @@ fi
         dep_ch "rofi" || true
     fi
 
-    cleanup() {
-        [ "$debug" != 1 ] && rm -rf /tmp/lobster/ 2>/dev/null
-        [ "$remove_tmp_lobster" = 1 ] && rm -rf /tmp/lobster/ 2>/dev/null
-        set +x && exec 2>&-
-    }
-    trap cleanup EXIT INT TERM
-
     configuration() {
         [ -n "$XDG_CONFIG_HOME" ] && config_dir="$XDG_CONFIG_HOME/lobster" || config_dir="$HOME/.config/lobster"
         [ -n "$XDG_DATA_HOME" ] && data_dir="$XDG_DATA_HOME/lobster" || data_dir="$HOME/.local/share/lobster"
@@ -63,8 +67,6 @@ fi
         [ ! -d "$data_dir" ] && mkdir -p "$data_dir"
         #shellcheck disable=1090
         [ -f "$config_file" ] && . "${config_file}"
-        export X=$(($(tput cols) - 35))
-        export Y=$(($(tput lines) / 6))
         [ -z "$base" ] && base="flixhq.to"
         [ -z "$player" ] && player="mpv"
         [ -z "$download_dir" ] && download_dir="$PWD"
@@ -76,6 +78,11 @@ fi
         [ -z "$use_external_menu" ] && use_external_menu="0"
         [ -z "$image_preview" ] && image_preview="0"
         [ -z "$debug" ] && debug=0
+        [ -z "$preview_window_size" ] && preview_window_size=50%
+        [ -z "$ueberzug_x" ] && ueberzug_x=$(($(tput cols) - 70))
+        [ -z "$ueberzug_y" ] && ueberzug_y=$(($(tput lines) / 10))
+        [ -z "$ueberzug_max_width" ] && ueberzug_max_width=100
+        [ -z "$ueberzug_max_height" ] && ueberzug_max_height=100
     }
 
     generate_desktop() {
@@ -115,7 +122,7 @@ EOF
         if [ "$media_type" = "tv" ]; then
             continue_choice=$(printf "Yes\nExit\nSearch" | launcher "Continue? ")
         else
-            continue_choice=$(printf "Search\nExit" | launcher "Continue? ")
+            continue_choice=$(printf "Exit\nSearch" | launcher "Continue? ")
         fi
     }
 
@@ -184,22 +191,23 @@ EOF
 
     download_thumbnails() {
         printf "%s\n" "$1" | while read -r cover_url id type title; do
+            cover_url=$(printf "%s" "$cover_url" | sed -E 's/\/[[:digit:]]+x[[:digit:]]+\//\/1000x1000\//')
             curl -s -o "$images_cache_dir/  $title ($type)  $id.jpg" "$cover_url" &
             if [ "$use_external_menu" = "1" ]; then
                 entry=/tmp/lobster/applications/"$id.desktop"
                 generate_desktop "$title ($type)" "$images_cache_dir/  $title ($type)  $id.jpg" >"$entry" &
             fi
         done
-        wait && sleep "$2"
+        sleep "$2"
     }
 
     image_preview_fzf() {
         UB_PID_FILE="/tmp/.$(uuidgen)"
-        ueberzugpp layer --no-stdin --silent --use-escape-codes --pid-file "$UB_PID_FILE"
+        ueberzugpp layer --no-stdin --silent --use-escape-codes --pid-file "$UB_PID_FILE" >/dev/null
         UB_PID="$(cat "$UB_PID_FILE")"
-        export SOCKET=/tmp/ueberzugpp-"$UB_PID".socket
-        choice=$(ls "$images_cache_dir"/* | fzf -i -q "$1" --preview='ueberzugpp cmd -s $SOCKET -i fzfpreview -a add -x $X -y $Y --max-width $FZF_PREVIEW_COLUMNS --max-height $FZF_PREVIEW_LINES -f {}' --reverse --with-nth 2 -d "  " --preview-window=30%)
-        ueberzugpp cmd -s "$SOCKET" -a exit
+        LOBSTER_UEBERZUG_SOCKET=/tmp/ueberzugpp-"$UB_PID".socket
+        choice=$(ls "$images_cache_dir"/* | fzf -i -q "$1" --cycle --preview-window=$preview_window_size --preview="ueberzugpp cmd -s $LOBSTER_UEBERZUG_SOCKET -i fzfpreview -a add -x $ueberzug_x -y $ueberzug_y --max-width $ueberzug_max_width --max-height $ueberzug_max_height -f {}" --reverse --with-nth 2 -d "  ")
+        ueberzugpp cmd -s "$LOBSTER_UEBERZUG_SOCKET" -a exit
     }
 
     select_desktop_entry() {
@@ -695,6 +703,7 @@ EOF
                 ;;
             -x | --debug)
                 set -x
+                debug=1
                 shift
                 ;;
             *)
