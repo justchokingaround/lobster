@@ -1,6 +1,6 @@
 ### Showcase
 
-https://github.com/justchokingaround/lobster/assets/44473782/fbeba934-58e0-4958-b051-a479c9015713
+https://github.com/justchokingaround/lobster/assets/44473782/d597335c-42a9-4e45-8948-122744aa5ca9
 
 ## Overview
 
