@@ -35,10 +35,14 @@ https://github.com/justchokingaround/lobster/assets/44473782/d597335c-42a9-4e45-
 
 #### Arch
 
-NOTE: the `lobster` package is OUT OF DATE, so do not install it! (it has already been flagged as so in the aur, but we need to wait for the maintainer to respond)
+Note: it is recommended to use the `lobster-git` package, as it is more up to date, and as the project is currently being actively maintained
 
 ```sh
 paru -S lobster-git
+```
+or
+```sh
+paru -S lobster
 ```
 
 #### Debian (using makedeb and mist)
