@@ -11,6 +11,11 @@ use_external_menu=0
 image_preview=0
 debug=0
 quiet_output=0
+preview_window_size=50%
+ueberzug_x=$(($(tput cols) - 70))
+ueberzug_y=$(($(tput lines) / 10))
+ueberzug_max_width=100
+ueberzug_max_height=100
 
 download_video() {
   ffmpeg -loglevel error -stats -i "$1" -c copy "$3/$2".mp4
