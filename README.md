@@ -2,6 +2,9 @@
 
 https://github.com/justchokingaround/lobster/assets/44473782/d597335c-42a9-4e45-8948-122744aa5ca9
 
+## Join the discord server!
+### https://discord.gg/JTDS2CKjQU
+
 ## Overview
 
 - [Install](#install)
