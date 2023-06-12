@@ -1,6 +1,6 @@
 #!/bin/sh
 
-LOBSTER_VERSION="4.0.1"
+LOBSTER_VERSION="4.0.2"
 
 config_file="$HOME/.config/lobster/lobster_config.txt"
 lobster_editor=${VISUAL:-${EDITOR:-vim}}
@@ -578,13 +578,15 @@ EOF
     }
 
     update_script() {
+        which_lobster="$(command -v lobster)"
+        [ -z "$which_lobster" ] && die "Can't find lobster in PATH"
         update=$(curl -s "https://raw.githubusercontent.com/justchokingaround/lobster/master/lobster.sh" || die "Connection error")
-        update="$(printf '%s\n' "$update" | diff -u "$(command -v lobster)" -)" || true
+        update="$(printf '%s\n' "$update" | diff -u "$which_lobster" -)"
         if [ -z "$update" ]; then
             send_notification "Script is up to date :)"
         else
-            if printf '%s\n' "$update" | patch "$(command -v lobster)" - || true; then
-                send_notification "Script has been updated"
+            if printf '%s\n' "$update" | patch "$which_lobster" -; then
+                send_notification "Script has been updated!"
             else
                 send_notification "Can't update for some reason!"
             fi
