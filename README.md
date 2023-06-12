@@ -247,13 +247,13 @@ Upon the completion of a movie or an episode, the corresponding entry is either 
 
 <details>
 <summary>Showcase</summary>
-   
+
 ![image](https://github.com/justchokingaround/lobster/assets/44473782/5ed98fb9-008d-4068-a854-577245cfe1ee)
-   
+
 ![image](https://github.com/justchokingaround/lobster/assets/44473782/cd59329e-a1c8-408a-be48-690db2d52642)
-   
+
 ![image](https://github.com/justchokingaround/lobster/assets/44473782/fae5ea52-4dc4-41ee-b7a2-cbb2476f5819)
-   
+
 </details>
 
 #### Please note:
@@ -302,18 +302,18 @@ Example using my custom rofi configuration (to customize how your rofi image pre
 
 <details>
 <summary>Showcase</summary>
-   
+
    ![image](https://github.com/justchokingaround/lobster/assets/44473782/a8850f00-9491-4f86-939d-2f63bcb36e96)
-   
+
 </details>
 
 For `fzf` you will need to install [ueberzugpp](https://github.com/jstkdng/ueberzugpp/).
 
 <details>
 <summary>Showcase</summary>
-   
+
    ![image](https://github.com/justchokingaround/lobster/assets/44473782/8d8057d8-4d85-4f0e-b6c0-3b7dd5dce557)
-   
+
 </details>
 
 <details>
@@ -367,9 +367,9 @@ Here is an example of that looks like (without image preview):
 
 <details>
 <summary>Showcase</summary>
-   
+
    ![image](https://github.com/justchokingaround/lobster/assets/44473782/d1243c17-0ef1-44b3-99a8-f2c4a4ab5da9)
-   
+
 </details>
 
 ### `-p` / `--provider` `<provider>` argument

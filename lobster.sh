@@ -1,17 +1,27 @@
 #!/bin/sh
 
-LOBSTER_VERSION="4.0.0"
+LOBSTER_VERSION="4.0.1"
 
 config_file="$HOME/.config/lobster/lobster_config.txt"
 lobster_editor=${VISUAL:-${EDITOR:-vim}}
 
 if [ "$1" = "--edit" ] || [ "$1" = "-e" ]; then
     if [ -f "$config_file" ]; then
-        . "$config_file"
         "$lobster_editor" "$config_file"
     fi
     exit 0
 fi
+
+cleanup() {
+    [ "$debug" != 1 ] && rm -rf /tmp/lobster/ 2>/dev/null
+    [ "$remove_tmp_lobster" = 1 ] && rm -rf /tmp/lobster/ 2>/dev/null
+    if [ "$image_preview" = "1" ] && [ "$use_external_menu" = "0" ]; then
+        killall ueberzugpp 2>/dev/null
+        rm /tmp/ueberzugpp-* 2>/dev/null
+    fi
+    set +x && exec 2>&-
+}
+trap cleanup EXIT INT TERM
 
 {
     applications="$HOME/.local/share/applications/lobster"
@@ -22,17 +32,6 @@ fi
         *arwin) sed="gsed" ;;
         *) separator=':' && path_thing="\\" && sed="sed" ;;
     esac
-    cleanup() {
-        [ "$debug" != 1 ] && rm -rf /tmp/lobster/ 2>/dev/null
-        # only set the remove_tmp_lobster variable to 1 if you understand how the script works
-        [ "$remove_tmp_lobster" = 1 ] && rm -rf /tmp/lobster/ 2>/dev/null
-        if [ "$image_preview" = "1" ] && [ "$use_external_menu" = "0" ]; then
-            killall ueberzugpp 2>/dev/null
-            rm /tmp/ueberzugpp-* 2>/dev/null
-        fi
-        set +x && exec 2>&-
-    }
-    trap cleanup EXIT INT TERM
 
     command -v notify-send >/dev/null 2>&1 && notify="true" || notify="false"
     command -v socat >/dev/null 2>&1 && socat_exists="true" || socat_exists="false"
@@ -83,6 +82,8 @@ fi
         [ -z "$ueberzug_y" ] && ueberzug_y=$(($(tput lines) / 10))
         [ -z "$ueberzug_max_width" ] && ueberzug_max_width=100
         [ -z "$ueberzug_max_height" ] && ueberzug_max_height=100
+        [ -z "$remove_tmp_lobster" ] && remove_tmp_lobster=1
+        [ -z "$json_output" ] && json_output=0
     }
 
     generate_desktop() {
@@ -98,13 +99,13 @@ EOF
 
     launcher() {
         case "$use_external_menu" in
-            0)
-                [ -z "$2" ] && fzf --reverse --prompt "$1"
-                [ -n "$2" ] && fzf --reverse --prompt "$1" --with-nth "$2" -d "\t"
-                ;;
             1)
                 [ -z "$2" ] && rofi -sort -dmenu -i -width 1500 -p "" -mesg "$1"
                 [ -n "$2" ] && rofi -sort -dmenu -i -width 1500 -p "" -mesg "$1" -display-columns "$2"
+                ;;
+            *)
+                [ -z "$2" ] && fzf --reverse --prompt "$1"
+                [ -n "$2" ] && fzf --reverse --prompt "$1" --with-nth "$2" -d "\t"
                 ;;
         esac
     }
@@ -210,7 +211,7 @@ EOF
         fi
         UB_PID="$(cat "$UB_PID_FILE")"
         LOBSTER_UEBERZUG_SOCKET=/tmp/ueberzugpp-"$UB_PID".socket
-        choice=$(ls "$images_cache_dir"/* | fzf -i -q "$1" --cycle --preview-window=$preview_window_size --preview="ueberzugpp cmd -s $LOBSTER_UEBERZUG_SOCKET -i fzfpreview -a add -x $ueberzug_x -y $ueberzug_y --max-width $ueberzug_max_width --max-height $ueberzug_max_height -f {}" --reverse --with-nth 2 -d "  ")
+        choice=$(find "$images_cache_dir" -type f -printf "%f\n" | fzf -i -q "$1" --cycle --preview-window="$preview_window_size" --preview="ueberzugpp cmd -s $LOBSTER_UEBERZUG_SOCKET -i fzfpreview -a add -x $ueberzug_x -y $ueberzug_y --max-width $ueberzug_max_width --max-height $ueberzug_max_height -f $images_cache_dir/{}" --reverse --with-nth 2 -d "  ")
         ueberzugpp cmd -s "$LOBSTER_UEBERZUG_SOCKET" -a exit
     }
 
@@ -279,7 +280,11 @@ EOF
         [ "$json_output" = "1" ] && printf "%s\n" "$json_data" && exit 0
         subs_links=$(printf "%s" "$json_data" | tr "{}" "\n" | $sed -nE "s@\"file\":\"([^\"]*)\",\"label\":\"(.$subs_language)[,\"\ ].*@\1@p")
         subs_arg="--sub-file"
-        [ $(printf "%s" "$subs_links" | wc -l) -gt 0 ] && subs_links=$(printf "%s" "$subs_links" | $sed -e "s/:/\\$path_thing:/g" -e "H;1h;\$!d;x;y/\n/$separator/" -e "s/$separator\$//") && subs_arg="--sub-files=$subs_links"
+        subs_links=$(printf "%s" "$subs_links" | $sed -e "s/:/\\$path_thing:/g" -e "H;1h;\$!d;x;y/\n/$separator/" -e "s/$separator\$//")
+        num_subs=$(printf "%s" "$subs_links" | wc -l)
+        if [ "$num_subs" -gt 0 ]; then
+            subs_arg="--sub-files=$subs_links"
+        fi
         [ -z "$subs_links" ] && send_notification "No subtitles found"
     }
 
@@ -318,6 +323,8 @@ EOF
                     send_notification "$season_title" "5000" "$images_cache_dir/  $title ($media_type)  $media_id.jpg" "$episode_title"
                 fi
                 ;;
+            *) send_notification "This media type is not supported" ;;
+
         esac
     }
 
@@ -354,12 +361,12 @@ EOF
                     fi
                     if [ "$socat_exists" = "true" ]; then
                         PID=$!
-                        while ! ps -p $PID >/dev/null; do
+                        while ! ps -p "$PID" >/dev/null; do
                             sleep 0.1
                         done
                         sleep 2
 
-                        while ps -p $PID >/dev/null; do
+                        while ps -p "$PID" >/dev/null; do
                             position=$(echo '{ "command": ["get_property", "time-pos"] }' | socat - /tmp/mpvsocket | $sed -nE "s@.*\"data\":([0-9\.]*),.*@\1@p")
                             [ "$position" != "" ] && printf "%s\n" "$position" >>"$tmp_position"
                             progress=$(echo '{ "command": ["get_property", "percent-pos"] }' | socat - /tmp/mpvsocket | $sed -nE "s@.*\"data\":([0-9\.]*),.*@\1@p")
@@ -443,6 +450,7 @@ EOF
                     printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n" "$title" "$position" "$media_id" "$media_type" "$season_id" "$episode_id" "$season_title" "$episode_title" "$data_id" >>"$histfile"
                 fi
                 ;;
+            *) notify-send "Error" "Unknown media type" ;;
         esac
     }
 
@@ -571,11 +579,11 @@ EOF
 
     update_script() {
         update=$(curl -s "https://raw.githubusercontent.com/justchokingaround/lobster/master/lobster.sh" || die "Connection error")
-        update="$(printf '%s\n' "$update" | diff -u "$(which lobster)" -)"
+        update="$(printf '%s\n' "$update" | diff -u "$(command -v lobster)" -)" || true
         if [ -z "$update" ]; then
             send_notification "Script is up to date :)"
         else
-            if printf '%s\n' "$update" | patch "$(which lobster)" -; then
+            if printf '%s\n' "$update" | patch "$(command -v lobster)" - || true; then
                 send_notification "Script has been updated"
             else
                 send_notification "Can't update for some reason!"

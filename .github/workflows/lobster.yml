@@ -25,4 +25,4 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: test exec bit
-      run: test -x "./lobster"
+      run: test -x "./lobster.sh"
