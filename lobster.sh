@@ -223,9 +223,9 @@ EOF
             media_type=$(printf "%s" "$choice" | $sed -nE "s@[0-9]* (.*) \((tv|movie)\)@\2@p")
         else
             image_preview_fzf "$1"
-            media_id=$(printf "%s" "$choice" | $sed -nE "s@.*\/  .*  ([0-9]*)\.jpg@\1@p")
-            title=$(printf "%s" "$choice" | $sed -nE "s@.*\/  (.*) \[.*\] \((tv|movie)\)  [0-9]*\.jpg@\1@p")
-            media_type=$(printf "%s" "$choice" | $sed -nE "s@.*\/  (.*) \[.*\] \((tv|movie)\)  [0-9]*\.jpg@\2@p")
+            media_id=$(printf "%s" "$choice" | $sed -nE "s@.* ([0-9]*)\.jpg@\1@p")
+            title=$(printf "%s" "$choice" | $sed -nE "s@[[:space:]]* (.*) \[.*\] \((tv|movie)\)  [0-9]*\.jpg@\1@p")
+            media_type=$(printf "%s" "$choice" | $sed -nE "s@[[:space:]]* (.*) \[.*\] \((tv|movie)\)  [0-9]*\.jpg@\2@p")
         fi
     }
 
@@ -280,9 +280,9 @@ EOF
         [ "$json_output" = "1" ] && printf "%s\n" "$json_data" && exit 0
         subs_links=$(printf "%s" "$json_data" | tr "{}" "\n" | $sed -nE "s@\"file\":\"([^\"]*)\",\"label\":\"(.$subs_language)[,\"\ ].*@\1@p")
         subs_arg="--sub-file"
-        subs_links=$(printf "%s" "$subs_links" | $sed -e "s/:/\\$path_thing:/g" -e "H;1h;\$!d;x;y/\n/$separator/" -e "s/$separator\$//")
         num_subs=$(printf "%s" "$subs_links" | wc -l)
         if [ "$num_subs" -gt 0 ]; then
+            subs_links=$(printf "%s" "$subs_links" | $sed -e "s/:/\\$path_thing:/g" -e "H;1h;\$!d;x;y/\n/$separator/" -e "s/$separator\$//")
             subs_arg="--sub-files=$subs_links"
         fi
         [ -z "$subs_links" ] && send_notification "No subtitles found"
