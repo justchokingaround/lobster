@@ -488,7 +488,22 @@ EOF
             [ "$history" = 1 ] && save_history
             prompt_to_continue
             case "$continue_choice" in
-                "Yes") resume_from="" && continue ;;
+                "Yes")
+                    resume_from=""
+                    if [ "$history" = 0 ]; then
+                        next_episode_exists
+                        if [ -n "$next_episode" ]; then
+                            episode_title=$(printf "%s" "$next_episode" | cut -f1)
+                            data_id=$(printf "%s" "$next_episode" | cut -f2)
+                            episode_id=$(curl -s "https://${base}/ajax/v2/episode/servers/${data_id}" | $sed ':a;N;$!ba;s/\n//g;s/class="nav-item"/\n/g' | $sed -nE "s@.*data-id=\"([0-9]*)\".*title=\"([^\"]*)\".*@\1\t\2@p" | grep "$provider" | cut -f1)
+                            send_notification "Watching the next episode" "5000" "" "$episode_title"
+                        else
+                            send_notification "No more episodes" "5000" "" "$title"
+                            exit 0
+                        fi
+                    fi
+                    continue
+                    ;;
                 "Search")
                     rm "$images_cache_dir"/*
                     rm "$tmp_position" 2>/dev/null
