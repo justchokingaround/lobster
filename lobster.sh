@@ -77,11 +77,11 @@ trap cleanup EXIT INT TERM
         [ -z "$use_external_menu" ] && use_external_menu="0"
         [ -z "$image_preview" ] && image_preview="0"
         [ -z "$debug" ] && debug=0
-        [ -z "$preview_window_size" ] && preview_window_size=50%
-        [ -z "$ueberzug_x" ] && ueberzug_x=$(($(tput cols) - 70))
-        [ -z "$ueberzug_y" ] && ueberzug_y=$(($(tput lines) / 10))
-        [ -z "$ueberzug_max_width" ] && ueberzug_max_width=100
-        [ -z "$ueberzug_max_height" ] && ueberzug_max_height=100
+        [ -z "$preview_window_size" ] && preview_window_size=up:60%:wrap
+        [ -z "$ueberzug_x" ] && ueberzug_x=10
+        [ -z "$ueberzug_y" ] && ueberzug_y=3
+        [ -z "$ueberzug_max_width" ] && ueberzug_max_width=$(($(tput lines) / 2))
+        [ -z "$ueberzug_max_height" ] && ueberzug_max_height=$(($(tput lines) / 2))
         [ -z "$remove_tmp_lobster" ] && remove_tmp_lobster=1
         [ -z "$json_output" ] && json_output=0
     }
