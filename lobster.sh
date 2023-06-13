@@ -206,7 +206,7 @@ EOF
 
     start_ueberzugpp() {
         if [ -z "$ueberzug_output" ]; then
-            ueberzugpp layer--silent <"$FIFO" &
+            ueberzugpp layer --silent <"$FIFO" &
         else
             ueberzugpp layer -o "$ueberzug_output" --silent <"$FIFO" &
         fi
