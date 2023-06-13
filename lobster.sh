@@ -13,8 +13,10 @@ if [ "$1" = "--edit" ] || [ "$1" = "-e" ]; then
 fi
 
 cleanup() {
-    [ "$debug" != 1 ] && rm -rf /tmp/lobster/ 2>/dev/null
-    [ "$remove_tmp_lobster" = 1 ] && rm -rf /tmp/lobster/ 2>/dev/null
+    if ! pgrep ueberzugpp >/dev/null; then
+        [ "$debug" != 1 ] && rm -rf /tmp/lobster/ 2>/dev/null
+        [ "$remove_tmp_lobster" = 1 ] && rm -rf /tmp/lobster/ 2>/dev/null
+    fi
     if [ "$image_preview" = "1" ] && [ "$use_external_menu" = "0" ]; then
         killall ueberzugpp 2>/dev/null
         rm /tmp/ueberzugpp-* 2>/dev/null
@@ -202,17 +204,27 @@ EOF
         sleep "$2"
     }
 
-    image_preview_fzf() {
-        UB_PID_FILE="/tmp/.$(uuidgen)"
+    start_ueberzugpp() {
         if [ -z "$ueberzug_output" ]; then
-            ueberzugpp layer --no-stdin --silent --use-escape-codes --pid-file "$UB_PID_FILE"
+            ueberzugpp layer--silent <"$FIFO" &
         else
-            ueberzugpp layer -o "$ueberzug_output" --no-stdin --silent --use-escape-codes --pid-file "$UB_PID_FILE"
+            ueberzugpp layer -o "$ueberzug_output" --silent <"$FIFO" &
         fi
-        UB_PID="$(cat "$UB_PID_FILE")"
-        LOBSTER_UEBERZUG_SOCKET=/tmp/ueberzugpp-"$UB_PID".socket
-        choice=$(find "$images_cache_dir" -type f -printf "%f\n" | fzf -i -q "$1" --cycle --preview-window="$preview_window_size" --preview="ueberzugpp cmd -s $LOBSTER_UEBERZUG_SOCKET -i fzfpreview -a add -x $ueberzug_x -y $ueberzug_y --max-width $ueberzug_max_width --max-height $ueberzug_max_height -f $images_cache_dir/{}" --reverse --with-nth 2 -d "  ")
-        ueberzugpp cmd -s "$LOBSTER_UEBERZUG_SOCKET" -a exit
+        exec 3>"${FIFO}"
+    }
+
+    preview_image() {
+        FIFO="/tmp/lobster/fzf_preview_fifo"
+        echo '{"path": "'"$1"'", "action": "add", "identifier": "fzfpreview", "x": "'"$ueberzug_x"'", "y": "'"$ueberzug_y"'", "width": "'"$ueberzug_max_width"'", "height": "'"$ueberzug_max_height"'"}' >"$FIFO"
+    }
+
+    image_preview_fzf() {
+        FIFO="/tmp/lobster/fzf_preview_fifo"
+        [ -p "$FIFO" ] || mkfifo "$FIFO"
+        start_ueberzugpp
+        choice=$(find "$images_cache_dir" -type f -printf "%f\n" | fzf -i -q "$1" --cycle --preview "$0 -W $images_cache_dir/{}" --preview-window="$preview_window_size" --reverse --with-nth 2 -d "  ")
+        exec 3>&-
+        rm "$FIFO"
     }
 
     select_desktop_entry() {
@@ -729,6 +741,11 @@ EOF
                 ;;
             -v | -V | --version)
                 send_notification "Lobster Version: $LOBSTER_VERSION" && exit 0
+                ;;
+            -W)
+                shift
+                preview_image "$@"
+                exit
                 ;;
             -x | --debug)
                 set -x
