@@ -606,8 +606,9 @@ EOF
 
     update_script() {
         which_lobster="$(command -v lobster)"
-        [ -z "$which_lobster" ] && die "Can't find lobster in PATH"
-        update=$(curl -s "https://raw.githubusercontent.com/justchokingaround/lobster/master/lobster.sh" || die "Connection error")
+        [ -z "$which_lobster" ] && send_notification "Can't find lobster in PATH"
+        [ -z "$which_lobster" ] && exit 1
+        update=$(curl -s "https://raw.githubusercontent.com/justchokingaround/lobster/master/lobster.sh" || exit 1)
         update="$(printf '%s\n' "$update" | diff -u "$which_lobster" -)"
         if [ -z "$update" ]; then
             send_notification "Script is up to date :)"
@@ -674,6 +675,7 @@ EOF
                         subs_language="english"
                         shift
                     else
+                        subs_language="$(echo "$subs_language" | cut -c2-)"
                         shift 2
                     fi
                 fi
