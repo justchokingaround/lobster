@@ -393,10 +393,10 @@ EOF
                     if [ -n "$subs_links" ]; then
                         if [ "$quiet_output" = 1 ]; then
                             [ -z "$resume_from" ] && mpv "$subs_arg"="$subs_links" --force-media-title="$displayed_title" "$video_link" >/dev/null 2>&1
-                            [ -n "$resume_from" ] && mpv --start="$resume_from" --force-media-title="$displayed_title" "$video_link" >/dev/null 2>&1
+                            [ -n "$resume_from" ] && mpv "$subs_arg"="$subs_links" --start="$resume_from" --force-media-title="$displayed_title" "$video_link" >/dev/null 2>&1
                         else
                             [ -z "$resume_from" ] && mpv "$subs_arg"="$subs_links" --force-media-title="$displayed_title" "$video_link"
-                            [ -n "$resume_from" ] && mpv --start="$resume_from" --force-media-title="$displayed_title" "$video_link"
+                            [ -n "$resume_from" ] && mpv "$subs_arg"="$subs_links" --start="$resume_from" --force-media-title="$displayed_title" "$video_link"
                         fi
                     else
                         if [ "$quiet_output" = 1 ]; then
