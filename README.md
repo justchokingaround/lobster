@@ -3,6 +3,7 @@
 https://github.com/justchokingaround/lobster/assets/44473782/d597335c-42a9-4e45-8948-122744aa5ca9
 
 ## Join the discord server!
+
 ### https://discord.gg/JTDS2CKjQU
 
 ## Overview
@@ -15,6 +16,7 @@ https://github.com/justchokingaround/lobster/assets/44473782/d597335c-42a9-4e45-
   - [Windows](#windows)
 - [Usage](#usage)
   - [`-c` / `--continue`](#-c----continue-argument)
+  - [`--clear-history / --delete-history`](#--clear-history----delete-history-argument)
   - [`-d` / `--download`](#-d----download-path-argument)
   - [`-e` / `--edit`](#-e----edit-argument)
   - [`-i` / `--image-preview`](#-i----image-preview-argument)
@@ -43,7 +45,9 @@ Note: it is recommended to use the `lobster-git` package, as it is more up to da
 ```sh
 paru -S lobster-git
 ```
+
 or
+
 ```sh
 paru -S lobster
 ```
@@ -261,6 +265,10 @@ Upon the completion of a movie or an episode, the corresponding entry is either 
 - The history file can be found at `~/.local/share/lobster/lobster_history.txt`
 - A movie or TV show episode is automatically marked as completed/updated after the user watches more than 90% of its content
 
+### --`clear-history` / `--delete-history` argument
+
+This argument allows you to delete the history file
+
 ### `-d` / `--download` `<path>` argument
 
 This option lets you use lobster as you normally would, with the exception that instead of playing the video in your player of choice, it will instead download the video. If no path is specified when passing this argument, then it will download to the current working directory, as an example, it would look like this:
@@ -303,7 +311,7 @@ Example using my custom rofi configuration (to customize how your rofi image pre
 <details>
 <summary>Showcase</summary>
 
-   ![image](https://github.com/justchokingaround/lobster/assets/44473782/a8850f00-9491-4f86-939d-2f63bcb36e96)
+![image](https://github.com/justchokingaround/lobster/assets/44473782/a8850f00-9491-4f86-939d-2f63bcb36e96)
 
 </details>
 
@@ -312,7 +320,7 @@ For `fzf` you will need to install [ueberzugpp](https://github.com/jstkdng/ueber
 <details>
 <summary>Showcase</summary>
 
-   ![image](https://github.com/justchokingaround/lobster/assets/44473782/8d8057d8-4d85-4f0e-b6c0-3b7dd5dce557)
+![image](https://github.com/justchokingaround/lobster/assets/44473782/8d8057d8-4d85-4f0e-b6c0-3b7dd5dce557)
 
 </details>
 
@@ -368,7 +376,7 @@ Here is an example of that looks like (without image preview):
 <details>
 <summary>Showcase</summary>
 
-   ![image](https://github.com/justchokingaround/lobster/assets/44473782/d1243c17-0ef1-44b3-99a8-f2c4a4ab5da9)
+![image](https://github.com/justchokingaround/lobster/assets/44473782/d1243c17-0ef1-44b3-99a8-f2c4a4ab5da9)
 
 </details>
 

@@ -15,6 +15,28 @@ if [ "$1" = "--edit" ] || [ "$1" = "-e" ]; then
     exit 0
 fi
 
+if [ "$1" = "--clear-history" ] || [ "$1" = "--delete-history" ]; then
+    printf ""
+    while true; do
+        printf "This will delete your lobster history. Are you sure? [Y/n] "
+        read -r choice
+        case $choice in
+            [Yy]* | "")
+                #shellcheck disable=1090
+                [ -f "$config_file" ] && . "$config_file"
+                [ -z "$histfile" ] && histfile="$HOME/.local/share/lobster/lobster_history.txt"
+                rm "$histfile"
+                echo "History deleted."
+                exit 0
+                ;;
+            [Nn]*)
+                return 1
+                ;;
+            *) echo "Please answer yes or no." ;;
+        esac
+    done
+fi
+
 cleanup() {
     if ! pgrep ueberzugpp >/dev/null; then
         [ "$debug" != 1 ] && rm -rf /tmp/lobster/ 2>/dev/null
@@ -140,6 +162,8 @@ EOF
   Options:
     -c, --continue
       Continue watching from current history
+    --clear-history, --delete-history
+      Deletes history
     -d, --download [path]
       Downloads movie or episode that is selected (if no path is provided, it defaults to the current directory)
     -e, --edit
