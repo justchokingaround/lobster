@@ -213,7 +213,11 @@ EOF
         if [ "$use_external_menu" = "0" ]; then
             printf "Search Movie/TV Show: " && read -r query
         else
-            query=$(printf "" | launcher "Search Movie/TV Show")
+            if [ -n "$rofi_prompt_config" ]; then
+                query=$(printf "" | rofi -theme "$rofi_prompt_config" -sort -dmenu -i -width 1500 -p "" -mesg "Search Movie/TV Show")
+            else
+                query=$(printf "" | launcher "Search Movie/TV Show")
+            fi
         fi
         [ -n "$query" ] && query=$(echo "$query" | tr ' ' '-')
         [ -z "$query" ] && send_notification "Error" "1000" "" "No query provided" && exit 1
