@@ -3,10 +3,13 @@
 LOBSTER_VERSION="4.0.2"
 
 config_file="$HOME/.config/lobster/lobster_config.txt"
-lobster_editor=${VISUAL:-${EDITOR:-vim}}
+lobster_editor=${VISUAL:-${EDITOR}}
 
 if [ "$1" = "--edit" ] || [ "$1" = "-e" ]; then
     if [ -f "$config_file" ]; then
+        #shellcheck disable=1090
+        . "${config_file}"
+        [ -z "$lobster_editor" ] && lobster_editor="vim"
         "$lobster_editor" "$config_file"
     fi
     exit 0
