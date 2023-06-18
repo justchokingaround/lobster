@@ -3,18 +3,45 @@
 LOBSTER_VERSION="4.0.2"
 
 config_file="$HOME/.config/lobster/lobster_config.txt"
-lobster_editor=${VISUAL:-${EDITOR:-vim}}
+lobster_editor=${VISUAL:-${EDITOR}}
 
 if [ "$1" = "--edit" ] || [ "$1" = "-e" ]; then
     if [ -f "$config_file" ]; then
+        #shellcheck disable=1090
+        . "${config_file}"
+        [ -z "$lobster_editor" ] && lobster_editor="vim"
         "$lobster_editor" "$config_file"
     fi
     exit 0
 fi
 
+if [ "$1" = "--clear-history" ] || [ "$1" = "--delete-history" ]; then
+    printf ""
+    while true; do
+        printf "This will delete your lobster history. Are you sure? [Y/n] "
+        read -r choice
+        case $choice in
+            [Yy]* | "")
+                #shellcheck disable=1090
+                [ -f "$config_file" ] && . "$config_file"
+                [ -z "$histfile" ] && histfile="$HOME/.local/share/lobster/lobster_history.txt"
+                rm "$histfile"
+                echo "History deleted."
+                exit 0
+                ;;
+            [Nn]*)
+                return 1
+                ;;
+            *) echo "Please answer yes or no." ;;
+        esac
+    done
+fi
+
 cleanup() {
-    [ "$debug" != 1 ] && rm -rf /tmp/lobster/ 2>/dev/null
-    [ "$remove_tmp_lobster" = 1 ] && rm -rf /tmp/lobster/ 2>/dev/null
+    if ! pgrep ueberzugpp >/dev/null; then
+        [ "$debug" != 1 ] && rm -rf /tmp/lobster/ 2>/dev/null
+        [ "$remove_tmp_lobster" = 1 ] && rm -rf /tmp/lobster/ 2>/dev/null
+    fi
     if [ "$image_preview" = "1" ] && [ "$use_external_menu" = "0" ]; then
         killall ueberzugpp 2>/dev/null
         rm /tmp/ueberzugpp-* 2>/dev/null
@@ -77,11 +104,11 @@ trap cleanup EXIT INT TERM
         [ -z "$use_external_menu" ] && use_external_menu="0"
         [ -z "$image_preview" ] && image_preview="0"
         [ -z "$debug" ] && debug=0
-        [ -z "$preview_window_size" ] && preview_window_size=50%
-        [ -z "$ueberzug_x" ] && ueberzug_x=$(($(tput cols) - 70))
-        [ -z "$ueberzug_y" ] && ueberzug_y=$(($(tput lines) / 10))
-        [ -z "$ueberzug_max_width" ] && ueberzug_max_width=100
-        [ -z "$ueberzug_max_height" ] && ueberzug_max_height=100
+        [ -z "$preview_window_size" ] && preview_window_size=up:60%:wrap
+        [ -z "$ueberzug_x" ] && ueberzug_x=10
+        [ -z "$ueberzug_y" ] && ueberzug_y=3
+        [ -z "$ueberzug_max_width" ] && ueberzug_max_width=$(($(tput lines) / 2))
+        [ -z "$ueberzug_max_height" ] && ueberzug_max_height=$(($(tput lines) / 2))
         [ -z "$remove_tmp_lobster" ] && remove_tmp_lobster=1
         [ -z "$json_output" ] && json_output=0
     }
@@ -135,6 +162,8 @@ EOF
   Options:
     -c, --continue
       Continue watching from current history
+    --clear-history, --delete-history
+      Deletes history
     -d, --download [path]
       Downloads movie or episode that is selected (if no path is provided, it defaults to the current directory)
     -e, --edit
@@ -184,7 +213,11 @@ EOF
         if [ "$use_external_menu" = "0" ]; then
             printf "Search Movie/TV Show: " && read -r query
         else
-            query=$(printf "" | launcher "Search Movie/TV Show")
+            if [ -n "$rofi_prompt_config" ]; then
+                query=$(printf "" | rofi -theme "$rofi_prompt_config" -sort -dmenu -i -width 1500 -p "" -mesg "Search Movie/TV Show")
+            else
+                query=$(printf "" | launcher "Search Movie/TV Show")
+            fi
         fi
         [ -n "$query" ] && query=$(echo "$query" | tr ' ' '-')
         [ -z "$query" ] && send_notification "Error" "1000" "" "No query provided" && exit 1
@@ -223,9 +256,9 @@ EOF
             media_type=$(printf "%s" "$choice" | $sed -nE "s@[0-9]* (.*) \((tv|movie)\)@\2@p")
         else
             image_preview_fzf "$1"
-            media_id=$(printf "%s" "$choice" | $sed -nE "s@.*\/  .*  ([0-9]*)\.jpg@\1@p")
-            title=$(printf "%s" "$choice" | $sed -nE "s@.*\/  (.*) \[.*\] \((tv|movie)\)  [0-9]*\.jpg@\1@p")
-            media_type=$(printf "%s" "$choice" | $sed -nE "s@.*\/  (.*) \[.*\] \((tv|movie)\)  [0-9]*\.jpg@\2@p")
+            media_id=$(printf "%s" "$choice" | $sed -nE "s@.* ([0-9]*)\.jpg@\1@p")
+            title=$(printf "%s" "$choice" | $sed -nE "s@[[:space:]]* (.*) \[.*\] \((tv|movie)\)  [0-9]*\.jpg@\1@p")
+            media_type=$(printf "%s" "$choice" | $sed -nE "s@[[:space:]]* (.*) \[.*\] \((tv|movie)\)  [0-9]*\.jpg@\2@p")
         fi
     }
 
@@ -234,6 +267,7 @@ EOF
             $sed -nE "s@.*img data-src=\"([^\"]*)\".*<a href=\".*/(tv|movie)/watch-.*-([0-9]*)\".*title=\"([^\"]*)\".*class=\"fdi-item\">([^<]*)</span>.*@\1\t\3\t\2\t\4 [\5]@p" | hxunent)
         [ "$image_preview" = "0" ] && response=$(curl -s "https://${base}/search/$query" | $sed ':a;N;$!ba;s/\n//g;s/class="flw-item"/\n/g' |
             $sed -nE "s@.*<a href=\".*/(tv|movie)/watch-.*-([0-9]*)\".*title=\"([^\"]*)\".*class=\"fdi-item\">([^<]*)</span>.*@\3 (\1) [\4]\t\2@p" | hxunent)
+        [ -z "$response" ] && send_notification "Error" "1000" "" "No results found" && exit 1
     }
 
     choose_episode() {
@@ -261,6 +295,10 @@ EOF
         fi
         # request to get the embed
         embed_link=$(curl -s "https://flixhq.to/ajax/sources/${episode_id}" | $sed -nE "s_.*\"link\":\"([^\"]*)\".*_\1_p")
+        if [ -z "$embed_link" ]; then
+            send_notification "Error" "Could not get embed link"
+            exit 1
+        fi
     }
 
     extract_from_json() {
@@ -280,9 +318,9 @@ EOF
         [ "$json_output" = "1" ] && printf "%s\n" "$json_data" && exit 0
         subs_links=$(printf "%s" "$json_data" | tr "{}" "\n" | $sed -nE "s@\"file\":\"([^\"]*)\",\"label\":\"(.$subs_language)[,\"\ ].*@\1@p")
         subs_arg="--sub-file"
-        subs_links=$(printf "%s" "$subs_links" | $sed -e "s/:/\\$path_thing:/g" -e "H;1h;\$!d;x;y/\n/$separator/" -e "s/$separator\$//")
         num_subs=$(printf "%s" "$subs_links" | wc -l)
         if [ "$num_subs" -gt 0 ]; then
+            subs_links=$(printf "%s" "$subs_links" | $sed -e "s/:/\\$path_thing:/g" -e "H;1h;\$!d;x;y/\n/$separator/" -e "s/$separator\$//")
             subs_arg="--sub-files=$subs_links"
         fi
         [ -z "$subs_links" ] && send_notification "No subtitles found"
@@ -381,10 +419,10 @@ EOF
                     if [ -n "$subs_links" ]; then
                         if [ "$quiet_output" = 1 ]; then
                             [ -z "$resume_from" ] && mpv "$subs_arg"="$subs_links" --force-media-title="$displayed_title" "$video_link" >/dev/null 2>&1
-                            [ -n "$resume_from" ] && mpv --start="$resume_from" --force-media-title="$displayed_title" "$video_link" >/dev/null 2>&1
+                            [ -n "$resume_from" ] && mpv "$subs_arg"="$subs_links" --start="$resume_from" --force-media-title="$displayed_title" "$video_link" >/dev/null 2>&1
                         else
                             [ -z "$resume_from" ] && mpv "$subs_arg"="$subs_links" --force-media-title="$displayed_title" "$video_link"
-                            [ -n "$resume_from" ] && mpv --start="$resume_from" --force-media-title="$displayed_title" "$video_link"
+                            [ -n "$resume_from" ] && mpv "$subs_arg"="$subs_links" --start="$resume_from" --force-media-title="$displayed_title" "$video_link"
                         fi
                     else
                         if [ "$quiet_output" = 1 ]; then
@@ -488,7 +526,22 @@ EOF
             [ "$history" = 1 ] && save_history
             prompt_to_continue
             case "$continue_choice" in
-                "Yes") resume_from="" && continue ;;
+                "Yes")
+                    resume_from=""
+                    if [ "$history" = 0 ]; then
+                        next_episode_exists
+                        if [ -n "$next_episode" ]; then
+                            episode_title=$(printf "%s" "$next_episode" | cut -f1)
+                            data_id=$(printf "%s" "$next_episode" | cut -f2)
+                            episode_id=$(curl -s "https://${base}/ajax/v2/episode/servers/${data_id}" | $sed ':a;N;$!ba;s/\n//g;s/class="nav-item"/\n/g' | $sed -nE "s@.*data-id=\"([0-9]*)\".*title=\"([^\"]*)\".*@\1\t\2@p" | grep "$provider" | cut -f1)
+                            send_notification "Watching the next episode" "5000" "" "$episode_title"
+                        else
+                            send_notification "No more episodes" "5000" "" "$title"
+                            exit 0
+                        fi
+                    fi
+                    continue
+                    ;;
                 "Search")
                     rm "$images_cache_dir"/*
                     rm "$tmp_position" 2>/dev/null
@@ -579,8 +632,9 @@ EOF
 
     update_script() {
         which_lobster="$(command -v lobster)"
-        [ -z "$which_lobster" ] && die "Can't find lobster in PATH"
-        update=$(curl -s "https://raw.githubusercontent.com/justchokingaround/lobster/master/lobster.sh" || die "Connection error")
+        [ -z "$which_lobster" ] && send_notification "Can't find lobster in PATH"
+        [ -z "$which_lobster" ] && exit 1
+        update=$(curl -s "https://raw.githubusercontent.com/justchokingaround/lobster/master/lobster.sh" || exit 1)
         update="$(printf '%s\n' "$update" | diff -u "$which_lobster" -)"
         if [ -z "$update" ]; then
             send_notification "Script is up to date :)"
@@ -647,6 +701,7 @@ EOF
                         subs_language="english"
                         shift
                     else
+                        subs_language="$(echo "$subs_language" | cut -c2-)"
                         shift 2
                     fi
                 fi
