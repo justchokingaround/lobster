@@ -277,6 +277,7 @@ EOF
             $sed -nE "s@.*img data-src=\"([^\"]*)\".*<a href=\".*/(tv|movie)/watch-.*-([0-9]*)\".*title=\"([^\"]*)\".*class=\"fdi-item\">([^<]*)</span>.*@\1\t\3\t\2\t\4 [\5]@p" | hxunent)
         [ "$image_preview" = "0" ] && response=$(curl -s "https://${base}/search/$query" | $sed ':a;N;$!ba;s/\n//g;s/class="flw-item"/\n/g' |
             $sed -nE "s@.*<a href=\".*/(tv|movie)/watch-.*-([0-9]*)\".*title=\"([^\"]*)\".*class=\"fdi-item\">([^<]*)</span>.*@\3 (\1) [\4]\t\2@p" | hxunent)
+        [ -z "$response" ] && send_notification "Error" "1000" "" "No results found" && exit 1
     }
 
     choose_episode() {
@@ -304,6 +305,10 @@ EOF
         fi
         # request to get the embed
         embed_link=$(curl -s "https://flixhq.to/ajax/sources/${episode_id}" | $sed -nE "s_.*\"link\":\"([^\"]*)\".*_\1_p")
+        if [ -z "$embed_link" ]; then
+            send_notification "Error" "Could not get embed link"
+            exit 1
+        fi
     }
 
     extract_from_json() {
