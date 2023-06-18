@@ -1,6 +1,6 @@
 #!/bin/sh
 
-LOBSTER_VERSION="4.0.3"
+LOBSTER_VERSION="4.0.4"
 
 config_file="$HOME/.config/lobster/lobster_config.txt"
 lobster_editor=${VISUAL:-${EDITOR}}
@@ -38,10 +38,8 @@ if [ "$1" = "--clear-history" ] || [ "$1" = "--delete-history" ]; then
 fi
 
 cleanup() {
-    if ! pgrep ueberzugpp >/dev/null; then
-        [ "$debug" != 1 ] && rm -rf /tmp/lobster/ 2>/dev/null
-        [ "$remove_tmp_lobster" = 1 ] && rm -rf /tmp/lobster/ 2>/dev/null
-    fi
+    [ "$debug" != 1 ] && rm -rf /tmp/lobster/ 2>/dev/null
+    [ "$remove_tmp_lobster" = 1 ] && rm -rf /tmp/lobster/ 2>/dev/null
     if [ "$image_preview" = "1" ] && [ "$use_external_menu" = "0" ]; then
         killall ueberzugpp 2>/dev/null
         rm /tmp/ueberzugpp-* 2>/dev/null
@@ -55,13 +53,16 @@ trap cleanup EXIT INT TERM
     images_cache_dir="/tmp/lobster/lobster-images"
     tmp_position="/tmp/lobster_position"
     case "$(uname -s)" in
-        MINGW* | *Msys) separator=';' && path_thing='' ;;
+        MINGW* | *Msys) separator=';' && path_thing='' && sed="sed" ;;
         *arwin) sed="gsed" ;;
         *) separator=':' && path_thing="\\" && sed="sed" ;;
     esac
 
     command -v notify-send >/dev/null 2>&1 && notify="true" || notify="false"
-    command -v socat >/dev/null 2>&1 && socat_exists="true" || socat_exists="false"
+    case "$(uname -s)" in
+        MINGW* | *Msys) socat_exists="false" ;;
+        *) command -v socat >/dev/null 2>&1 && socat_exists="true" || socat_exists="false" ;;
+    esac
     send_notification() {
         [ "$json_output" = "1" ] && return
         if [ "$use_external_menu" = "0" ] || [ "$use_external_menu" = "" ]; then
@@ -81,7 +82,7 @@ trap cleanup EXIT INT TERM
             command -v "$dep" >/dev/null || exit 1
         done
     }
-    dep_ch "grep" "$sed" "curl" "fzf" "mpv" "socat" || true
+    dep_ch "grep" "$sed" "curl" "fzf" "mpv" || true
     if [ "$use_external_menu" = "1" ]; then
         dep_ch "rofi" || true
     fi
