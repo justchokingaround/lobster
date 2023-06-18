@@ -770,11 +770,6 @@ EOF
             -v | -V | --version)
                 send_notification "Lobster Version: $LOBSTER_VERSION" && exit 0
                 ;;
-            -W)
-                shift
-                preview_image "$@"
-                exit
-                ;;
             -x | --debug)
                 set -x
                 debug=1
