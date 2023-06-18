@@ -1,6 +1,6 @@
 #!/bin/sh
 
-LOBSTER_VERSION="4.0.2"
+LOBSTER_VERSION="4.0.3"
 
 config_file="$HOME/.config/lobster/lobster_config.txt"
 lobster_editor=${VISUAL:-${EDITOR}}
