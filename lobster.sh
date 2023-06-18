@@ -235,27 +235,17 @@ EOF
         sleep "$2"
     }
 
-    start_ueberzugpp() {
-        if [ -z "$ueberzug_output" ]; then
-            ueberzugpp layer --silent <"$FIFO" &
-        else
-            ueberzugpp layer -o "$ueberzug_output" --silent <"$FIFO" &
-        fi
-        exec 3>"${FIFO}"
-    }
-
-    preview_image() {
-        FIFO="/tmp/lobster/fzf_preview_fifo"
-        echo '{"path": "'"$1"'", "action": "add", "identifier": "fzfpreview", "x": "'"$ueberzug_x"'", "y": "'"$ueberzug_y"'", "width": "'"$ueberzug_max_width"'", "height": "'"$ueberzug_max_height"'"}' >"$FIFO"
-    }
-
     image_preview_fzf() {
-        FIFO="/tmp/lobster/fzf_preview_fifo"
-        [ -p "$FIFO" ] || mkfifo "$FIFO"
-        start_ueberzugpp
-        choice=$(find "$images_cache_dir" -type f -printf "%f\n" | fzf -i -q "$1" --cycle --preview "$0 -W $images_cache_dir/{}" --preview-window="$preview_window_size" --reverse --with-nth 2 -d "  ")
-        exec 3>&-
-        rm "$FIFO"
+        UB_PID_FILE="/tmp/.$(uuidgen)"
+        if [ -z "$ueberzug_output" ]; then
+            ueberzugpp layer --no-stdin --silent --use-escape-codes --pid-file "$UB_PID_FILE"
+        else
+            ueberzugpp layer -o "$ueberzug_output" --no-stdin --silent --use-escape-codes --pid-file "$UB_PID_FILE"
+        fi
+        UB_PID="$(cat "$UB_PID_FILE")"
+        LOBSTER_UEBERZUG_SOCKET=/tmp/ueberzugpp-"$UB_PID".socket
+        choice=$(find "$images_cache_dir" -type f -printf "%f\n" | fzf -i -q "$1" --cycle --preview-window="$preview_window_size" --preview="ueberzugpp cmd -s $LOBSTER_UEBERZUG_SOCKET -i fzfpreview -a add -x $ueberzug_x -y $ueberzug_y --max-width $ueberzug_max_width --max-height $ueberzug_max_height -f $images_cache_dir/{}" --reverse --with-nth 2 -d "  ")
+        ueberzugpp cmd -s "$LOBSTER_UEBERZUG_SOCKET" -a exit
     }
 
     select_desktop_entry() {
