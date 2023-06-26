@@ -1,6 +1,6 @@
 #!/bin/sh
 
-LOBSTER_VERSION="4.0.4"
+LOBSTER_VERSION="4.0.5"
 
 config_file="$HOME/.config/lobster/lobster_config.txt"
 lobster_editor=${VISUAL:-${EDITOR}}
@@ -59,10 +59,6 @@ trap cleanup EXIT INT TERM
     esac
 
     command -v notify-send >/dev/null 2>&1 && notify="true" || notify="false"
-    case "$(uname -s)" in
-        MINGW* | *Msys) socat_exists="false" ;;
-        *) command -v socat >/dev/null 2>&1 && socat_exists="true" || socat_exists="false" ;;
-    esac
     send_notification() {
         [ "$json_output" = "1" ] && return
         if [ "$use_external_menu" = "0" ] || [ "$use_external_menu" = "" ]; then
@@ -387,35 +383,22 @@ EOF
                 if [ "$history" = 1 ]; then
                     if [ -n "$subs_links" ]; then
                         if [ -n "$resume_from" ]; then
-                            nohup mpv --start="$resume_from" "$subs_arg"="$subs_links" --force-media-title="$displayed_title" --input-ipc-server=/tmp/mpvsocket "$video_link" >/dev/null 2>&1 &
+                            mpv --start="$resume_from" "$subs_arg"="$subs_links" --force-media-title="$displayed_title" --input-ipc-server=/tmp/mpvsocket "$video_link" 2>&1 | tee "$tmp_position"
                         else
-                            nohup mpv --sub-file="$subs_links" --force-media-title="$displayed_title" --input-ipc-server=/tmp/mpvsocket "$video_link" >/dev/null 2>&1 &
+                            mpv --sub-file="$subs_links" --force-media-title="$displayed_title" --input-ipc-server=/tmp/mpvsocket "$video_link" 2>&1 | tee "$tmp_position"
                         fi
                     else
                         if [ -n "$resume_from" ]; then
-                            nohup mpv --start="$resume_from" --force-media-title="$displayed_title" --input-ipc-server=/tmp/mpvsocket "$video_link" >/dev/null 2>&1 &
+                            mpv --start="$resume_from" --force-media-title="$displayed_title" --input-ipc-server=/tmp/mpvsocket "$video_link" 2>&1 | tee "$tmp_position"
                         else
-                            nohup mpv --force-media-title="$displayed_title" --input-ipc-server=/tmp/mpvsocket "$video_link" >/dev/null 2>&1 &
+                            mpv --force-media-title="$displayed_title" --input-ipc-server=/tmp/mpvsocket "$video_link" 2>&1 | tee "$tmp_position"
                         fi
                     fi
-                    if [ "$socat_exists" = "true" ]; then
-                        PID=$!
-                        while ! ps -p "$PID" >/dev/null; do
-                            sleep 0.1
-                        done
-                        sleep 2
 
-                        while ps -p "$PID" >/dev/null; do
-                            position=$(echo '{ "command": ["get_property", "time-pos"] }' | socat - /tmp/mpvsocket | $sed -nE "s@.*\"data\":([0-9\.]*),.*@\1@p")
-                            [ "$position" != "" ] && printf "%s\n" "$position" >>"$tmp_position"
-                            progress=$(echo '{ "command": ["get_property", "percent-pos"] }' | socat - /tmp/mpvsocket | $sed -nE "s@.*\"data\":([0-9\.]*),.*@\1@p")
-                            sleep 1
-                        done
-                        last_line=$($sed '/^$/d' "$tmp_position" | tail -1)
-                        position=$(date -u -d "@$(printf "%.0f" "$last_line")" "+%H:%M:%S")
-                        progress=$(printf "%.0f" "$progress")
-                        [ -n "$position" ] && send_notification "Stopped at" "5000" "$images_cache_dir/  $title ($media_type)  $media_id.jpg" "$position"
-                    fi
+                    position=$($sed -nE "s@.*AV: ([0-9:]*) / ([0-9:]*) \(([0-9]*)%\).*@\1@p" "$tmp_position" | tail -1)
+                    progress=$($sed -nE "s@.*AV: ([0-9:]*) / ([0-9:]*) \(([0-9]*)%\).*@\3@p" "$tmp_position" | tail -1)
+                    [ -n "$position" ] && send_notification "Stopped at" "5000" "$images_cache_dir/  $title ($media_type)  $media_id.jpg" "$position"
+
                 else
                     if [ -n "$subs_links" ]; then
                         if [ "$quiet_output" = 1 ]; then
