@@ -145,9 +145,9 @@ EOF
 
     prompt_to_continue() {
         if [ "$media_type" = "tv" ]; then
-            continue_choice=$(printf "Yes\nExit\nSearch" | launcher "Continue? ")
+            continue_choice=$(printf "Next episode\nExit\nSearch" | launcher "Select: ")
         else
-            continue_choice=$(printf "Exit\nSearch" | launcher "Continue? ")
+            continue_choice=$(printf "Exit\nSearch" | launcher "Select: ")
         fi
     }
 
@@ -510,7 +510,7 @@ EOF
             [ "$history" = 1 ] && save_history
             prompt_to_continue
             case "$continue_choice" in
-                "Yes")
+                "Next episode")
                     resume_from=""
                     if [ "$history" = 0 ]; then
                         next_episode_exists
