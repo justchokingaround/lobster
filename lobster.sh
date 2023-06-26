@@ -233,7 +233,7 @@ EOF
     }
 
     image_preview_fzf() {
-        UB_PID_FILE="/tmp/.$(uuidgen)"
+        UB_PID_FILE="/tmp/lobster/.$(uuidgen)"
         if [ -z "$ueberzug_output" ]; then
             ueberzugpp layer --no-stdin --silent --use-escape-codes --pid-file "$UB_PID_FILE"
         else
@@ -383,15 +383,15 @@ EOF
                 if [ "$history" = 1 ]; then
                     if [ -n "$subs_links" ]; then
                         if [ -n "$resume_from" ]; then
-                            mpv --start="$resume_from" "$subs_arg"="$subs_links" --force-media-title="$displayed_title" --input-ipc-server=/tmp/mpvsocket "$video_link" 2>&1 | tee "$tmp_position"
+                            mpv --start="$resume_from" "$subs_arg"="$subs_links" --force-media-title="$displayed_title" "$video_link" 2>&1 | tee "$tmp_position"
                         else
-                            mpv --sub-file="$subs_links" --force-media-title="$displayed_title" --input-ipc-server=/tmp/mpvsocket "$video_link" 2>&1 | tee "$tmp_position"
+                            mpv --sub-file="$subs_links" --force-media-title="$displayed_title" "$video_link" 2>&1 | tee "$tmp_position"
                         fi
                     else
                         if [ -n "$resume_from" ]; then
-                            mpv --start="$resume_from" --force-media-title="$displayed_title" --input-ipc-server=/tmp/mpvsocket "$video_link" 2>&1 | tee "$tmp_position"
+                            mpv --start="$resume_from" --force-media-title="$displayed_title" "$video_link" 2>&1 | tee "$tmp_position"
                         else
-                            mpv --force-media-title="$displayed_title" --input-ipc-server=/tmp/mpvsocket "$video_link" 2>&1 | tee "$tmp_position"
+                            mpv --force-media-title="$displayed_title" "$video_link" 2>&1 | tee "$tmp_position"
                         fi
                     fi
 
