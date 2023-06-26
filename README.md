@@ -104,6 +104,9 @@ chmod +x "$(brew --prefix)"/bin/lobster
 
 <details>
 <summary>Windows installation instructions</summary>
+
+* This guide covers how to install and use lobster with the windows terminal, you could also use a different terminal emulator, that supports fzf, like for example wezterm
+* Note that the git bash terminal does *not* have proper fzf support
 1. Install scoop
 
 Open a PowerShell terminal https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell-on-windows?view=powershell-7.2#msi (version 5.1 or later) and run:
@@ -119,60 +122,33 @@ irm get.scoop.sh | iex
 scoop bucket add extras
 scoop install git mpv fzf
 ```
-
-3. Install git bash
-   https://git-scm.com/download/win
-4. Install windows terminal (you don't need to have a microsoft account for that)
+3. Install windows terminal (you don't need to have a microsoft account for that)
    https://learn.microsoft.com/en-us/windows/terminal/install
-5. Adding git bash to windows terminal.
 
-   a) Install windows terminal from the Microsoft store.
+4. Install git bash (select the option to add it to the windows terminal during installation)
+   https://git-scm.com/download/win
 
-   b) Open the terminal.
-
-   c) Open settings.
-
-   d) Click "Add a new profile"
-
-   e) Click "New empty profile"
-
-   f) Click on "name" and rename it to "Git Bash"
-
-   g) Click on "Command line" and click "Browse..."
-
-   h) If you installed git using scoop then follow this(else the steps are mostly the same just a different path)
-   navigate to `C:\User\USERNAME\scoop\apps\git\2.37.1.windows.1\bin\bash.exe`
-   Where USERNAME is your username
-   note that the name `2.37.1.windows.1` might be slightly different on your system
-
-   j) Click "Open"
-
-   k) Click "Starting directory" and uncheck "Use parent process directory"
-
-   l) Click "Save"
-
-   m) Now you can open gitbash from the windows terminal
-
-6. Clone the repo and go inside it
-
+5. Download the script file to the current directory
 ```sh
-git clone https://github.com/justchokingaround/lobster && cd lobster
+curl -O "https://raw.githubusercontent.com/justchokingaround/lobster/main/lobster.sh"
 ```
 
-7. Add the script to default path for binaries
+6. Give it executable permissions
+```sh
+chmod +x lobster.sh
+```
 
+7. Remove the hxunent dependency manually from the script
+```sh
+sed -i 's/ | hxunent//g; /command -v "hxunent"/d' lobster.sh
+```
+
+8. Copy the script to path
 ```sh
 cp lobster.sh /usr/bin/lobster
 ```
 
-8. Denote permission to access the file in executable mode
-
-```sh
-sudo chmod +x /usr/bin/lobster
-```
-
-9. Use lobster (either with git bash or windows terminal)
-
+9. Use lobster
 ```sh
 lobster <args> or lobster [movie/tv show]
 ```
