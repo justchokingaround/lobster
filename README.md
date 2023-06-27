@@ -138,17 +138,12 @@ curl -O "https://raw.githubusercontent.com/justchokingaround/lobster/main/lobste
 chmod +x lobster.sh
 ```
 
-7. Remove the hxunent dependency manually from the script
-```sh
-sed -i 's/ | hxunent//g; /command -v "hxunent"/d' lobster.sh
-```
-
-8. Copy the script to path
+7. Copy the script to path
 ```sh
 cp lobster.sh /usr/bin/lobster
 ```
 
-9. Use lobster
+8. Use lobster
 ```sh
 lobster <args> or lobster [movie/tv show]
 ```
@@ -473,7 +468,7 @@ https://github.com/users/justchokingaround/projects/2/views/1?query=is%3Aopen+so
 - sed
 - patch
 - mpv
-- html-xml-utils (for fixing html encoded characters)
+- html-xml-utils (for fixing html encoded characters) (optional)
 - rofi (external menu)
 - socat (for getting the player position from the mpv socket)
 - vlc (optional)
