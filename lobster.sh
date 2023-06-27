@@ -769,7 +769,7 @@ EOF
                 ;;
         esac
     done
-    query="$(printf "%s" "$query" | tr ' ' '-')"
+    query="$(printf "%s" "$query" | tr ' ' '-' | $sed "s/^-//g")"
     if [ "$image_preview" = 1 ]; then
         test -d "$images_cache_dir" || mkdir -p "$images_cache_dir"
         if [ "$use_external_menu" = 1 ]; then
