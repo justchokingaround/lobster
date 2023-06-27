@@ -1,6 +1,6 @@
 #!/bin/sh
 
-LOBSTER_VERSION="4.0.5"
+LOBSTER_VERSION="4.0.6"
 
 config_file="$HOME/.config/lobster/lobster_config.txt"
 lobster_editor=${VISUAL:-${EDITOR}}
@@ -618,7 +618,7 @@ EOF
         which_lobster="$(command -v lobster)"
         [ -z "$which_lobster" ] && send_notification "Can't find lobster in PATH"
         [ -z "$which_lobster" ] && exit 1
-        update=$(curl -s "https://raw.githubusercontent.com/justchokingaround/lobster/master/lobster.sh" || exit 1)
+        update=$(curl -s "https://raw.githubusercontent.com/justchokingaround/lobster/main/lobster.sh" || exit 1)
         update="$(printf '%s\n' "$update" | diff -u "$which_lobster" -)"
         if [ -z "$update" ]; then
             send_notification "Script is up to date :)"
