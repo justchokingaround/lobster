@@ -11,6 +11,21 @@ if [ "$1" = "--edit" ] || [ "$1" = "-e" ]; then
         . "${config_file}"
         [ -z "$lobster_editor" ] && lobster_editor="vim"
         "$lobster_editor" "$config_file"
+    else
+        printf "No configuration file found. Would you like to generate a default one? [y/N] " && read -r generate
+        case "$generate" in
+            "Yes" | "yes" | "y" | "Y")
+                [ ! -d "$HOME/.config/lobster" ] && mkdir -p "$HOME/.config/lobster"
+                printf "Getting the latest example config from github...\n"
+                curl -s "https://raw.githubusercontent.com/justchokingaround/lobster/main/examples/lobster_config.txt" -o "$config_file"
+                printf "New config generated!\n"
+                #shellcheck disable=1090
+                . "${config_file}"
+                [ -z "$lobster_editor" ] && lobster_editor="vim"
+                "$lobster_editor" "$config_file"
+                ;;
+            *) exit 0 ;;
+        esac
     fi
     exit 0
 fi
