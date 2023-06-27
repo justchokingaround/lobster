@@ -581,7 +581,7 @@ EOF
         [ ! -f "$histfile" ] && send_notification "No history file found" "5000" "" && exit 1
         [ "$watched_history" = 1 ] && exit 0
         watched_history=1
-        choice=$(tail -r "$histfile" | nl -w 1 | nth "Choose an entry:")
+        choice=$($sed -n "1h;1!{x;H;};\${g;p;}" "$histfile" | nl -w 1 | nth "Choose an entry:")
         [ -z "$choice" ] && exit 1
         media_type=$(printf "%s" "$choice" | cut -f4)
         title=$(printf "%s" "$choice" | cut -f1)
