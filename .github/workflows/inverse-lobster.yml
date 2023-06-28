@@ -5,7 +5,7 @@ name: 'lobster checks'
 on:
   pull_request:
     paths-ignore:
-      - "**lobster.sh"
+      - "**lobster**"
 jobs:
   sh-checker:
     name: Shellcheck + Shfmt
