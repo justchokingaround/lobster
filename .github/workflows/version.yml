@@ -2,7 +2,7 @@ name: 'lobster checks'
 on:
   pull_request:
     paths: 
-      - "**.sh"
+      - "lobster.sh"
       
 jobs:
   version-bump:
