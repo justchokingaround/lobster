@@ -13,4 +13,4 @@ jobs:
       with:
         fetch-depth: 0
     - name: check version bump
-      run: git diff origin/master | grep LOBSTER_VERSION
+      run: git diff origin/main | grep LOBSTER_VERSION
