@@ -5,7 +5,7 @@ on:
       - main
   pull_request:
     paths: 
-      - "**lobster"
+      - "**lobster**"
 
 jobs:
   sh-checker:
