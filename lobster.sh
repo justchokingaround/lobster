@@ -147,8 +147,8 @@ EOF
                 [ -n "$2" ] && rofi -sort -dmenu -i -width 1500 -p "" -mesg "$1" -display-columns "$2"
                 ;;
             *)
-                [ -z "$2" ] && fzf --reverse --prompt "$1"
-                [ -n "$2" ] && fzf --reverse --prompt "$1" --with-nth "$2" -d "\t"
+                [ -z "$2" ] && fzf --cycle --reverse --prompt "$1"
+                [ -n "$2" ] && fzf --cycle --reverse --prompt "$1" --with-nth "$2" -d "\t"
                 ;;
         esac
     }
@@ -164,7 +164,7 @@ EOF
 
     prompt_to_continue() {
         if [ "$media_type" = "tv" ]; then
-            continue_choice=$(printf "Next episode\nReplay episode\nExit\nSearch" | launcher "Select: ")
+            continue_choice=$(printf "Next episode\nReplay episode\nChange quality\nExit\nSearch" | launcher "Select: ")
         else
             continue_choice=$(printf "Exit\nSearch" | launcher "Select: ")
         fi
@@ -278,31 +278,89 @@ EOF
         fi
     }
 
-    search() {
-        if [ "$image_preview" = "1" ]; then
-            response=$(curl -s "https://${base}/search/$query" | $sed ':a;N;$!ba;s/\n//g;s/class="flw-item"/\n/g' |
-                $sed -nE "s@.*img data-src=\"([^\"]*)\".*<a href=\".*/(tv|movie)/watch-.*-([0-9]*)\".*title=\"([^\"]*)\".*class=\"fdi-item\">([^<]*)</span>.*@\1\t\3\t\2\t\4 [\5]@p")
+    hdrezka_data_and_translation_id() {
+        data_id=$(printf "%s" "$media_id" | $sed -nE "s@[a-z]*/([0-9]*)-.*@\1@p")
+        case "$media_type" in
+            series | cartoons)
+                default_translator_id=$(curl -s "https://${base}/${media_type}/$(printf "%s" "$media_id" | tr '=' '/').html" -A "uwu" --compressed |
+                    sed -nE "s@.*initCDNSeriesEvents\(${data_id}\, ([0-9]*)\,.*@\1@p")
+                ;;
+            films)
+                default_translator_id=$(curl -s "https://${base}/${media_type}/$(printf "%s" "$media_id" | tr '=' '/').html" -A "uwu" --compressed |
+                    sed -nE "s@.*initCDNMoviesEvents\(${data_id}\, ([0-9]*)\,.*@\1@p")
+                ;;
+        esac
+        translations=$(curl -s "https://${base}/${media_type}/$(printf "%s" "$media_id" | tr '=' '/').html" -A "uwu" --compressed |
+            sed 's/b-translator__item/\n/g' | sed -nE "s@.*data-translator_id=\"([0-9]*)\"[^>]*>(.*)</li.*@\2\t\1@p" |
+            sed 's/<img title="\([^\"]*\)" .*>\(.*\)/(\1)\2/;s/^\(.*\)<\/li><\/ul> <\/div>.*\t\([0-9]*\)/\1\t\2/')
+        if [ -z "$translations" ]; then
+            translator_id=$default_translator_id
         else
-            response=$(curl -s "https://${base}/search/$query" | $sed ':a;N;$!ba;s/\n//g;s/class="flw-item"/\n/g' |
-                $sed -nE "s@.*<a href=\".*/(tv|movie)/watch-.*-([0-9]*)\".*title=\"([^\"]*)\".*class=\"fdi-item\">([^<]*)</span>.*@\3 (\1) [\4]\t\2@p" | $hxunent)
+            if [ "$use_external_menu" = "1" ]; then
+                translator_id=$(printf "%s" "$translations" | rofi -dmenu -p "" -mesg "Choose a translation" -display-columns 1 | cut -f2)
+            else
+                translator_id=$(printf "%s" "$translations" | fzf --cycle --reverse --with-nth 1 -d "\t" --header "Choose a translation" | cut -f2)
+            fi
         fi
+    }
+
+    search() {
+        case "$base" in
+            "hdrezka.website")
+                if [ "$image_preview" = 1 ]; then
+                    response=$(curl -s "https://${base}/search/?do=search&subaction=search&q=${query}" -A "uwu" --compressed | sed "s/<img/\n/g" |
+                        sed -nE "s@.*src=\"([^\"]*)\".*<a href=\"https://hdrezka\.website/(.*)/(.*)/(.*)\.html\">([^<]*)</a> <div>([0-9]*).*@\1\t\3=\4\t\2\t\5 [\6]@p" | $hxunent)
+                else
+                    response=$(curl -s "https://${base}/search/?do=search&subaction=search&q=${query}" -A "uwu" --compressed | sed "s/<img/\n/g" |
+                        sed -nE "s@.*src=\"[^\"]*\".*<a href=\"https://hdrezka\.website/(.*)/(.*)/(.*)\.html\">([^<]*)</a> <div>([0-9]*).*@\4 (\1) [\5]\t\2/\3@p" | $hxunent)
+                fi
+                ;;
+            "flixhq.to")
+                if [ "$image_preview" = 1 ]; then
+                    response=$(curl -s "https://${base}/search/$query" | $sed ':a;N;$!ba;s/\n//g;s/class="flw-item"/\n/g' |
+                        $sed -nE "s@.*img data-src=\"([^\"]*)\".*<a href=\".*/(tv|movie)/watch-.*-([0-9]*)\".*title=\"([^\"]*)\".*class=\"fdi-item\">([^<]*)</span>.*@\1\t\3\t\2\t\4 [\5]@p" | $hxunent)
+                else
+                    response=$(curl -s "https://${base}/search/$query" | $sed ':a;N;$!ba;s/\n//g;s/class="flw-item"/\n/g' |
+                        $sed -nE "s@.*<a href=\".*/(tv|movie)/watch-.*-([0-9]*)\".*title=\"([^\"]*)\".*class=\"fdi-item\">([^<]*)</span>.*@\3 (\1) [\4]\t\2@p" | $hxunent)
+                fi
+                ;;
+        esac
         [ -z "$response" ] && send_notification "Error" "1000" "" "No results found" && exit 1
     }
 
     choose_episode() {
-        if [ -z "$season_id" ]; then
-            tmp_season_id=$(curl -s "https://${base}/ajax/v2/tv/seasons/${media_id}" | $sed -nE "s@.*href=\".*-([0-9]*)\">(.*)</a>@\2\t\1@p" | launcher "Select a season: " "1")
-            [ -z "$tmp_season_id" ] && exit 1
-            season_title=$(printf "%s" "$tmp_season_id" | cut -f1)
-            season_id=$(printf "%s" "$tmp_season_id" | cut -f2)
-            tmp_ep_id=$(curl -s "https://${base}/ajax/v2/season/episodes/${season_id}" | $sed ':a;N;$!ba;s/\n//g;s/class="nav-item"/\n/g' |
-                $sed -nE "s@.*data-id=\"([0-9]*)\".*title=\"([^\"]*)\">.*@\2\t\1@p" | $hxunent | launcher "Select an episode: " "1")
-            [ -z "$tmp_ep_id" ] && exit 1
-        fi
-        [ -z "$episode_title" ] && episode_title=$(printf "%s" "$tmp_ep_id" | cut -f1)
-        [ -z "$data_id" ] && data_id=$(printf "%s" "$tmp_ep_id" | cut -f2)
-        episode_id=$(curl -s "https://${base}/ajax/v2/episode/servers/${data_id}" | $sed ':a;N;$!ba;s/\n//g;s/class="nav-item"/\n/g' |
-            $sed -nE "s@.*data-id=\"([0-9]*)\".*title=\"([^\"]*)\".*@\1\t\2@p" | grep "$provider" | cut -f1)
+        case "$base" in
+            "flixhq.to")
+                if [ -z "$season_id" ]; then
+                    tmp_season_id=$(curl -s "https://${base}/ajax/v2/tv/seasons/${media_id}" | $sed -nE "s@.*href=\".*-([0-9]*)\">(.*)</a>@\2\t\1@p" | launcher "Select a season: " "1")
+                    [ -z "$tmp_season_id" ] && exit 1
+                    season_title=$(printf "%s" "$tmp_season_id" | cut -f1)
+                    season_id=$(printf "%s" "$tmp_season_id" | cut -f2)
+                    tmp_ep_id=$(curl -s "https://${base}/ajax/v2/season/episodes/${season_id}" | $sed ':a;N;$!ba;s/\n//g;s/class="nav-item"/\n/g' |
+                        $sed -nE "s@.*data-id=\"([0-9]*)\".*title=\"([^\"]*)\">.*@\2\t\1@p" | $hxunent | launcher "Select an episode: " "1")
+                    [ -z "$tmp_ep_id" ] && exit 1
+                fi
+                [ -z "$episode_title" ] && episode_title=$(printf "%s" "$tmp_ep_id" | cut -f1)
+                [ -z "$data_id" ] && data_id=$(printf "%s" "$tmp_ep_id" | cut -f2)
+                episode_id=$(curl -s "https://${base}/ajax/v2/episode/servers/${data_id}" | $sed ':a;N;$!ba;s/\n//g;s/class="nav-item"/\n/g' |
+                    $sed -nE "s@.*data-id=\"([0-9]*)\".*title=\"([^\"]*)\".*@\1\t\2@p" | grep "$provider" | cut -f1)
+                ;;
+            "hdrezka.website")
+                hdrezka_data_and_translation_id
+                if [ -z "$season_id" ]; then
+                    tmp_season_id=$(curl -s "https://${base}/${media_type}/${media_id}.html" -A "uwu" --compressed | $sed "s/<li/\n/g" |
+                        $sed -nE "s@.*data-tab_id=\"([0-9]*)\">([^<]*)</li>.*@\2\t\1@p" | $hxunent | launcher "Select a season: " "1")
+                    [ -z "$tmp_season_id" ] && exit 1
+                    season_title=$(printf "%s" "$tmp_season_id" | cut -f1)
+                    season_id=$(printf "%s" "$tmp_season_id" | cut -f2)
+                    episode_id=$(curl -s -X POST "https://${base}/ajax/get_cdn_series/" -A "uwu" --data-raw "id=${data_id}&translator_id=${translator_id}&season=${season_id}&action=get_episodes" --compressed |
+                        $sed "s/\\\//g;s/cdn_url/\n/g" |
+                        $sed -nE "s@.*data-season_id=\"${season_id}\" data-episode_id=\"([0-9]*)\".*@\1@p" | $hxunent | launcher "Select an episode: " "1")
+                    [ -z "$episode_id" ] && exit 1
+                fi
+                [ -z "$episode_title" ] && episode_title=$episode_id
+                ;;
+        esac
     }
 
     get_embed() {
@@ -321,38 +379,81 @@ EOF
     }
 
     extract_from_json() {
-        encrypted=$(printf "%s" "$json_data" | tr "{}" "\n" | $sed -nE "s_.*\"file\":\"([^\"]*)\".*_\1_p" | grep "\.m3u8")
-        if [ -n "$encrypted" ]; then
-            video_link=$(printf "%s" "$json_data" | tr "{|}" "\n" | $sed -nE "s_.*\"file\":\"([^\"]*)\".*_\1_p" | head -1)
-        else
-            key="$(curl -s "https://github.com/enimax-anime/key/blob/e${embed_type}/key.txt" | $sed -nE "s_.*js-file-line\">(.*)<.*_\1_p")"
-            encrypted_video_link=$(printf "%s" "$json_data" | tr "{|}" "\n" | $sed -nE "s_.*\"sources\":\"([^\"]*)\".*_\1_p" | head -1)
-            # ty @CoolnsX for helping me with figuring out how to implement aes in openssl
-            video_link=$(printf "%s" "$encrypted_video_link" | base64 -d |
-                openssl enc -aes-256-cbc -d -md md5 -k "$key" 2>/dev/null | $sed -nE "s_.*\"file\":\"([^\"]*)\".*_\1_p")
-            json_data=$(printf "%s" "$json_data" | $sed -e "s|${encrypted_video_link}|${video_link}|")
-        fi
-        [ -n "$quality" ] && video_link=$(printf "%s" "$video_link" | $sed -e "s|/playlist.m3u8|/$quality/index.m3u8|")
+        case "$base" in
+            "flixhq.to")
+                encrypted=$(printf "%s" "$json_data" | tr "{}" "\n" | $sed -nE "s_.*\"file\":\"([^\"]*)\".*_\1_p" | grep "\.m3u8")
+                if [ -n "$encrypted" ]; then
+                    video_link=$(printf "%s" "$json_data" | tr "{|}" "\n" | $sed -nE "s_.*\"file\":\"([^\"]*)\".*_\1_p" | head -1)
+                else
+                    key="$(curl -s "https://github.com/enimax-anime/key/blob/e${embed_type}/key.txt" | $sed -nE "s_.*js-file-line\">(.*)<.*_\1_p")"
+                    encrypted_video_link=$(printf "%s" "$json_data" | tr "{|}" "\n" | $sed -nE "s_.*\"sources\":\"([^\"]*)\".*_\1_p" | head -1)
+                    # ty @CoolnsX for helping me with figuring out how to implement aes in openssl
+                    video_link=$(printf "%s" "$encrypted_video_link" | base64 -d |
+                        openssl enc -aes-256-cbc -d -md md5 -k "$key" 2>/dev/null | $sed -nE "s_.*\"file\":\"([^\"]*)\".*_\1_p")
+                    json_data=$(printf "%s" "$json_data" | $sed -e "s|${encrypted_video_link}|${video_link}|")
+                fi
+                [ -n "$quality" ] && video_link=$(printf "%s" "$video_link" | $sed -e "s|/playlist.m3u8|/$quality/index.m3u8|")
 
-        [ "$json_output" = "1" ] && printf "%s\n" "$json_data" && exit 0
-        subs_links=$(printf "%s" "$json_data" | tr "{}" "\n" | $sed -nE "s@\"file\":\"([^\"]*)\",\"label\":\"(.$subs_language)[,\"\ ].*@\1@p")
-        subs_arg="--sub-file"
-        num_subs=$(printf "%s" "$subs_links" | wc -l)
-        if [ "$num_subs" -gt 0 ]; then
-            subs_links=$(printf "%s" "$subs_links" | $sed -e "s/:/\\$path_thing:/g" -e "H;1h;\$!d;x;y/\n/$separator/" -e "s/$separator\$//")
-            subs_arg="--sub-files=$subs_links"
-        fi
-        [ -z "$subs_links" ] && send_notification "No subtitles found"
+                [ "$json_output" = "1" ] && printf "%s\n" "$json_data" && exit 0
+                subs_links=$(printf "%s" "$json_data" | tr "{}" "\n" | $sed -nE "s@\"file\":\"([^\"]*)\",\"label\":\"(.$subs_language)[,\"\ ].*@\1@p")
+                subs_arg="--sub-file"
+                num_subs=$(printf "%s" "$subs_links" | wc -l)
+                if [ "$num_subs" -gt 0 ]; then
+                    subs_links=$(printf "%s" "$subs_links" | $sed -e "s/:/\\$path_thing:/g" -e "H;1h;\$!d;x;y/\n/$separator/" -e "s/$separator\$//")
+                    subs_arg="--sub-files=$subs_links"
+                fi
+                [ -z "$subs_links" ] && send_notification "No subtitles found"
+                ;;
+            "hdrezka.website")
+                encrypted_video_link=$(printf "%s" "$json_data" | sed -nE "s@.*\"url\":\"([^\"]*)\".*@\1@p" | sed "s/\\\//g" | cut -c'3-' | sed 's|//_//||g')
+                # the part below is pain
+                subs_links=$(printf "%s" "$json_data" | sed -nE "s@.*\"subtitle\":\"([^\"]*)\".*@\1@p" |
+                    sed -e 's/\[[^]]*\]//g' -e 's/,/\n/g' -e 's/\\//g' -e "s/:/\\$path_thing:/g" -e "H;1h;\$!d;x;y/\n/$separator/" -e "s/$separator\$//")
+                subs_arg="--sub-files=$subs_links"
+
+                # ty @CoolnsX for helping me out with the decryption
+                table='ISE=,IUA=,IV4=,ISM=,ISQ=,QCE=,QEA=,QF4=,QCM=,QCQ=,XiE=,XkA=,Xl4=,XiM=,XiQ=,IyE=,I0A=,I14=,IyM=,IyQ=,JCE=,JEA=,JF4=,JCM=,JCQ=,ISEh,ISFA,ISFe,ISEj,ISEk,IUAh,IUBA,IUBe,IUAj,IUAk,IV4h,IV5A,IV5e,IV4j,IV4k,ISMh,ISNA,ISNe,ISMj,ISMk,ISQh,ISRA,ISRe,ISQj,ISQk,QCEh,QCFA,QCFe,QCEj,QCEk,QEAh,QEBA,QEBe,QEAj,QEAk,QF4h,QF5A,QF5e,QF4j,QF4k,QCMh,QCNA,QCNe,QCMj,QCMk,QCQh,QCRA,QCRe,QCQj,QCQk,XiEh,XiFA,XiFe,XiEj,XiEk,XkAh,XkBA,XkBe,XkAj,XkAk,Xl4h,Xl5A,Xl5e,Xl4j,Xl4k,XiMh,XiNA,XiNe,XiMj,XiMk,XiQh,XiRA,XiRe,XiQj,XiQk,IyEh,IyFA,IyFe,IyEj,IyEk,I0Ah,I0BA,I0Be,I0Aj,I0Ak,I14h,I15A,I15e,I14j,I14k,IyMh,IyNA,IyNe,IyMj,IyMk,IyQh,IyRA,IyRe,IyQj,IyQk,JCEh,JCFA,JCFe,JCEj,JCEk,JEAh,JEBA,JEBe,JEAj,JEAk,JF4h,JF5A,JF5e,JF4j,JF4k,JCMh,JCNA,JCNe,JCMj,JCMk,JCQh,JCRA,JCRe,JCQj,JCQk'
+
+                for i in $(printf "%s" "$table" | tr ',' '\n'); do
+                    encrypted_video_link=$(printf "%s" "$encrypted_video_link" | sed "s/$i//g")
+                done
+
+                video_links=$(printf "%s" "$encrypted_video_link" | sed 's/_//g' | base64 -d | tr ',' '\n' | sed -nE "s@\[([^\]*)\](.*)@\"\1\":\"\2\",@p")
+                video_links_json=$(printf "%s" "$video_links" | tr -d '\n' | sed "s/,$//g")
+                json_data=$(printf "%s" "$json_data" | $sed -E "s@\"url\":\"[^\"]*\"@\"url\":\{$video_links_json\}@")
+                [ "$json_output" = "1" ] && printf "%s\n" "$json_data" && exit 0
+
+                if [ -n "$quality" ]; then
+                    video_link=$(printf "%s" "$video_links" | sed -nE "s@\"${quality}.*\":\".* or ([^\"]*)\".*@\1@p" | tail -1)
+                else
+                    video_link=$(printf "%s" "$video_links" | sed -nE "s@\".*\":\".* or ([^\"]*)\".*@\1@p" | tail -1)
+                fi
+                ;;
+        esac
     }
 
     get_json() {
-        # get the juicy links
-        parse_embed=$(printf "%s" "$embed_link" | $sed -nE "s_(.*)/embed-(4|6)/(.*)\?z=\$_\1\t\2\t\3_p")
-        provider_link=$(printf "%s" "$parse_embed" | cut -f1)
-        source_id=$(printf "%s" "$parse_embed" | cut -f3)
-        embed_type=$(printf "%s" "$parse_embed" | cut -f2)
-        json_data=$(curl -s "${provider_link}/ajax/embed-${embed_type}/getSources?id=${source_id}" -H "X-Requested-With: XMLHttpRequest")
-        [ -n "$json_data" ] && extract_from_json
+        case "$base" in
+            "flixhq.to")
+                # get the juicy links
+                parse_embed=$(printf "%s" "$embed_link" | $sed -nE "s_(.*)/embed-(4|6)/(.*)\?z=\$_\1\t\2\t\3_p")
+                provider_link=$(printf "%s" "$parse_embed" | cut -f1)
+                source_id=$(printf "%s" "$parse_embed" | cut -f3)
+                embed_type=$(printf "%s" "$parse_embed" | cut -f2)
+                json_data=$(curl -s "${provider_link}/ajax/embed-${embed_type}/getSources?id=${source_id}" -H "X-Requested-With: XMLHttpRequest")
+                [ -n "$json_data" ] && extract_from_json
+                ;;
+            "hdrezka.website")
+                case "$media_type" in
+                    series | cartoons) json_data=$(curl -s -X POST "https://${base}/ajax/get_cdn_series/" -A "uwu" --data-raw "id=${data_id}&translator_id=${translator_id}&season=${season_id}&episode=${episode_id}&action=get_stream" --compressed) ;;
+                    films)
+                        hdrezka_data_and_translation_id
+                        json_data=$(curl -s -X POST "https://${base}/ajax/get_cdn_series/" -A "uwu" --data-raw "id=${data_id}&translator_id=${translator_id}&action=get_movie" --compressed)
+                        ;;
+                esac
+                [ -n "$json_data" ] && extract_from_json
+                ;;
+        esac
     }
 
     check_history() {
@@ -362,7 +463,7 @@ EOF
             return
         fi
         case $media_type in
-            movie)
+            movie | films)
                 if grep -q "$media_id" "$histfile"; then
                     resume_from=$(grep "$media_id" "$histfile" | cut -f2)
                     send_notification "Resuming from" "5000" "$images_cache_dir/  $title ($media_type)  $media_id.jpg" "$resume_from"
@@ -370,14 +471,14 @@ EOF
                     send_notification "Now Playing" "5000" "$images_cache_dir/  $title ($media_type)  $media_id.jpg" "$title"
                 fi
                 ;;
-            tv)
+            tv | series | cartoons)
                 if grep -q "$media_id" "$histfile"; then
                     if grep -q "$episode_id" "$histfile"; then
                         [ -z "$resume_from" ] && resume_from=$($sed -nE "s@.*\t([0-9:]*)\t$media_id\ttv\t$season_id.*@\1@p" "$histfile")
                         send_notification "$season_title" "5000" "$images_cache_dir/  $title ($media_type)  $media_id.jpg" "$episode_title"
                     fi
                 else
-                    send_notification "$season_title" "5000" "$images_cache_dir/  $title ($media_type)  $media_id.jpg" "$episode_title"
+                    send_notification "Now Playing" "5000" "$images_cache_dir/  $title ($media_type)  $media_id.jpg" "$displayed_title"
                 fi
                 ;;
             *) send_notification "This media type is not supported" ;;
@@ -386,7 +487,11 @@ EOF
     }
 
     play_video() {
-        [ "$media_type" = "tv" ] && displayed_title="$title - $season_title - $episode_title" || displayed_title="$title"
+        if [ "$media_type" = "tv" ] || [ "$media_type" = "series" ]; then
+            displayed_title="$title - $season_title - $episode_title"
+        else
+            displayed_title="$title"
+        fi
         case $player in
             iina | celluloid)
                 if [ -n "$subs_links" ]; then
@@ -504,8 +609,12 @@ EOF
 
     loop() {
         while [ "$keep_running" = "true" ]; do
-            get_embed
-            [ -z "$embed_link" ] && exit 1
+            case "$base" in
+                "flixhq.to") get_embed ;;
+            esac
+            if [ "$base" = "flixhq.to" ] && [ -z "$embed_link" ]; then
+                exit 1
+            fi
             get_json
             [ -z "$video_link" ] && exit 1
             if [ "$download" = "1" ]; then
@@ -550,6 +659,10 @@ EOF
                     resume_from=""
                     continue
                     ;;
+                "Change quality")
+                    quality=$(printf "1080\n720\n480\n360" | launcher "Please select a quality: ")
+                    continue
+                    ;;
                 "Search")
                     rm "$images_cache_dir"/*
                     rm "$tmp_position" 2>/dev/null
@@ -582,12 +695,23 @@ EOF
             select_desktop_entry ""
         else
             [ "$use_external_menu" = "1" ] && choice=$(printf "%s" "$response" | rofi -dmenu -p "" -mesg "Choose a Movie or TV Show" -display-columns 1)
-            [ "$use_external_menu" = "0" ] && choice=$(printf "%s" "$response" | fzf --reverse --with-nth 1 -d "\t" --header "Choose a Movie or TV Show")
-            title=$(printf "%s" "$choice" | $sed -nE "s@(.*) \((movie|tv)\).*@\1@p")
-            media_type=$(printf "%s" "$choice" | $sed -nE "s@(.*) \((movie|tv)\).*@\2@p")
-            media_id=$(printf "%s" "$choice" | cut -f2)
+            [ "$use_external_menu" = "0" ] && choice=$(printf "%s" "$response" | fzf --cycle --reverse --with-nth 1 -d "\t" --header "Choose a Movie or TV Show")
+            case "$base" in
+                "flixhq.to")
+                    title=$(printf "%s" "$choice" | $sed -nE "s@(.*) \((movie|tv)\).*@\1@p")
+                    media_type=$(printf "%s" "$choice" | $sed -nE "s@(.*) \((movie|tv)\).*@\2@p")
+                    media_id=$(printf "%s" "$choice" | cut -f2)
+                    ;;
+                "hdrezka.website")
+                    title=$(printf "%s" "$choice" | $sed -nE "s@(.*) \((films|series|cartoons)\).*@\1@p")
+                    media_type=$(printf "%s" "$choice" | $sed -nE "s@(.*) \((films|series|cartoons)\).*@\2@p")
+                    media_id=$(printf "%s" "$choice" | cut -f2)
+                    ;;
+            esac
         fi
-        [ "$media_type" = "tv" ] && choose_episode
+        if [ "$media_type" = "tv" ] || [ "$media_type" = "cartoons" ] || [ "$media_type" = "series" ]; then
+            choose_episode
+        fi
         keep_running="true"
         loop
     }
@@ -787,6 +911,20 @@ EOF
             -v | -V | --version)
                 send_notification "Lobster Version: $LOBSTER_VERSION" && exit 0
                 ;;
+            -w | --website)
+                base="$2"
+                if [ -z "$base" ]; then
+                    base="flixhq.to"
+                    shift
+                else
+                    if [ "${base#-}" != "$base" ]; then
+                        base="flixhq.to"
+                        shift
+                    else
+                        shift 2
+                    fi
+                fi
+                ;;
             -x | --debug)
                 set -x
                 debug=1
@@ -802,7 +940,14 @@ EOF
                 ;;
         esac
     done
-    query="$(printf "%s" "$query" | tr ' ' '-' | $sed "s/^-//g")"
+    case "$base" in
+        "hdrezka") base="hdrezka.website" ;;
+        *) base="flixhq.to" ;;
+    esac
+    case "$base" in
+        "flixhq.to") query="$(printf "%s" "$query" | tr ' ' '-' | $sed "s/^-//g")" ;;
+        "hdrezka.website") query="$(printf "%s" "$query" | tr ' ' '+' | $sed "s/^+//g")" ;;
+    esac
     if [ "$image_preview" = 1 ]; then
         test -d "$images_cache_dir" || mkdir -p "$images_cache_dir"
         if [ "$use_external_menu" = 1 ]; then
