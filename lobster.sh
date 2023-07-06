@@ -1,6 +1,6 @@
 #!/bin/sh
 
-LOBSTER_VERSION="4.0.7"
+LOBSTER_VERSION="4.0.8"
 
 config_file="$HOME/.config/lobster/lobster_config.txt"
 lobster_editor=${VISUAL:-${EDITOR}}
@@ -31,7 +31,6 @@ if [ "$1" = "--edit" ] || [ "$1" = "-e" ]; then
 fi
 
 if [ "$1" = "--clear-history" ] || [ "$1" = "--delete-history" ]; then
-    printf ""
     while true; do
         printf "This will delete your lobster history. Are you sure? [Y/n] "
         read -r choice
@@ -158,12 +157,12 @@ EOF
         [ -z "$stdin" ] && return 1
         prompt="$1"
         [ $# -ne 1 ] && shift
-        line=$(printf "%s" "$stdin" | $sed -nE "s@^(.*)\t[0-9:]*\t[0-9]*\t(tv|movie)(.*)@\1 (\2)\t\3@p" | cut -f1-3,6,7 | tr '\t' '|' | launcher "$prompt" | cut -d "|" -f 1)
+        line=$(printf "%s" "$stdin" | $sed -nE "s@^(.*)\t[0-9:]*\t[0-9a-z/-]*\t(tv|movie|series|cartoons|films)(.*)@\1 (\2)\t\3@p" | cut -f1-3,6,7 | tr '\t' '|' | launcher "$prompt" | cut -d "|" -f 1)
         [ -n "$line" ] && printf "%s" "$stdin" | $sed -nE "s@^$line\t(.*)@\1@p" || exit 1
     }
 
     prompt_to_continue() {
-        if [ "$media_type" = "tv" ]; then
+        if [ "$media_type" = "tv" ] || [ "$media_type" = "series" ] || [ "$media_type" = "cartoons" ]; then
             continue_choice=$(printf "Next episode\nReplay episode\nChange quality\nExit\nSearch" | launcher "Select: ")
         else
             continue_choice=$(printf "Exit\nSearch" | launcher "Select: ")
@@ -307,20 +306,31 @@ EOF
     search() {
         case "$base" in
             "hdrezka.website")
+                request=$(curl --max-time 10 -s "https://${base}/search/?do=search&subaction=search&q=${query}" -A "uwu" --compressed)
+                status=$?
+                if [ "$status" -eq 28 ]; then
+                    send_notification "Request timed out"
+                    exit 1
+                fi
                 if [ "$image_preview" = 1 ]; then
-                    response=$(curl -s "https://${base}/search/?do=search&subaction=search&q=${query}" -A "uwu" --compressed | sed "s/<img/\n/g" |
-                        sed -nE "s@.*src=\"([^\"]*)\".*<a href=\"https://hdrezka\.website/(.*)/(.*)/(.*)\.html\">([^<]*)</a> <div>([0-9]*).*@\1\t\3=\4\t\2\t\5 [\6]@p" | $hxunent)
+                    response=$(printf "%s" "$request" | sed "s/<img/\n/g" | sed -nE "s@.*src=\"([^\"]*)\".*<a href=\"https://hdrezka\.website/(.*)/(.*)/(.*)\.html\">([^<]*)</a> <div>([0-9]*).*@\1\t\3=\4\t\2\t\5 [\6]@p" | $hxunent)
+
                 else
-                    response=$(curl -s "https://${base}/search/?do=search&subaction=search&q=${query}" -A "uwu" --compressed | sed "s/<img/\n/g" |
-                        sed -nE "s@.*src=\"[^\"]*\".*<a href=\"https://hdrezka\.website/(.*)/(.*)/(.*)\.html\">([^<]*)</a> <div>([0-9]*).*@\4 (\1) [\5]\t\2/\3@p" | $hxunent)
+                    response=$(printf "%s" "$request" | sed "s/<img/\n/g" | sed -nE "s@.*src=\"[^\"]*\".*<a href=\"https://hdrezka\.website/(.*)/(.*)/(.*)\.html\">([^<]*)</a> <div>([0-9]*).*@\4 (\1) [\5]\t\2/\3@p" | $hxunent)
                 fi
                 ;;
             "flixhq.to")
+                request=$(curl --max-time 10 -s "https://${base}/search/$query")
+                status=$?
+                if [ "$status" -eq 28 ]; then
+                    send_notification "Request timed out"
+                    exit 1
+                fi
                 if [ "$image_preview" = 1 ]; then
-                    response=$(curl -s "https://${base}/search/$query" | $sed ':a;N;$!ba;s/\n//g;s/class="flw-item"/\n/g' |
+                    response=$(printf "%s" "$request" | $sed ':a;N;$!ba;s/\n//g;s/class="flw-item"/\n/g' |
                         $sed -nE "s@.*img data-src=\"([^\"]*)\".*<a href=\".*/(tv|movie)/watch-.*-([0-9]*)\".*title=\"([^\"]*)\".*class=\"fdi-item\">([^<]*)</span>.*@\1\t\3\t\2\t\4 [\5]@p" | $hxunent)
                 else
-                    response=$(curl -s "https://${base}/search/$query" | $sed ':a;N;$!ba;s/\n//g;s/class="flw-item"/\n/g' |
+                    response=$(printf "%s" "$request" | $sed ':a;N;$!ba;s/\n//g;s/class="flw-item"/\n/g' |
                         $sed -nE "s@.*<a href=\".*/(tv|movie)/watch-.*-([0-9]*)\".*title=\"([^\"]*)\".*class=\"fdi-item\">([^<]*)</span>.*@\3 (\1) [\4]\t\2@p" | $hxunent)
                 fi
                 ;;
@@ -400,7 +410,7 @@ EOF
                 num_subs=$(printf "%s" "$subs_links" | wc -l)
                 if [ "$num_subs" -gt 0 ]; then
                     subs_links=$(printf "%s" "$subs_links" | $sed -e "s/:/\\$path_thing:/g" -e "H;1h;\$!d;x;y/\n/$separator/" -e "s/$separator\$//")
-                    subs_arg="--sub-files=$subs_links"
+                    subs_arg="--sub-files"
                 fi
                 [ -z "$subs_links" ] && send_notification "No subtitles found"
                 ;;
@@ -466,7 +476,7 @@ EOF
             movie | films)
                 if grep -q "$media_id" "$histfile"; then
                     resume_from=$(grep "$media_id" "$histfile" | cut -f2)
-                    send_notification "Resuming from" "5000" "$images_cache_dir/  $title ($media_type)  $media_id.jpg" "$resume_from"
+                    send_notification "$episode_title" "5000" "$images_cache_dir/  $title ($media_type)  $media_id.jpg" "$resume_from"
                 else
                     send_notification "Now Playing" "5000" "$images_cache_dir/  $title ($media_type)  $media_id.jpg" "$title"
                 fi
@@ -474,8 +484,8 @@ EOF
             tv | series | cartoons)
                 if grep -q "$media_id" "$histfile"; then
                     if grep -q "$episode_id" "$histfile"; then
-                        [ -z "$resume_from" ] && resume_from=$($sed -nE "s@.*\t([0-9:]*)\t$media_id\ttv\t$season_id.*@\1@p" "$histfile")
-                        send_notification "$season_title" "5000" "$images_cache_dir/  $title ($media_type)  $media_id.jpg" "$episode_title"
+                        [ -z "$resume_from" ] && resume_from=$($sed -nE "s@.*\t([0-9:]*)\t${media_id}\t${media_type}\t${season_id}.*@\1@p" "$histfile")
+                        send_notification "Ep: $episode_title" "5000" "$images_cache_dir/  $title ($media_type)  $media_id.jpg" "$resume_from"
                     fi
                 else
                     send_notification "Now Playing" "5000" "$images_cache_dir/  $title ($media_type)  $media_id.jpg" "$displayed_title"
@@ -487,7 +497,7 @@ EOF
     }
 
     play_video() {
-        if [ "$media_type" = "tv" ] || [ "$media_type" = "series" ]; then
+        if [ "$media_type" = "tv" ] || [ "$media_type" = "series" ] || [ "$media_type" = "cartoons" ]; then
             displayed_title="$title - $season_title - $episode_title"
         else
             displayed_title="$title"
@@ -512,7 +522,7 @@ EOF
                         if [ -n "$resume_from" ]; then
                             mpv --start="$resume_from" "$subs_arg"="$subs_links" --force-media-title="$displayed_title" "$video_link" 2>&1 | tee "$tmp_position"
                         else
-                            mpv --sub-file="$subs_links" --force-media-title="$displayed_title" "$video_link" 2>&1 | tee "$tmp_position"
+                            mpv "$subs_arg"="$subs_links" --force-media-title="$displayed_title" "$video_link" 2>&1 | tee "$tmp_position"
                         fi
                     else
                         if [ -n "$resume_from" ]; then
@@ -552,24 +562,50 @@ EOF
     }
 
     next_episode_exists() {
-        episodes_list=$(curl -s "https://${base}/ajax/v2/season/episodes/${season_id}" | $sed ':a;N;$!ba;s/\n//g;s/class="nav-item"/\n/g' |
-            $sed -nE "s@.*data-id=\"([0-9]*)\".*title=\"([^\"]*)\">.*@\2\t\1@p" | $hxunent)
-        next_episode=$(printf "%s" "$episodes_list" | $sed -n "/$data_id/{n;p;}")
-        [ -n "$next_episode" ] && return
-        tmp_season_id=$(curl -s "https://${base}/ajax/v2/tv/seasons/${media_id}" | $sed -n "/href=\".*-$season_id/{n;n;n;n;p;}" | $sed -nE "s@.*href=\".*-([0-9]*)\">(.*)</a>@\2\t\1@p")
-        [ -z "$tmp_season_id" ] && return
-        season_title=$(printf "%s" "$tmp_season_id" | cut -f1)
-        season_id=$(printf "%s" "$tmp_season_id" | cut -f2)
-        next_episode=$(curl -s "https://${base}/ajax/v2/season/episodes/${season_id}" | $sed ':a;N;$!ba;s/\n//g;s/class="nav-item"/\n/g' |
-            $sed -nE "s@.*data-id=\"([0-9]*)\".*title=\"([^\"]*)\">.*@\2\t\1@p" | $hxunent | head -1)
-        [ -n "$next_episode" ] && return
+        case "$base" in
+            "flixhq.to")
+                episodes_list=$(curl -s "https://${base}/ajax/v2/season/episodes/${season_id}" | $sed ':a;N;$!ba;s/\n//g;s/class="nav-item"/\n/g' |
+                    $sed -nE "s@.*data-id=\"([0-9]*)\".*title=\"([^\"]*)\">.*@\2\t\1@p" | $hxunent)
+                next_episode=$(printf "%s" "$episodes_list" | $sed -n "/$data_id/{n;p;}")
+                [ -n "$next_episode" ] && return
+                tmp_season_id=$(curl -s "https://${base}/ajax/v2/tv/seasons/${media_id}" | $sed -n "/href=\".*-$season_id/{n;n;n;n;p;}" | $sed -nE "s@.*href=\".*-([0-9]*)\">(.*)</a>@\2\t\1@p")
+                [ -z "$tmp_season_id" ] && return
+                season_title=$(printf "%s" "$tmp_season_id" | cut -f1)
+                season_id=$(printf "%s" "$tmp_season_id" | cut -f2)
+                next_episode=$(curl -s "https://${base}/ajax/v2/season/episodes/${season_id}" | $sed ':a;N;$!ba;s/\n//g;s/class="nav-item"/\n/g' |
+                    $sed -nE "s@.*data-id=\"([0-9]*)\".*title=\"([^\"]*)\">.*@\2\t\1@p" | $hxunent | head -1)
+                [ -n "$next_episode" ] && return
+                ;;
+            "hdrezka.website")
+
+                next_episode=$(curl -s -X POST "https://${base}/ajax/get_cdn_series/" -A "uwu" --data-raw "id=${data_id}&translator_id=${translator_id}&season=${season_id}&action=get_episodes" --compressed |
+                    $sed "s/\\\//g;s/cdn_url/\n/g" |
+                    $sed -nE "s@.*data-season_id=\"${season_id}\" data-episode_id=\"([0-9]*)\".*@\1@p" | sed -n "$((episode_id + 1))p")
+                [ -n "$next_episode" ] && return
+
+                tmp_season_id=$(curl -s "https://${base}/${media_type}/${media_id}.html" -A "uwu" --compressed | $sed "s/<li/\n/g" |
+                    $sed -nE "s@.*data-tab_id=\"([0-9]*)\">([^<]*)</li>.*@\2\t\1@p" | sed -n "$((season_id + 1))p")
+                if [ -z "$tmp_season_id" ]; then
+                    notify-send "TODO"
+                    exit 1
+                fi
+                season_title=$(printf "%s" "$tmp_season_id" | cut -f1)
+                season_id=$(printf "%s" "$tmp_season_id" | cut -f2)
+                next_episode=$(curl -s -X POST "https://${base}/ajax/get_cdn_series/" -A "uwu" --data-raw "id=${data_id}&translator_id=${translator_id}&season=${season_id}&action=get_episodes" --compressed |
+                    $sed "s/\\\//g;s/cdn_url/\n/g" |
+                    $sed -nE "s@.*data-season_id=\"${season_id}\" data-episode_id=\"([0-9]*)\".*@\1@p" | head -1)
+                [ -n "$next_episode" ] && return
+
+                exit 1
+                ;;
+        esac
     }
 
     save_history() {
         case $media_type in
             movie)
                 if [ "$progress" -gt "90" ]; then
-                    $sed -i "/$media_id/d" "$histfile"
+                    $sed -i "/${media_id}\tmovie/d" "$histfile"
                     send_notification "Deleted from history" "5000" "" "$title"
                 else
                     if grep -q -- "$media_id" "$histfile" 2>/dev/null; then
@@ -580,23 +616,53 @@ EOF
                 fi
                 ;;
             tv)
-                if [ "$progress" -gt "90" ]; then
+                if [ "$progress" -gt 90 ]; then
                     next_episode_exists
                     if [ -n "$next_episode" ]; then
                         episode_title=$(printf "%s" "$next_episode" | cut -f1)
                         data_id=$(printf "%s" "$next_episode" | cut -f2)
                         episode_id=$(curl -s "https://${base}/ajax/v2/episode/servers/${data_id}" | $sed ':a;N;$!ba;s/\n//g;s/class="nav-item"/\n/g' | $sed -nE "s@.*data-id=\"([0-9]*)\".*title=\"([^\"]*)\".*@\1\t\2@p" | grep "$provider" | cut -f1)
-                        $sed -i "s|\t[0-9:]*\t[0-9]*\ttv\t[0-9]*\t[0-9]*.*\t.*\t[0-9]*|\t00:00:00\t$media_id\ttv\t$season_id\t$episode_id\t$season_title\t$episode_title\t$data_id|1" "$histfile"
-                        send_notification "Updated to next episode" "5000" "" "$episode_title"
+                        if grep -q -- "$media_id" "$histfile" 2>/dev/null; then
+                            $sed -i "s|\t[0-9:]*\t[0-9]*\ttv\t[0-9]*\t[0-9]*.*\t.*\t[0-9]*|\t00:00:00\t$media_id\ttv\t$season_id\t$episode_id\t$season_title\t$episode_title\t$data_id|1" "$histfile"
+                            send_notification "Updated to next episode" "5000" "" "$episode_title"
+                        else
+                            printf "%s\t00:00:00\t%s\ttv\t%s\t%s\t%s\t%s\t%s\n" "$title" "$media_id" "$season_id" "$episode_id" "$season_title" "$episode_title" "$data_id" >>"$histfile"
+                            send_notification "Added to history" "5000" "" "$episode_title"
+                        fi
                     else
-                        $sed -i "/$episode_id/d" "$histfile"
+                        $sed -i "/${media_id}\ttv/d" "$histfile"
                         send_notification "Completed" "5000" "" "$title"
                     fi
                 else
                     if grep -q -- "$media_id" "$histfile" 2>/dev/null; then
-                        $sed -i "/$media_id/d" "$histfile"
+                        $sed -i "/${media_id}\ttv/d" "$histfile"
                     fi
-                    printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n" "$title" "$position" "$media_id" "$media_type" "$season_id" "$episode_id" "$season_title" "$episode_title" "$data_id" >>"$histfile"
+                    printf "%s\t%s\t%s\ttv\t%s\t%s\t%s\t%s\t%s\n" "$title" "$position" "$media_id" "$season_id" "$episode_id" "$season_title" "$episode_title" "$data_id" >>"$histfile"
+                fi
+                ;;
+            series | cartoons)
+                if [ "$progress" -gt 90 ]; then
+                    next_episode_exists
+                    if [ -n "$next_episode" ]; then
+                        [ -z "$episode_title" ] && episode_title=$episode_id
+                        if grep -q -- "$media_id" "$histfile" 2>/dev/null; then
+                            $sed -i "s|\t[0-9:]*\t[0-9]*\t[0-9]*\t[0-9]*\t[0-9]*\t[0-9]*.*\t.*\t[0-9a-z/-]*\t[0-9]*|\t00:00:00\t$media_id\t$media_type\t$season_id\t$next_episode\t$season_title\t$episode_title\t$data_id\t$translator_id|1" "$histfile"
+                            send_notification "Updated to next episode" "5000" "" "$episode_id"
+                        else
+                            printf "%s\t00:00:00\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n" "$title" "$media_id" "$media_type" "$season_id" "$next_episode" "$season_title" "$next_episode" "$data_id" "$translator_id" >>"$histfile"
+                            send_notification "Added to history" "5000" "" "$episode_title"
+                        fi
+                    else
+                        tmp_media_id=$(printf "%s" "$media_id" | sed -nE "s@.*/(.*)@\1@p")
+                        $sed -i "/${tmp_media_id}\t$media_type/d" "$histfile"
+                        send_notification "Completed" "5000" "" "$title"
+                    fi
+                else
+                    if grep -q -- "$media_id" "$histfile" 2>/dev/null; then
+                        tmp_media_id=$(printf "%s" "$media_id" | sed -nE "s@.*/(.*)@\1@p")
+                        $sed -i "/${tmp_media_id}\t$media_type/d" "$histfile"
+                    fi
+                    printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n" "$title" "$position" "$media_id" "$media_type" "$season_id" "$episode_id" "$season_title" "$episode_title" "$data_id" "$translator_id" >>"$histfile"
                 fi
                 ;;
             *) notify-send "Error" "Unknown media type" ;;
@@ -605,8 +671,8 @@ EOF
 
     download_video() {
         ffmpeg -loglevel error -stats -i "$1" -c copy "$3/$2".mp4
-    }
 
+    }
     loop() {
         while [ "$keep_running" = "true" ]; do
             case "$base" in
@@ -643,12 +709,21 @@ EOF
             case "$continue_choice" in
                 "Next episode")
                     resume_from=""
-                    next_episode_exists
+                    [ "$history" = 0 ] && next_episode_exists
                     if [ -n "$next_episode" ]; then
-                        episode_title=$(printf "%s" "$next_episode" | cut -f1)
-                        data_id=$(printf "%s" "$next_episode" | cut -f2)
-                        episode_id=$(curl -s "https://${base}/ajax/v2/episode/servers/${data_id}" | $sed ':a;N;$!ba;s/\n//g;s/class="nav-item"/\n/g' | $sed -nE "s@.*data-id=\"([0-9]*)\".*title=\"([^\"]*)\".*@\1\t\2@p" | grep "$provider" | cut -f1)
-                        send_notification "Watching the next episode" "5000" "" "$episode_title"
+                        case "$base" in
+                            "flixhq.to")
+                                episode_title=$(printf "%s" "$next_episode" | cut -f1)
+                                data_id=$(printf "%s" "$next_episode" | cut -f2)
+                                episode_id=$(curl -s "https://${base}/ajax/v2/episode/servers/${data_id}" | $sed ':a;N;$!ba;s/\n//g;s/class="nav-item"/\n/g' | $sed -nE "s@.*data-id=\"([0-9]*)\".*title=\"([^\"]*)\".*@\1\t\2@p" | grep "$provider" | cut -f1)
+                                send_notification "Watching the next episode" "5000" "" "$episode_title"
+                                ;;
+                            "hdrezka.website")
+                                episode_title=$(printf "%s" "$next_episode" | cut -f1)
+                                episode_id=$(printf "%s" "$next_episode" | cut -f2)
+                                send_notification "Watching the next episode" "5000" "" "$episode_title"
+                                ;;
+                        esac
                     else
                         send_notification "No more episodes" "5000" "" "$title"
                         exit 0
@@ -725,15 +800,24 @@ EOF
         media_type=$(printf "%s" "$choice" | cut -f4)
         title=$(printf "%s" "$choice" | cut -f1)
         resume_from=$(printf "%s" "$choice" | cut -f2)
-        media_id=$(printf "%s" "$choice" | cut -f3)
-        if [ "$media_type" = "tv" ]; then
+        if [ "$media_type" = "tv" ] || [ "$media_type" = "series" ] || [ "$media_type" = "cartoons" ]; then
+            media_id=$(printf "%s" "$choice" | cut -f3)
             season_id=$(printf "%s" "$choice" | cut -f5)
             episode_id=$(printf "%s" "$choice" | cut -f6)
             season_title=$(printf "%s" "$choice" | cut -f7)
             episode_title=$(printf "%s" "$choice" | cut -f8)
-            data_id=$(printf "%s" "$choice" | cut -f9)
-            choose_episode
         fi
+        case "$media_type" in
+            tv)
+                data_id=$(printf "%s" "$choice" | cut -f9)
+                choose_episode
+                ;;
+            series)
+                base="hdrezka.website"
+                data_id=$(printf "%s" "$choice" | cut -f9)
+                translator_id=$(printf "%s" "$choice" | cut -f10)
+                ;;
+        esac
         keep_running="true" && loop
     }
 
@@ -848,7 +932,7 @@ EOF
                 fi
                 ;;
             --rofi | --dmenu | --external-menu)
-                use_external_menu="1"
+                use_external_menu=1
                 shift
                 ;;
             -p | --provider)
