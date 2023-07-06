@@ -393,14 +393,12 @@ EOF
             "flixhq.to")
                 json_key="file"
                 encrypted=$(printf "%s" "$json_data" | tr "{}" "\n" | $sed -nE "s_.*\"${json_key}\":\"([^\"]*)\".*_\1_p" | grep "\.m3u8")
-                if [ -z "$encrypted" ]; then
-                    json_key="sources"
-                    encrypted=$(printf "%s" "$json_data" | tr "{}" "\n" | $sed -nE "s_.*\"${json_key}\":\"([^\"]*)\".*_\1_p")
-                fi
                 if [ -n "$encrypted" ]; then
                     video_link=$(printf "%s" "$json_data" | tr "{|}" "\n" | $sed -nE "s_.*\"${json_key}\":\"([^\"]*)\".*_\1_p" | head -1)
                 else
-                    key="$(curl -s "https://github.com/enimax-anime/key/blob/e${embed_type}/key.txt" | $sed -nE "s_.*js-file-line\">(.*)<.*_\1_p")"
+                    json_key="sources"
+                    encrypted=$(printf "%s" "$json_data" | tr "{}" "\n" | $sed -nE "s_.*\"${json_key}\":\"([^\"]*)\".*_\1_p")
+                    key="$(curl -s "https://github.com/enimax-anime/key/blob/e${embed_type}/key.txt" | $sed -nE "s@.*\"rawBlob\":\"([^\"]*)\",.*@\1@p")"
                     encrypted_video_link=$(printf "%s" "$json_data" | tr "{|}" "\n" | $sed -nE "s_.*\"sources\":\"([^\"]*)\".*_\1_p" | head -1)
                     # ty @CoolnsX for helping me with figuring out how to implement aes in openssl
                     video_link=$(printf "%s" "$encrypted_video_link" | base64 -d |
@@ -410,7 +408,10 @@ EOF
                 [ -n "$quality" ] && video_link=$(printf "%s" "$video_link" | $sed -e "s|/playlist.m3u8|/$quality/index.m3u8|")
 
                 [ "$json_output" = "1" ] && printf "%s\n" "$json_data" && exit 0
-                subs_links=$(printf "%s" "$json_data" | tr "{}" "\n" | $sed -nE "s@\"${json_key}\":\"([^\"]*)\",\"label\":\"(.$subs_language)[,\"\ ].*@\1@p")
+                case "$json_key" in
+                    file) subs_links=$(printf "%s" "$json_data" | tr "{}" "\n" | $sed -nE "s@\"${json_key}\":\"([^\"]*)\",\"label\":\"(.$subs_language)[,\"\ ].*@\1@p") ;;
+                    sources) subs_links=$(printf "%s" "$json_data" | tr "{}" "\n" | $sed -nE "s@.*\"file\":\"([^\"]*)\",\"label\":\"(.$subs_language)[,\"\ ].*@\1@p") ;;
+                esac
                 subs_arg="--sub-file"
                 num_subs=$(printf "%s" "$subs_links" | wc -l)
                 if [ "$num_subs" -gt 0 ]; then
