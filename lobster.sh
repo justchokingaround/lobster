@@ -540,7 +540,7 @@ EOF
             case "$continue_choice" in
                 "Next episode")
                     resume_from=""
-                    next_episode_exists
+                    [ "$history" = 0 ] && next_episode_exists
                     if [ -n "$next_episode" ]; then
                         episode_title=$(printf "%s" "$next_episode" | cut -f1)
                         data_id=$(printf "%s" "$next_episode" | cut -f2)
