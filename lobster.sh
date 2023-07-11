@@ -652,8 +652,9 @@ EOF
                     if [ -n "$next_episode" ]; then
                         [ -z "$episode_title" ] && episode_title=$episode_id
                         if grep -q -- "$media_id" "$histfile" 2>/dev/null; then
-                            $sed -i "s|\t[0-9:]*\t[0-9]*\t[0-9]*\t[0-9]*\t[0-9]*\t[0-9]*.*\t.*\t[0-9a-z/-]*\t[0-9]*|\t00:00:00\t$media_id\t$media_type\t$season_id\t$next_episode\t$season_title\t$episode_title\t$data_id\t$translator_id|1" "$histfile"
-                            send_notification "Updated to next episode" "5000" "" "$episode_id"
+                            # TODO: check that this behavior is consistent with how flixhq handles this
+                            $sed -i "s|\t[0-9:]*\t[a-zA-Z0-9/-]*\t[a-z]*\t[0-9]*\t[0-9]*\t[0-9]*.*\t.*\t[0-9a-z/-]*\t[0-9]*|\t00:00:00\t$media_id\t$media_type\t$season_id\t$next_episode\t$season_title\t$next_episode\t$data_id\t$translator_id|1" "$histfile"
+                            send_notification "Updated progress to next episode" "5000" "" "$episode_id"
                         else
                             printf "%s\t00:00:00\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n" "$title" "$media_id" "$media_type" "$season_id" "$next_episode" "$season_title" "$next_episode" "$data_id" "$translator_id" >>"$histfile"
                             send_notification "Added to history" "5000" "" "$episode_title"
