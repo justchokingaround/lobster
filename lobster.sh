@@ -557,7 +557,7 @@ EOF
                     continue
                     ;;
                 "Search")
-                    rm "$images_cache_dir"/*
+                    rm -f "$images_cache_dir"/*
                     rm "$tmp_position" 2>/dev/null
                     query=""
                     response=""
