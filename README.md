@@ -128,22 +128,27 @@ scoop install git mpv fzf
 4. Install git bash (select the option to add it to the windows terminal during installation)
    https://git-scm.com/download/win
 
-5. Download the script file to the current directory
+5. Symlink mpv to be in path.
+```sh
+ln -sf "$(scoop prefix mpv)/mpv.exe" /usr/bin/mpv
+```
+
+6. Download the script file to the current directory
 ```sh
 curl -O "https://raw.githubusercontent.com/justchokingaround/lobster/main/lobster.sh"
 ```
 
-6. Give it executable permissions
+7. Give it executable permissions
 ```sh
 chmod +x lobster.sh
 ```
 
-7. Copy the script to path
+8. Copy the script to path
 ```sh
 cp lobster.sh /usr/bin/lobster
 ```
 
-8. Use lobster
+9. Use lobster
 ```sh
 lobster <args> or lobster [movie/tv show]
 ```
