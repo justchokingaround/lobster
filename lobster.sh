@@ -341,6 +341,7 @@ EOF
         case "$json_key" in
             file) subs_links=$(printf "%s" "$json_data" | tr "{}" "\n" | $sed -nE "s@\"${json_key}\":\"([^\"]*)\",\"label\":\"(.$subs_language)[,\"\ ].*@\1@p") ;;
             sources) subs_links=$(printf "%s" "$json_data" | tr "{}" "\n" | $sed -nE "s@.*\"file\":\"([^\"]*)\",\"label\":\"(.$subs_language)[,\"\ ].*@\1@p") ;;
+            *) subs_links="" ;;
         esac
         subs_arg="--sub-file"
         num_subs=$(printf "%s" "$subs_links" | wc -l)
