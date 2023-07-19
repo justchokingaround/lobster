@@ -4,6 +4,8 @@ LOBSTER_VERSION="4.0.8"
 
 config_file="$HOME/.config/lobster/lobster_config.txt"
 lobster_editor=${VISUAL:-${EDITOR}}
+base_helper_url="https://9anime.eltik.net"
+fmovies_provider="Vidstream"
 
 if [ "$1" = "--edit" ] || [ "$1" = "-e" ]; then
     if [ -f "$config_file" ]; then
@@ -334,6 +336,22 @@ EOF
                         $sed -nE "s@.*<a href=\".*/(tv|movie)/watch-.*-([0-9]*)\".*title=\"([^\"]*)\".*class=\"fdi-item\">([^<]*)</span>.*@\3 (\1) [\4]\t\2@p" | $hxunent)
                 fi
                 ;;
+            "fmovies.taxi")
+                request=$(curl --max-time 10 -s "https://${base}/filter?keyword=$query")
+                status=$?
+                if [ "$status" -eq 28 ]; then
+                    send_notification "Request timed out"
+                    exit 1
+                fi
+                echo "$response"
+                if [ "$image_preview" = 1 ]; then
+                    notify-send "TODO"
+                    exit
+                else
+                    response=$(printf "%s" "$request" | $sed ':a;N;$!ba;s/\n//g;s/class="item"/\n/g' |
+                        $sed -nE "s@.*<span>([0-9]*)<\/span>.*class=\"type\">([^<]*)<.*href=\"([^\"]*)\">([^<]*)<.*@\4 (\2) [\1]\t\3@p" | $sed \$d | $hxunent)
+                fi
+                ;;
         esac
         [ -z "$response" ] && send_notification "Error" "1000" "" "No results found" && exit 1
     }
@@ -448,6 +466,10 @@ EOF
         esac
     }
 
+    fmovies_helper() {
+        curl -s "$base_helper_url/$1?query=$2&apikey=jerry" | $sed -nE "s@.*\"$3\":\"([^\"]*)\".*@\1@p"
+    }
+
     get_json() {
         case "$base" in
             "flixhq.to")
@@ -469,6 +491,41 @@ EOF
                 esac
                 [ -n "$json_data" ] && extract_from_json
                 ;;
+            "fmovies.taxi")
+                case "$media_type" in
+                    MOVIE)
+                        reconstruct_id=$(printf "%s" "$media_id" | sed "s@=@/@g")
+                        url="https://${base}${reconstruct_id}"
+                        data_id=$(curl -s "$url" | sed -nE "s@.*data-id=\"([0-9]*)\" data-url.*@\1@p")
+
+                        ep_list_vrf=$(fmovies_helper "fmovies-vrf" "$data_id" "url")
+                        # ep_data_id=$(curl -s "https://fmovies.taxi/ajax/episode/list/$data_id?vrf=$ep_list_vrf" | sed "s/</\n/g;s/\\\//g" | sed -nE "s@.*data-id=\"([^\"]*)\".*@\1@p" | sed -n ${episode_number}p)
+                        ep_data_id=$(curl -s "https://fmovies.taxi/ajax/episode/list/$data_id?vrf=$ep_list_vrf" | sed "s/</\n/g;s/\\\//g" | sed -nE "s@.*data-id=\"([^\"]*)\".*@\1@p" | sed -n ${episode_number}p)
+
+                        server_list_vrf=$(fmovies_helper "fmovies-vrf" "$ep_data_id" "url")
+
+                        provider_id=$(curl -s "https://fmovies.taxi/ajax/server/list/$ep_data_id?vrf=$server_list_vrf" | sed 's/li>/\n/g;s/\\//g' | sed -nE 's@.*data-link-id="([^"]*)".*Vidstream.*@\1@p')
+                        provider_vrf=$(fmovies_helper "fmovies-vrf" "$provider_id" "url")
+
+                        encrypted_provider_url=$(curl -s "https://fmovies.taxi/ajax/server/$provider_id?vrf=$provider_vrf" | sed "s/\\\//g" | sed -nE "s@.*\{\"url\":\"([^\"]*)\".*@\1@p")
+                        provider_embed=$(fmovies_helper "fmovies-decrypt" "$encrypted_provider_url" "url")
+                        provider_query=$(printf "%s" "$provider_embed" | sed -nE "s@.*/e/(.*)@\1@p")
+
+                        case "$fmovies_provider" in
+                            "Vidstream")
+                                raw_url=$(fmovies_helper "rawvizcloud" "$provider_query" "rawURL")
+                                json_data=$(curl -s "$raw_url" -e "$provider_embed" | sed "s/\\\//g")
+                                ;;
+                            "MyCloud")
+                                raw_url=$(fmovies_helper "rawmcloud" "$provider_query" "rawURL")
+                                json_data=$(curl -s "$raw_url" -e "$provider_embed" | sed "s/\\\//g")
+                                ;;
+                        esac
+                        [ "$json_output" = "1" ] && printf "%s\n" "$json_data" && exit 0
+                        video_link=$(printf "%s" "$json_data" | sed -nE "s@.*\"file\":\"([^\"]*)\".*@\1@p")
+                        ;;
+                esac
+                ;;
         esac
     }
 
@@ -479,7 +536,7 @@ EOF
             return
         fi
         case $media_type in
-            movie | films)
+            movie | films | MOVIE)
                 if grep -q "$media_id" "$histfile"; then
                     resume_from=$(grep "$media_id" "$histfile" | cut -f2)
                     send_notification "$episode_title" "5000" "$images_cache_dir/  $title ($media_type)  $media_id.jpg" "$resume_from"
@@ -526,15 +583,15 @@ EOF
                 if [ "$history" = 1 ]; then
                     if [ -n "$subs_links" ]; then
                         if [ -n "$resume_from" ]; then
-                            mpv --start="$resume_from" "$subs_arg"="$subs_links" --force-media-title="$displayed_title" "$video_link" 2>&1 | tee "$tmp_position"
+                            mpv --start="$resume_from" "$subs_arg"="$subs_links" --force-media-title="$displayed_title" --msg-level=ffmpeg/demuxer=error "$video_link" 2>&1 | tee "$tmp_position"
                         else
-                            mpv "$subs_arg"="$subs_links" --force-media-title="$displayed_title" "$video_link" 2>&1 | tee "$tmp_position"
+                            mpv "$subs_arg"="$subs_links" --force-media-title="$displayed_title" --msg-level=ffmpeg/demuxer=error "$video_link" 2>&1 | tee "$tmp_position"
                         fi
                     else
                         if [ -n "$resume_from" ]; then
-                            mpv --start="$resume_from" --force-media-title="$displayed_title" "$video_link" 2>&1 | tee "$tmp_position"
+                            mpv --start="$resume_from" --force-media-title="$displayed_title" --msg-level=ffmpeg/demuxer=error "$video_link" 2>&1 | tee "$tmp_position"
                         else
-                            mpv --force-media-title="$displayed_title" "$video_link" 2>&1 | tee "$tmp_position"
+                            mpv --force-media-title="$displayed_title" --msg-level=ffmpeg/demuxer=error "$video_link" 2>&1 | tee "$tmp_position"
                         fi
                     fi
 
@@ -545,19 +602,19 @@ EOF
                 else
                     if [ -n "$subs_links" ]; then
                         if [ "$quiet_output" = 1 ]; then
-                            [ -z "$resume_from" ] && mpv "$subs_arg"="$subs_links" --force-media-title="$displayed_title" "$video_link" >/dev/null 2>&1
-                            [ -n "$resume_from" ] && mpv "$subs_arg"="$subs_links" --start="$resume_from" --force-media-title="$displayed_title" "$video_link" >/dev/null 2>&1
+                            [ -z "$resume_from" ] && mpv "$subs_arg"="$subs_links" --force-media-title="$displayed_title" --msg-level=ffmpeg/demuxer=error "$video_link" >/dev/null 2>&1
+                            [ -n "$resume_from" ] && mpv "$subs_arg"="$subs_links" --start="$resume_from" --force-media-title="$displayed_title" --msg-level=ffmpeg/demuxer=error "$video_link" >/dev/null 2>&1
                         else
-                            [ -z "$resume_from" ] && mpv "$subs_arg"="$subs_links" --force-media-title="$displayed_title" "$video_link"
-                            [ -n "$resume_from" ] && mpv "$subs_arg"="$subs_links" --start="$resume_from" --force-media-title="$displayed_title" "$video_link"
+                            [ -z "$resume_from" ] && mpv "$subs_arg"="$subs_links" --force-media-title="$displayed_title" --msg-level=ffmpeg/demuxer=error "$video_link"
+                            [ -n "$resume_from" ] && mpv "$subs_arg"="$subs_links" --start="$resume_from" --force-media-title="$displayed_title" --msg-level=ffmpeg/demuxer=error "$video_link"
                         fi
                     else
                         if [ "$quiet_output" = 1 ]; then
-                            [ -z "$resume_from" ] && mpv --force-media-title="$displayed_title" "$video_link" >/dev/null 2>&1
-                            [ -n "$resume_from" ] && mpv --start="$resume_from" --force-media-title="$displayed_title" "$video_link" >/dev/null 2>&1
+                            [ -z "$resume_from" ] && mpv --force-media-title="$displayed_title" --msg-level=ffmpeg/demuxer=error "$video_link" >/dev/null 2>&1
+                            [ -n "$resume_from" ] && mpv --start="$resume_from" --force-media-title="$displayed_title" --msg-level=ffmpeg/demuxer=error "$video_link" >/dev/null 2>&1
                         else
-                            [ -z "$resume_from" ] && mpv --force-media-title="$displayed_title" "$video_link"
-                            [ -n "$resume_from" ] && mpv --start="$resume_from" --force-media-title="$displayed_title" "$video_link"
+                            [ -z "$resume_from" ] && mpv --force-media-title="$displayed_title" --msg-level=ffmpeg/demuxer=error "$video_link"
+                            [ -n "$resume_from" ] && mpv --start="$resume_from" --force-media-title="$displayed_title" --msg-level=ffmpeg/demuxer=error "$video_link"
                         fi
                     fi
                 fi
@@ -620,6 +677,9 @@ EOF
                         printf "%s\t%s\t%s\t%s\n" "$title" "$position" "$media_id" "$media_type" >>"$histfile"
                     fi
                 fi
+                ;;
+            MOVIE)
+                notify-send "TODO"
                 ;;
             tv)
                 if [ "$progress" -gt 90 ]; then
@@ -788,6 +848,11 @@ EOF
                     title=$(printf "%s" "$choice" | $sed -nE "s@(.*) \((films|series|cartoons)\).*@\1@p")
                     media_type=$(printf "%s" "$choice" | $sed -nE "s@(.*) \((films|series|cartoons)\).*@\2@p")
                     media_id=$(printf "%s" "$choice" | cut -f2)
+                    ;;
+                "fmovies.taxi")
+                    title=$(printf "%s" "$choice" | $sed -nE "s@(.*) \((MOVIE)\).*@\1@p")
+                    media_type=$(printf "%s" "$choice" | $sed -nE "s@(.*) \((MOVIE)\).*@\2@p")
+                    media_id=$(printf "%s" "$choice" | cut -f2 | sed "s@/@=@g")
                     ;;
             esac
         fi
@@ -1033,11 +1098,12 @@ EOF
     done
     case "$base" in
         "hdrezka") base="hdrezka.website" ;;
+        "fmovies") base="fmovies.taxi" ;;
         *) base="flixhq.to" ;;
     esac
     case "$base" in
         "flixhq.to") query="$(printf "%s" "$query" | tr ' ' '-' | $sed "s/^-//g")" ;;
-        "hdrezka.website") query="$(printf "%s" "$query" | tr ' ' '+' | $sed "s/^+//g")" ;;
+        "hdrezka.website" | "fmovies.taxi") query="$(printf "%s" "$query" | tr ' ' '+' | $sed "s/^+//g")" ;;
     esac
     if [ "$image_preview" = 1 ]; then
         test -d "$images_cache_dir" || mkdir -p "$images_cache_dir"
