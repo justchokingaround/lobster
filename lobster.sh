@@ -1,6 +1,6 @@
 #!/bin/sh
 
-LOBSTER_VERSION="4.0.7"
+LOBSTER_VERSION="4.0.8"
 
 config_file="$HOME/.config/lobster/lobster_config.txt"
 lobster_editor=${VISUAL:-${EDITOR}}
@@ -309,7 +309,7 @@ EOF
         if [ "$media_type" = "movie" ]; then
             # request to get the episode id
             movie_page="https://${base}"$(curl -s "https://${base}/ajax/movie/episodes/${media_id}" |
-                tr -d "\n" | $sed -nE "s_.*href=\"([^\"]*)\".*$provider.*_\1_p")
+                $sed ':a;N;$!ba;s/\n//g;s/class="nav-item"/\n/g' | $sed -nE "s@.*href=\"([^\"]*)\"[[:space:]]*title=\"${provider}\".*@\1@p")
             episode_id=$(printf "%s" "$movie_page" | $sed -nE "s_.*-([0-9]*)\.([0-9]*)\$_\2_p")
         fi
         # request to get the embed
