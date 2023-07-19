@@ -522,7 +522,7 @@ EOF
                                 ;;
                         esac
                         [ "$json_output" = "1" ] && printf "%s\n" "$json_data" && exit 0
-                        video_link=$(printf "%s" "$json_data" | sed -nE "s@.*\"file\":\"([^\"]*)\".*@\1@p")
+                        video_link=$(printf "%s" "$json_data" | tr ',' '\n' | sed -nE "s@.*\"file\":\"([^\"]*)\".*@\1@p" | head -1)
                         ;;
                 esac
                 ;;
