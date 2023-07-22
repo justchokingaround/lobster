@@ -1,6 +1,6 @@
 #!/bin/sh
 
-LOBSTER_VERSION="4.0.8"
+LOBSTER_VERSION="4.1.0"
 
 config_file="$HOME/.config/lobster/lobster_config.txt"
 lobster_editor=${VISUAL:-${EDITOR}}
@@ -328,11 +328,26 @@ EOF
         else
             json_key="sources"
             encrypted=$(printf "%s" "$json_data" | tr "{}" "\n" | $sed -nE "s_.*\"${json_key}\":\"([^\"]*)\".*_\1_p")
-            key="$(curl -s "https://9anime.eltik.net/key/${embed_type}")"
+            enikey=$(curl -s "https://github.com/enimax-anime/key/blob/e${embed_type}/key.txt" | $sed -nE "s@.*rawLines\":\[\"([^\"]*)\".*@\1@p" |
+                $sed 's/\[\([0-9]*\),\([0-9]*\)\]/\1-\2/g;s/\[//g;s/\]//g;s/,/ /g')
+
             encrypted_video_link=$(printf "%s" "$json_data" | tr "{|}" "\n" | $sed -nE "s_.*\"sources\":\"([^\"]*)\".*_\1_p" | head -1)
+
+            final_key=""
+            tmp_encrypted_video_link="$encrypted_video_link"
+            for key in $enikey; do
+                start="${key%-*}"
+                start=$((start + 1))
+                end="${key#*-}"
+                key=$(printf "%s" "$encrypted_video_link" | cut -c"$start-$end")
+                final_key="$final_key$key"
+                tmp_encrypted_video_link=$(printf "%s" "$tmp_encrypted_video_link" | $sed "s/$key//g")
+            done
+
             # ty @CoolnsX for helping me with figuring out how to implement aes in openssl
-            video_link=$(printf "%s" "$encrypted_video_link" | base64 -d |
-                openssl enc -aes-256-cbc -d -md md5 -k "$key" 2>/dev/null | $sed -nE "s_.*\"file\":\"([^\"]*)\".*_\1_p")
+            video_link=$(printf "%s" "$tmp_encrypted_video_link" | base64 -d |
+                openssl enc -aes-256-cbc -d -md md5 -k "$final_key" 2>/dev/null | $sed -nE "s_.*\"file\":\"([^\"]*)\".*_\1_p")
+
             json_data=$(printf "%s" "$json_data" | $sed -e "s|${encrypted_video_link}|${video_link}|")
         fi
         [ -n "$quality" ] && video_link=$(printf "%s" "$video_link" | $sed -e "s|/playlist.m3u8|/$quality/index.m3u8|")
