@@ -127,6 +127,7 @@ trap cleanup EXIT INT TERM
         [ -z "$ueberzug_max_height" ] && ueberzug_max_height=$(($(tput lines) / 2))
         [ -z "$remove_tmp_lobster" ] && remove_tmp_lobster=1
         [ -z "$json_output" ] && json_output=0
+        [ -z "$discord_presence" ] && discord_presence=true
     }
 
     generate_desktop() {
@@ -423,19 +424,41 @@ EOF
                 vlc "$video_link" --meta-title "$displayed_title"
                 ;;
             mpv)
+                presence_script_path="./lobsterpresence.py"
+                cover_url=$(printf "%s" "$response" | grep ".*$media_id.*$media_type.*$title" | cut -f1)
+                [ -z "$cover_url" ] && cover_url=$(curl -s "$movie_page" | sed -nE "s@.*class=\"film-poster-img\" src=\"([^\"]*)\".*@\1@p")
                 [ -z "$continue_choice" ] && check_history
                 if [ "$history" = 1 ]; then
                     if [ -n "$subs_links" ]; then
                         if [ -n "$resume_from" ]; then
-                            mpv --start="$resume_from" "$subs_arg"="$subs_links" --force-media-title="$displayed_title" "$video_link" 2>&1 | tee "$tmp_position"
+                            if [ "$discord_presence" = "true" ]; then
+                                eval "$presence_script_path" \"mpv\" \"${displayed_title}\" \"${cover_url}\" \"${video_link}\" \"${subs_arg}=${subs_links}\" \"${media_type}\" \"--start=${resume_from}\" 2>&1 | tee "$tmp_position"
+                            else
+                                mpv --start="$resume_from" "$subs_arg"="$subs_links" --force-media-title="$displayed_title" "$video_link" 2>&1 | tee "$tmp_position"
+                            fi
                         else
-                            mpv --sub-file="$subs_links" --force-media-title="$displayed_title" "$video_link" 2>&1 | tee "$tmp_position"
+                            if [ "$discord_presence" = "true" ]; then
+                                cover_url=$(printf "%s" "$response" | grep ".*$media_id.*$media_type.*$title" | cut -f1)
+                                eval "$presence_script_path" \"mpv\" \"${displayed_title}\" \"${cover_url}\" \"${video_link}\" \"--sub-file=${subs_links}\" \"${media_type}\" \"\" 2>&1 | tee "$tmp_position"
+                            else
+                                mpv --sub-file="$subs_links" --force-media-title="$displayed_title" "$video_link" 2>&1 | tee "$tmp_position"
+                            fi
                         fi
                     else
                         if [ -n "$resume_from" ]; then
-                            mpv --start="$resume_from" --force-media-title="$displayed_title" "$video_link" 2>&1 | tee "$tmp_position"
+                            if [ "$discord_presence" = "true" ]; then
+                                cover_url=$(printf "%s" "$response" | grep ".*$media_id.*$media_type.*$title" | cut -f1)
+                                eval "$presence_script_path" \"mpv\" \"${displayed_title}\" \"${cover_url}\" \"${video_link}\" \"\" \"${media_type}\" \"--start=${resume_from}\" 2>&1 | tee "$tmp_position"
+                            else
+                                mpv --start="$resume_from" --force-media-title="$displayed_title" "$video_link" 2>&1 | tee "$tmp_position"
+                            fi
                         else
-                            mpv --force-media-title="$displayed_title" "$video_link" 2>&1 | tee "$tmp_position"
+                            if [ "$discord_presence" = "true" ]; then
+                                cover_url=$(printf "%s" "$response" | grep ".*$media_id.*$media_type.*$title" | cut -f1)
+                                eval "$presence_script_path" \"mpv\" \"${displayed_title}\" \"${cover_url}\" \"${video_link}\" \"\" \"${media_type}\" \"\" 2>&1 | tee "$tmp_position"
+                            else
+                                mpv --force-media-title="$displayed_title" "$video_link" 2>&1 | tee "$tmp_position"
+                            fi
                         fi
                     fi
 
