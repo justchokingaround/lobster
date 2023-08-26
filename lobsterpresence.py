@@ -176,7 +176,7 @@ while True:
         "buttons": [
             {
                 "label": "Github",
-                "url": "https://github.com/justchokingaround/jerry"
+                "url": "https://github.com/justchokingaround/lobster"
             }, 
             {
                 "label": "Discord",
