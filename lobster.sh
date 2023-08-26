@@ -4,6 +4,10 @@ LOBSTER_VERSION="4.1.0"
 
 config_file="$HOME/.config/lobster/lobster_config.txt"
 lobster_editor=${VISUAL:-${EDITOR}}
+case "$(uname -a)" in
+    *Darwin*) UEBERZUG_TMP_DIR="$TMPDIR" ;;
+    *) UEBERZUG_TMP_DIR="/tmp" ;;
+esac
 
 if [ "$1" = "--edit" ] || [ "$1" = "-e" ]; then
     if [ -f "$config_file" ]; then
@@ -57,7 +61,7 @@ cleanup() {
     [ "$remove_tmp_lobster" = 1 ] && rm -rf /tmp/lobster/
     if [ "$image_preview" = "1" ] && [ "$use_external_menu" = "0" ]; then
         killall ueberzugpp 2>/dev/null
-        rm -f /tmp/ueberzugpp-*
+        rm -f "$UEBERZUG_TMP_DIR"/ueberzugpp-*
     fi
     set +x && exec 2>&-
 }
@@ -253,14 +257,15 @@ EOF
     }
 
     image_preview_fzf() {
-        UB_PID_FILE="/tmp/lobster/.$(uuidgen)"
+        [ ! -d "$UEBERZUG_TMP_DIR/lobster" ] && mkdir -p "$UEBERZUG_TMP_DIR/lobster"
+        UB_PID_FILE="$UEBERZUG_TMP_DIR/lobster/.$(uuidgen)"
         if [ -z "$ueberzug_output" ]; then
             ueberzugpp layer --no-stdin --silent --use-escape-codes --pid-file "$UB_PID_FILE"
         else
             ueberzugpp layer -o "$ueberzug_output" --no-stdin --silent --use-escape-codes --pid-file "$UB_PID_FILE"
         fi
         UB_PID="$(cat "$UB_PID_FILE")"
-        LOBSTER_UEBERZUG_SOCKET=/tmp/ueberzugpp-"$UB_PID".socket
+        LOBSTER_UEBERZUG_SOCKET="$UEBERZUG_TMP_DIR"/ueberzugpp-"$UB_PID".socket
         choice=$(find "$images_cache_dir" -type f -exec basename {} \; | fzf -i -q "$1" --cycle --preview-window="$preview_window_size" --preview="ueberzugpp cmd -s $LOBSTER_UEBERZUG_SOCKET -i fzfpreview -a add -x $ueberzug_x -y $ueberzug_y --max-width $ueberzug_max_width --max-height $ueberzug_max_height -f $images_cache_dir/{}" --reverse --with-nth 2 -d "  ")
         ueberzugpp cmd -s "$LOBSTER_UEBERZUG_SOCKET" -a exit
     }
