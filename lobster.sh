@@ -1,6 +1,6 @@
 #!/bin/sh
 
-LOBSTER_VERSION="4.1.0"
+LOBSTER_VERSION="4.1.1"
 
 config_file="$HOME/.config/lobster/lobster_config.txt"
 lobster_editor=${VISUAL:-${EDITOR}}
@@ -280,10 +280,10 @@ EOF
 
     search() {
         if [ "$image_preview" = "1" ]; then
-            response=$(curl -s "https://${base}/search/$query" | $sed ':a;N;$!ba;s/\n//g;s/class="flw-item"/\n/g' |
+            response=$(curl -s --tlsv1.3 --cipher AES256-SHA256 "https://${base}/search/$query" | $sed ':a;N;$!ba;s/\n//g;s/class="flw-item"/\n/g' |
                 $sed -nE "s@.*img data-src=\"([^\"]*)\".*<a href=\".*/(tv|movie)/watch-.*-([0-9]*)\".*title=\"([^\"]*)\".*class=\"fdi-item\">([^<]*)</span>.*@\1\t\3\t\2\t\4 [\5]@p")
         else
-            response=$(curl -s "https://${base}/search/$query" | $sed ':a;N;$!ba;s/\n//g;s/class="flw-item"/\n/g' |
+            response=$(curl -s --tlsv1.3 --cipher AES256-SHA256 "https://${base}/search/$query" | $sed ':a;N;$!ba;s/\n//g;s/class="flw-item"/\n/g' |
                 $sed -nE "s@.*<a href=\".*/(tv|movie)/watch-.*-([0-9]*)\".*title=\"([^\"]*)\".*class=\"fdi-item\">([^<]*)</span>.*@\3 (\1) [\4]\t\2@p" | $hxunent)
         fi
         [ -z "$response" ] && send_notification "Error" "1000" "" "No results found" && exit 1
@@ -291,29 +291,29 @@ EOF
 
     choose_episode() {
         if [ -z "$season_id" ]; then
-            tmp_season_id=$(curl -s "https://${base}/ajax/v2/tv/seasons/${media_id}" | $sed -nE "s@.*href=\".*-([0-9]*)\">(.*)</a>@\2\t\1@p" | launcher "Select a season: " "1")
+            tmp_season_id=$(curl -s --tlsv1.3 --cipher AES256-SHA256 "https://${base}/ajax/v2/tv/seasons/${media_id}" | $sed -nE "s@.*href=\".*-([0-9]*)\">(.*)</a>@\2\t\1@p" | launcher "Select a season: " "1")
             [ -z "$tmp_season_id" ] && exit 1
             season_title=$(printf "%s" "$tmp_season_id" | cut -f1)
             season_id=$(printf "%s" "$tmp_season_id" | cut -f2)
-            tmp_ep_id=$(curl -s "https://${base}/ajax/v2/season/episodes/${season_id}" | $sed ':a;N;$!ba;s/\n//g;s/class="nav-item"/\n/g' |
+            tmp_ep_id=$(curl -s --tlsv1.3 --cipher AES256-SHA256 "https://${base}/ajax/v2/season/episodes/${season_id}" | $sed ':a;N;$!ba;s/\n//g;s/class="nav-item"/\n/g' |
                 $sed -nE "s@.*data-id=\"([0-9]*)\".*title=\"([^\"]*)\">.*@\2\t\1@p" | $hxunent | launcher "Select an episode: " "1")
             [ -z "$tmp_ep_id" ] && exit 1
         fi
         [ -z "$episode_title" ] && episode_title=$(printf "%s" "$tmp_ep_id" | cut -f1)
         [ -z "$data_id" ] && data_id=$(printf "%s" "$tmp_ep_id" | cut -f2)
-        episode_id=$(curl -s "https://${base}/ajax/v2/episode/servers/${data_id}" | $sed ':a;N;$!ba;s/\n//g;s/class="nav-item"/\n/g' |
+        episode_id=$(curl -s --tlsv1.3 --cipher AES256-SHA256 "https://${base}/ajax/v2/episode/servers/${data_id}" | $sed ':a;N;$!ba;s/\n//g;s/class="nav-item"/\n/g' |
             $sed -nE "s@.*data-id=\"([0-9]*)\".*title=\"([^\"]*)\".*@\1\t\2@p" | grep "$provider" | cut -f1)
     }
 
     get_embed() {
         if [ "$media_type" = "movie" ]; then
             # request to get the episode id
-            movie_page="https://${base}"$(curl -s "https://${base}/ajax/movie/episodes/${media_id}" |
+            movie_page="https://${base}"$(curl -s --tlsv1.3 --cipher AES256-SHA256 "https://${base}/ajax/movie/episodes/${media_id}" |
                 $sed ':a;N;$!ba;s/\n//g;s/class="nav-item"/\n/g' | $sed -nE "s@.*href=\"([^\"]*)\"[[:space:]]*title=\"${provider}\".*@\1@p")
             episode_id=$(printf "%s" "$movie_page" | $sed -nE "s_.*-([0-9]*)\.([0-9]*)\$_\2_p")
         fi
         # request to get the embed
-        embed_link=$(curl -s "https://${base}/ajax/sources/${episode_id}" | $sed -nE "s_.*\"link\":\"([^\"]*)\".*_\1_p")
+        embed_link=$(curl -s --tlsv1.3 --cipher AES256-SHA256 "https://${base}/ajax/sources/${episode_id}" | $sed -nE "s_.*\"link\":\"([^\"]*)\".*_\1_p")
         if [ -z "$embed_link" ]; then
             send_notification "Error" "Could not get embed link"
             exit 1
@@ -373,7 +373,7 @@ EOF
         provider_link=$(printf "%s" "$parse_embed" | cut -f1)
         source_id=$(printf "%s" "$parse_embed" | cut -f3)
         embed_type=$(printf "%s" "$parse_embed" | cut -f2)
-        json_data=$(curl -s "${provider_link}/ajax/embed-${embed_type}/getSources?id=${source_id}" -H "X-Requested-With: XMLHttpRequest")
+        json_data=$(curl -s --tlsv1.3 --cipher AES256-SHA256 "${provider_link}/ajax/embed-${embed_type}/getSources?id=${source_id}" -H "X-Requested-With: XMLHttpRequest")
         [ -n "$json_data" ] && extract_from_json
     }
 
@@ -469,15 +469,15 @@ EOF
     }
 
     next_episode_exists() {
-        episodes_list=$(curl -s "https://${base}/ajax/v2/season/episodes/${season_id}" | $sed ':a;N;$!ba;s/\n//g;s/class="nav-item"/\n/g' |
+        episodes_list=$(curl -s --tlsv1.3 --cipher AES256-SHA256 "https://${base}/ajax/v2/season/episodes/${season_id}" | $sed ':a;N;$!ba;s/\n//g;s/class="nav-item"/\n/g' |
             $sed -nE "s@.*data-id=\"([0-9]*)\".*title=\"([^\"]*)\">.*@\2\t\1@p" | $hxunent)
         next_episode=$(printf "%s" "$episodes_list" | $sed -n "/$data_id/{n;p;}")
         [ -n "$next_episode" ] && return
-        tmp_season_id=$(curl -s "https://${base}/ajax/v2/tv/seasons/${media_id}" | $sed -n "/href=\".*-$season_id/{n;n;n;n;p;}" | $sed -nE "s@.*href=\".*-([0-9]*)\">(.*)</a>@\2\t\1@p")
+        tmp_season_id=$(curl -s --tlsv1.3 --cipher AES256-SHA256 "https://${base}/ajax/v2/tv/seasons/${media_id}" | $sed -n "/href=\".*-$season_id/{n;n;n;n;p;}" | $sed -nE "s@.*href=\".*-([0-9]*)\">(.*)</a>@\2\t\1@p")
         [ -z "$tmp_season_id" ] && return
         season_title=$(printf "%s" "$tmp_season_id" | cut -f1)
         season_id=$(printf "%s" "$tmp_season_id" | cut -f2)
-        next_episode=$(curl -s "https://${base}/ajax/v2/season/episodes/${season_id}" | $sed ':a;N;$!ba;s/\n//g;s/class="nav-item"/\n/g' |
+        next_episode=$(curl -s --tlsv1.3 --cipher AES256-SHA256 "https://${base}/ajax/v2/season/episodes/${season_id}" | $sed ':a;N;$!ba;s/\n//g;s/class="nav-item"/\n/g' |
             $sed -nE "s@.*data-id=\"([0-9]*)\".*title=\"([^\"]*)\">.*@\2\t\1@p" | $hxunent | head -1)
         [ -n "$next_episode" ] && return
     }
@@ -502,7 +502,7 @@ EOF
                     if [ -n "$next_episode" ]; then
                         episode_title=$(printf "%s" "$next_episode" | cut -f1)
                         data_id=$(printf "%s" "$next_episode" | cut -f2)
-                        episode_id=$(curl -s "https://${base}/ajax/v2/episode/servers/${data_id}" | $sed ':a;N;$!ba;s/\n//g;s/class="nav-item"/\n/g' | $sed -nE "s@.*data-id=\"([0-9]*)\".*title=\"([^\"]*)\".*@\1\t\2@p" | grep "$provider" | cut -f1)
+                        episode_id=$(curl -s --tlsv1.3 --cipher AES256-SHA256 "https://${base}/ajax/v2/episode/servers/${data_id}" | $sed ':a;N;$!ba;s/\n//g;s/class="nav-item"/\n/g' | $sed -nE "s@.*data-id=\"([0-9]*)\".*title=\"([^\"]*)\".*@\1\t\2@p" | grep "$provider" | cut -f1)
                         $sed -i "s|\t[0-9:]*\t[0-9]*\ttv\t[0-9]*\t[0-9]*.*\t.*\t[0-9]*|\t00:00:00\t$media_id\ttv\t$season_id\t$episode_id\t$season_title\t$episode_title\t$data_id|1" "$histfile"
                         send_notification "Updated to next episode" "5000" "" "$episode_title"
                     else
@@ -560,7 +560,7 @@ EOF
                     if [ -n "$next_episode" ]; then
                         episode_title=$(printf "%s" "$next_episode" | cut -f1)
                         data_id=$(printf "%s" "$next_episode" | cut -f2)
-                        episode_id=$(curl -s "https://${base}/ajax/v2/episode/servers/${data_id}" | $sed ':a;N;$!ba;s/\n//g;s/class="nav-item"/\n/g' | $sed -nE "s@.*data-id=\"([0-9]*)\".*title=\"([^\"]*)\".*@\1\t\2@p" | grep "$provider" | cut -f1)
+                        episode_id=$(curl -s --tlsv1.3 --cipher AES256-SHA256 "https://${base}/ajax/v2/episode/servers/${data_id}" | $sed ':a;N;$!ba;s/\n//g;s/class="nav-item"/\n/g' | $sed -nE "s@.*data-id=\"([0-9]*)\".*title=\"([^\"]*)\".*@\1\t\2@p" | grep "$provider" | cut -f1)
                         send_notification "Watching the next episode" "5000" "" "$episode_title"
                     else
                         send_notification "No more episodes" "5000" "" "$title"
@@ -638,10 +638,10 @@ EOF
     # TODO: remove code duplication
     choose_from_trending() {
         if [ "$image_preview" = "1" ]; then
-            response=$(curl -s "https://${base}/home" | $sed -n '/id="trending-movies"/,/class="block_area block_area_home section-id-02"/p' | $sed ':a;N;$!ba;s/\n//g;s/class="flw-item"/\n/g' |
+            response=$(curl -s --tlsv1.3 --cipher AES256-SHA256 "https://${base}/home" | $sed -n '/id="trending-movies"/,/class="block_area block_area_home section-id-02"/p' | $sed ':a;N;$!ba;s/\n//g;s/class="flw-item"/\n/g' |
                 $sed -nE "s@.*img data-src=\"([^\"]*)\".*<a href=\".*/(tv|movie)/watch-.*-([0-9]*)\".*title=\"([^\"]*)\".*class=\"fdi-item\">([^<]*)</span>.*@\1\t\3\t\2\t\4 [\5]@p" | $hxunent)
         else
-            response=$(curl -s "https://${base}/home" | $sed -n '/id="trending-movies"/,/id="trending-tv"/p' | $sed ':a;N;$!ba;s/\n//g;s/class="flw-item"/\n/g' |
+            response=$(curl -s --tlsv1.3 --cipher AES256-SHA256 "https://${base}/home" | $sed -n '/id="trending-movies"/,/id="trending-tv"/p' | $sed ':a;N;$!ba;s/\n//g;s/class="flw-item"/\n/g' |
                 $sed -nE "s@.*<a href=\".*/(tv|movie)/watch-.*-([0-9]*)\".*title=\"([^\"]*)\".*class=\"fdi-item\">([^<]*)</span>.*@\3 (\1) [\4]\t\2@p" | $hxunent)
         fi
         main
@@ -649,10 +649,10 @@ EOF
 
     choose_from_recent_movie() {
         if [ "$image_preview" = "1" ]; then
-            response=$(curl -s "https://${base}/movie" | $sed ':a;N;$!ba;s/\n//g;s/class="flw-item"/\n/g' |
+            response=$(curl -s --tlsv1.3 --cipher AES256-SHA256 "https://${base}/movie" | $sed ':a;N;$!ba;s/\n//g;s/class="flw-item"/\n/g' |
                 $sed -nE "s@.*img data-src=\"([^\"]*)\".*<a href=\".*/(tv|movie)/watch-.*-([0-9]*)\".*title=\"([^\"]*)\".*class=\"fdi-item\">([^<]*)</span>.*@\1\t\3\t\2\t\4 [\5]@p" | $hxunent)
         else
-            response=$(curl -s "https://${base}/movie" | $sed ':a;N;$!ba;s/\n//g;s/class="flw-item"/\n/g' |
+            response=$(curl -s --tlsv1.3 --cipher AES256-SHA256 "https://${base}/movie" | $sed ':a;N;$!ba;s/\n//g;s/class="flw-item"/\n/g' |
                 $sed -nE "s@.*<a href=\".*/(tv|movie)/watch-.*-([0-9]*)\".*title=\"([^\"]*)\".*class=\"fdi-item\">([^<]*)</span>.*@\3 (\1) [\4]\t\2@p" | $hxunent)
         fi
         main
@@ -660,10 +660,10 @@ EOF
 
     choose_from_recent_tv() {
         if [ "$image_preview" = "1" ]; then
-            response=$(curl -s "https://${base}/tv-show" | $sed ':a;N;$!ba;s/\n//g;s/class="flw-item"/\n/g' |
+            response=$(curl -s --tlsv1.3 --cipher AES256-SHA256 "https://${base}/tv-show" | $sed ':a;N;$!ba;s/\n//g;s/class="flw-item"/\n/g' |
                 $sed -nE "s@.*img data-src=\"([^\"]*)\".*<a href=\".*/(tv|movie)/watch-.*-([0-9]*)\".*title=\"([^\"]*)\".*class=\"fdi-item\">([^<]*)</span>.*@\1\t\3\t\2\t\4 [\5]@p" | $hxunent)
         else
-            response=$(curl -s "https://${base}/tv-show" | $sed ':a;N;$!ba;s/\n//g;s/class="flw-item"/\n/g' |
+            response=$(curl -s --tlsv1.3 --cipher AES256-SHA256 "https://${base}/tv-show" | $sed ':a;N;$!ba;s/\n//g;s/class="flw-item"/\n/g' |
                 $sed -nE "s@.*<a href=\".*/(tv|movie)/watch-.*-([0-9]*)\".*title=\"([^\"]*)\".*class=\"fdi-item\">([^<]*)</span>.*@\3 (\1) [\4]\t\2@p" | $hxunent)
         fi
         main
