@@ -12,6 +12,7 @@ https://github.com/justchokingaround/lobster/assets/44473782/d597335c-42a9-4e45-
   - [Arch linux](#arch)
   - [Debian linux](#debian-using-makedeb-and-mist)
   - [Linux](#linux-from-source)
+  - [NixOS](#nixos-flake)
   - [Mac](#mac)
   - [Windows](#windows)
 - [Usage](#usage)
@@ -91,6 +92,27 @@ mist update && mist install lobster-git
 ```sh
 sudo curl -sL github.com/justchokingaround/lobster/raw/main/lobster.sh -o /usr/local/bin/lobster &&
 sudo chmod +x /usr/local/bin/lobster
+```
+
+#### Nixos (Flake)
+
+Add this to you flake.nix
+
+``` nix
+inputs.lobster.url = "github:justchokingaround/lobster";
+```
+
+Add this in you configuration.nix
+
+``` nix
+environment.systemPackages = [
+  inputs.lobster.packages.<architecture>.lobster
+];
+```
+
+##### Or for run the script once use
+```sh
+nix run github:justchokingaround/lobster#lobster
 ```
 
 #### Mac
