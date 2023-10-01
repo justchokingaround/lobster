@@ -98,19 +98,20 @@ sudo chmod +x /usr/local/bin/lobster
 
 Add this to you flake.nix
 
-``` nix
+```nix
 inputs.lobster.url = "github:justchokingaround/lobster";
 ```
 
 Add this in you configuration.nix
 
-``` nix
+```nix
 environment.systemPackages = [
   inputs.lobster.packages.<architecture>.lobster
 ];
 ```
 
 ##### Or for run the script once use
+
 ```sh
 nix run github:justchokingaround/lobster#lobster
 ```
@@ -122,6 +123,25 @@ curl -sL github.com/justchokingaround/lobster/raw/main/lobster.sh -o "$(brew --p
 chmod +x "$(brew --prefix)"/bin/lobster
 ```
 
+#### WSL :
+
+* Make sure you have **mpv** installed via scoop or chocolatey:
+
+```
+scoop install mpv
+```
+
+```
+choco install mpv
+```
+* And then paste this into terminal :
+
+```
+sudo curl -o /usr/local/bin/lobster -L https://github.com/aryan-212/lobster/raw/main/lobster.sh && sudo chmod +x /usr/local/bin/lobster
+
+```
+
+
 #### Windows
 
 <details>
@@ -129,6 +149,7 @@ chmod +x "$(brew --prefix)"/bin/lobster
 
 * This guide covers how to install and use lobster with the windows terminal, you could also use a different terminal emulator, that supports fzf, like for example wezterm
 * Note that the git bash terminal does *not* have proper fzf support
+
 1. Install scoop
 
 Open a PowerShell terminal https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell-on-windows?view=powershell-7.2#msi (version 5.1 or later) and run:
@@ -144,33 +165,37 @@ irm get.scoop.sh | iex
 scoop bucket add extras
 scoop install git mpv fzf
 ```
+
 3. Install windows terminal (you don't need to have a microsoft account for that)
    https://learn.microsoft.com/en-us/windows/terminal/install
-
 4. Install git bash (select the option to add it to the windows terminal during installation)
    https://git-scm.com/download/win
-
 5. Symlink mpv to be in path.
+
 ```sh
 ln -sf "$(scoop prefix mpv)/mpv.exe" /usr/bin/mpv
 ```
 
 6. Download the script file to the current directory
+
 ```sh
 curl -O "https://raw.githubusercontent.com/justchokingaround/lobster/main/lobster.sh"
 ```
 
 7. Give it executable permissions
+
 ```sh
 chmod +x lobster.sh
 ```
 
 8. Copy the script to path
+
 ```sh
 cp lobster.sh /usr/bin/lobster
 ```
 
 9. Use lobster
+
 ```sh
 lobster <args> or lobster [movie/tv show]
 ```
