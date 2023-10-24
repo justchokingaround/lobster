@@ -133,14 +133,14 @@ chmod +x "$(brew --prefix)"/bin/lobster
 
 Open a PowerShell terminal https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell-on-windows?view=powershell-7.2#msi (version 5.1 or later) and run:
 
-```sh
+```ps
 Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
 irm get.scoop.sh | iex
 ```
 
 2. Install git,mpv and fzf
 
-```sh
+```ps
 scoop bucket add extras
 scoop install git mpv fzf
 ```
@@ -151,18 +151,18 @@ scoop install git mpv fzf
    https://git-scm.com/download/win
 
 5. Symlink mpv to be in path.
-```sh
+```ps
 ln -sf "$(scoop prefix mpv)/mpv.exe" /usr/bin/mpv
 ```
 
 6. Download the script file to the current directory
-```sh
+```ps
 curl -O "https://raw.githubusercontent.com/justchokingaround/lobster/main/lobster.sh"
 ```
 
 7. Give it executable permissions
 ```sh
-chmod +x lobster.sh
+bash chmod +x lobster.sh
 ```
 
 8. Copy the script to path
@@ -170,9 +170,14 @@ chmod +x lobster.sh
 cp lobster.sh /usr/bin/lobster
 ```
 
-9. Use lobster
+9. Create a Powershell Lobster function by adding the following to the end of `Microsoft.PowerShell_profile.ps1`. You can check the location of this file by querying the $PROFILE variable in PowerShell. Typically the path is `~\Documents\PowerShell\Microsoft.PowerShell_profile.ps1`
+```ps
+Function lobster([string]$s1,[string]$s2,[string]$s3,[string]$s4) {bash lobster "$s1 $s2 $s3 $s4"}
+```
+
+10. Use lobster
 ```sh
-lobster <args> or lobster [movie/tv show]
+lobster <args> or lobster [movie/tv show (upto 4 arguments)]
 ```
 
 </details>
@@ -530,6 +535,6 @@ rm "$(brew --prefix)"/bin/lobster
 
 ### Windows
 
-```sh
-rm /usr/bin/lobster
+```ps
+bash rm /usr/bin/lobster
 ```
