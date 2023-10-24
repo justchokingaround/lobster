@@ -172,12 +172,12 @@ cp lobster.sh /usr/bin/lobster
 
 9. Create a Powershell Lobster function by adding the following to the end of `Microsoft.PowerShell_profile.ps1`. You can check the location of this file by querying the $PROFILE variable in PowerShell. Typically the path is `~\Documents\PowerShell\Microsoft.PowerShell_profile.ps1`
 ```ps
-Function lobster([string]$s1,[string]$s2,[string]$s3,[string]$s4) {bash lobster "$s1 $s2 $s3 $s4"}
+function lobster { param([string[]]$Args); Invoke-Expression ("bash lobster " + $Args) }
 ```
 
 10. Use lobster
 ```sh
-lobster <args> or lobster [movie/tv show (upto 4 arguments)]
+lobster <args> or lobster [movie/tv show]
 ```
 
 </details>
