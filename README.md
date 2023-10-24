@@ -152,7 +152,7 @@ scoop install git mpv fzf
 
 5. Symlink mpv to be in path.
 ```ps
-ln -sf "$(scoop prefix mpv)/mpv.exe" /usr/bin/mpv
+bash ln -sf "$(scoop prefix for mpv)/mpv.exe" /usr/bin/mpv
 ```
 
 6. Download the script file to the current directory
@@ -167,7 +167,7 @@ bash chmod +x lobster.sh
 
 8. Copy the script to path
 ```sh
-cp lobster.sh /usr/bin/lobster
+bash cp lobster.sh /usr/bin/lobster
 ```
 
 9. Create a Powershell Lobster function by adding the following to the end of `Microsoft.PowerShell_profile.ps1`. You can check the location of this file by querying the $PROFILE variable in PowerShell. Typically the path is `~\Documents\PowerShell\Microsoft.PowerShell_profile.ps1`
