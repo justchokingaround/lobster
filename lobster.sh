@@ -1,6 +1,6 @@
 #!/bin/sh
 
-LOBSTER_VERSION="4.1.1"
+LOBSTER_VERSION="4.2.0"
 
 config_file="$HOME/.config/lobster/lobster_config.txt"
 lobster_editor=${VISUAL:-${EDITOR}}
@@ -328,9 +328,22 @@ EOF
         else
             json_key="sources"
             encrypted=$(printf "%s" "$json_data" | tr "{}" "\n" | $sed -nE "s_.*\"${json_key}\":\"([^\"]*)\".*_\1_p")
-            enikey=$(curl -s "https://github.com/enimax-anime/key/blob/e${embed_type}/key.txt" | $sed -nE "s@.*rawLines\":\[\"([^\"]*)\".*@\1@p" |
-                $sed 's/\[\([0-9]*\),\([0-9]*\)\]/\1-\2/g;s/\[//g;s/\]//g;s/,/ /g')
 
+            claude_key=$(curl -s "https://github.com/Claudemirovsky/keys/blob/e${embed_type}/key" | $sed -nE "s@.*rawLines\":\[\"([^\"]*)\".*@\1@p" |
+						 tr -d ' ' | $sed "s/],/ /g;s/\[//g;s/\]//g")
+						current_sum=0
+						eni_array=$(for pair in $claude_key; do
+							first_term=$(printf "%s" "$pair" | cut -d, -f1)
+							second_term=$(printf "%s" "$pair" | cut -d, -f2)
+
+							first_term=$((first_term + current_sum))
+							current_sum=$((current_sum + second_term))
+							second_term=$((first_term + second_term))
+
+							printf "[%s,%s]" "$first_term" "$second_term"
+						done)
+
+						enikey=$(printf "[%s]" "$eni_array" | $sed "s/\]\[/\],\[/g" | $sed 's/\[\([0-9]*\),\([0-9]*\)\]/\1-\2/g;s/\[//g;s/\]//g;s/,/ /g')
             encrypted_video_link=$(printf "%s" "$json_data" | tr "{|}" "\n" | $sed -nE "s_.*\"sources\":\"([^\"]*)\".*_\1_p" | head -1)
 
             final_key=""
