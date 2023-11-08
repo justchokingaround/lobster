@@ -330,20 +330,20 @@ EOF
             encrypted=$(printf "%s" "$json_data" | tr "{}" "\n" | $sed -nE "s_.*\"${json_key}\":\"([^\"]*)\".*_\1_p")
 
             claude_key=$(curl -s "https://github.com/Claudemirovsky/keys/blob/e${embed_type}/key" | $sed -nE "s@.*rawLines\":\[\"([^\"]*)\".*@\1@p" |
-						 tr -d ' ' | $sed "s/],/ /g;s/\[//g;s/\]//g")
-						current_sum=0
-						eni_array=$(for pair in $claude_key; do
-							first_term=$(printf "%s" "$pair" | cut -d, -f1)
-							second_term=$(printf "%s" "$pair" | cut -d, -f2)
+                tr -d ' ' | $sed "s/],/ /g;s/\[//g;s/\]//g")
+            current_sum=0
+            eni_array=$(for pair in $claude_key; do
+                first_term=$(printf "%s" "$pair" | cut -d, -f1)
+                second_term=$(printf "%s" "$pair" | cut -d, -f2)
 
-							first_term=$((first_term + current_sum))
-							current_sum=$((current_sum + second_term))
-							second_term=$((first_term + second_term))
+                first_term=$((first_term + current_sum))
+                current_sum=$((current_sum + second_term))
+                second_term=$((first_term + second_term))
 
-							printf "[%s,%s]" "$first_term" "$second_term"
-						done)
+                printf "[%s,%s]" "$first_term" "$second_term"
+            done)
 
-						enikey=$(printf "[%s]" "$eni_array" | $sed "s/\]\[/\],\[/g" | $sed 's/\[\([0-9]*\),\([0-9]*\)\]/\1-\2/g;s/\[//g;s/\]//g;s/,/ /g')
+            enikey=$(printf "[%s]" "$eni_array" | $sed "s/\]\[/\],\[/g" | $sed 's/\[\([0-9]*\),\([0-9]*\)\]/\1-\2/g;s/\[//g;s/\]//g;s/,/ /g')
             encrypted_video_link=$(printf "%s" "$json_data" | tr "{|}" "\n" | $sed -nE "s_.*\"sources\":\"([^\"]*)\".*_\1_p" | head -1)
 
             final_key=""
