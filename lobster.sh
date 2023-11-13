@@ -354,7 +354,7 @@ EOF
                 end="${key#*-}"
                 key=$(printf "%s" "$encrypted_video_link" | cut -c"$start-$end")
                 final_key="$final_key$key"
-                tmp_encrypted_video_link=$(printf "%s" "$tmp_encrypted_video_link" | $sed "s/$key//g")
+                tmp_encrypted_video_link=$(printf "%s" "$tmp_encrypted_video_link" | $sed "s@$key@@g")
             done
 
             # ty @CoolnsX for helping me with figuring out how to implement aes in openssl
