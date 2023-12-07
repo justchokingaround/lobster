@@ -521,7 +521,7 @@ EOF
     }
 
     download_video() {
-        ffmpeg -loglevel error -stats -i "$1" -c copy "$(echo "$3/$2" | sed 's/://g')".mp4
+        ffmpeg -loglevel error -stats -i "$1" -c copy "$(printf "$3/$2" | tr -d ':')".mp4
     }
 
     loop() {
