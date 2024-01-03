@@ -102,7 +102,7 @@ Add this to you flake.nix
 inputs.lobster.url = "github:justchokingaround/lobster";
 ```
 
-Add this in you configuration.nix
+Add this to you configuration.nix
 
 ``` nix
 environment.systemPackages = [
@@ -113,6 +113,13 @@ environment.systemPackages = [
 ##### Or for run the script once use
 ```sh
 nix run github:justchokingaround/lobster#lobster
+```
+
+##### Nixos (Flake) update
+When encoutering errors first run the nix flake update command in the cloned project and second add new/missing [dependencies](#dependencies) to the default.nix file. Use the [nixos package search](https://search.nixos.org/packages) to find the correct name.
+
+``` nix
+nix flake update
 ```
 
 #### Mac
