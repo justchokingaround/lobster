@@ -157,32 +157,28 @@ scoop install git mpv fzf
 4. Install git bash (select the option to add it to the windows terminal during installation)
    https://git-scm.com/download/win
 
+(The next steps are to be done in the windows terminal, in a bash shell)
 5. Symlink mpv to be in path.
-```ps
-bash ln -sf "$(scoop prefix for mpv)/mpv.exe" /usr/bin/mpv
+```sh
+ln -sf "$(scoop prefix for mpv)/mpv.exe" /usr/bin/mpv
 ```
 
 6. Download the script file to the current directory
-```ps
+```sh
 curl -O "https://raw.githubusercontent.com/justchokingaround/lobster/main/lobster.sh"
 ```
 
 7. Give it executable permissions
 ```sh
-bash chmod +x lobster.sh
+chmod +x lobster.sh
 ```
 
 8. Copy the script to path
 ```sh
-bash cp lobster.sh /usr/bin/lobster
+cp lobster.sh /usr/bin/lobster
 ```
 
-9. Create a Powershell Lobster function by adding the following to the end of `Microsoft.PowerShell_profile.ps1`. You can check the location of this file by querying the $PROFILE variable in PowerShell. Typically the path is `~\Documents\PowerShell\Microsoft.PowerShell_profile.ps1`
-```ps
-function lobster { param([string[]]$Args); & bash -c "lobster $($Args -join ' ')" Invoke-Expression $command }
-```
-
-10. Use lobster
+9. Use lobster
 ```sh
 lobster <args> or lobster [movie/tv show]
 ```
@@ -542,6 +538,6 @@ rm "$(brew --prefix)"/bin/lobster
 
 ### Windows
 
-```ps
-bash rm /usr/bin/lobster
+```sh
+rm /usr/bin/lobster
 ```
