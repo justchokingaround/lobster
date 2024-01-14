@@ -503,11 +503,11 @@ https://github.com/users/justchokingaround/projects/2/views/1?query=is%3Aopen+so
 - sed
 - patch
 - mpv
+- iina (for macOS)
 - html-xml-utils (for fixing html encoded characters) (optional)
 - rofi (external menu)
 - socat (for getting the player position from the mpv socket)
 - vlc (optional)
-- iina (optional)
 
 ### In case you don't have fzf installed, you can install it like this:
 
