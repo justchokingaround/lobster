@@ -330,7 +330,6 @@ EOF
             encrypted=$(printf "%s" "$json_data" | tr "{}" "\n" | $sed -nE "s_.*\"${json_key}\":\"([^\"]*)\".*_\1_p")
             encrypted_video_link=$(printf "%s" "$json_data" | tr "{|}" "\n" | $sed -nE "s_.*\"sources\":\"([^\"]*)\".*_\1_p" | head -1)
 
-            keys="127 40 223 213 114 170 104 225 186 97"
             keys="$(curl -s "https://keys4.fun/" | tr -d '\n ' | tr ',' ' ' | sed -nE "s@.*\"rabbitstream\":\{\"keys\":\[([0-9 ]*)\].*@\1@p")"
 
             keyString=""
