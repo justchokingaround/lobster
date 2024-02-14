@@ -1,6 +1,6 @@
 #!/bin/sh
 
-LOBSTER_VERSION="4.2.1"
+LOBSTER_VERSION="4.2.2"
 
 config_file="$HOME/.config/lobster/lobster_config.txt"
 lobster_editor=${VISUAL:-${EDITOR}}
@@ -328,24 +328,20 @@ EOF
         else
             json_key="sources"
             encrypted=$(printf "%s" "$json_data" | tr "{}" "\n" | $sed -nE "s_.*\"${json_key}\":\"([^\"]*)\".*_\1_p")
-
-						enikey=$(curl -s "http://zoro-keys.freeddns.org/keys/e${embed_type}/key.txt" | tr -d ' ' |
-                $sed 's/\[\([0-9]*\),\([0-9]*\)\]/\1-\2/g;s/\[//g;s/\]//g;s/,/ /g')
             encrypted_video_link=$(printf "%s" "$json_data" | tr "{|}" "\n" | $sed -nE "s_.*\"sources\":\"([^\"]*)\".*_\1_p" | head -1)
 
-            final_key=""
-            tmp_encrypted_video_link="$encrypted_video_link"
-            for key in $enikey; do
-                start="${key%-*}"
-                start=$((start + 1))
-                end="${key#*-}"
-                key=$(printf "%s" "$encrypted_video_link" | cut -c"$start-$end")
-                final_key="$final_key$key"
-                tmp_encrypted_video_link=$(printf "%s" "$tmp_encrypted_video_link" | $sed "s@$key@@g")
+            keys="127 40 223 213 114 170 104 225 186 97"
+            keys="$(curl -s "https://keys4.fun/" | tr -d '\n ' | tr ',' ' ' | sed -nE "s@.*\"rabbitstream\":\{\"keys\":\[([0-9 ]*)\].*@\1@p")"
+
+            keyString=""
+            for key in $keys; do
+                keyString="$keyString$(printf "\\$(printf %o $key)")"
             done
 
+            final_key=$(printf "%s" "$keyString" | base64)
+
             # ty @CoolnsX for helping me with figuring out how to implement aes in openssl
-            video_link=$(printf "%s" "$tmp_encrypted_video_link" | base64 -d |
+            video_link=$(printf "%s" "$encrypted_video_link" | base64 -d |
                 openssl enc -aes-256-cbc -d -md md5 -k "$final_key" 2>/dev/null | $sed -nE "s_.*\"file\":\"([^\"]*)\".*_\1_p")
 
             json_data=$(printf "%s" "$json_data" | $sed -e "s|${encrypted_video_link}|${video_link}|")
