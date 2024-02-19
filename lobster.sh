@@ -97,7 +97,7 @@ trap cleanup EXIT INT TERM
             command -v "$dep" >/dev/null || exit 1
         done
     }
-    dep_ch "grep" "$sed" "curl" "fzf" "mpv" || true
+    dep_ch "grep" "$sed" "curl" "fzf" || true
     if [ "$use_external_menu" = "1" ]; then
         dep_ch "rofi" || true
     fi
@@ -417,20 +417,20 @@ EOF
             vlc)
                 vlc "$video_link" --meta-title "$displayed_title"
                 ;;
-            mpv)
+            mpv|mpv.exe)
                 [ -z "$continue_choice" ] && check_history
                 if [ "$history" = 1 ]; then
                     if [ -n "$subs_links" ]; then
                         if [ -n "$resume_from" ]; then
-                            mpv --start="$resume_from" "$subs_arg"="$subs_links" --force-media-title="$displayed_title" "$video_link" 2>&1 | tee "$tmp_position"
+                            "$player" --start="$resume_from" "$subs_arg"="$subs_links" --force-media-title="$displayed_title" "$video_link" 2>&1 | tee "$tmp_position"
                         else
-                            mpv --sub-file="$subs_links" --force-media-title="$displayed_title" "$video_link" 2>&1 | tee "$tmp_position"
+                            "$player" --sub-file="$subs_links" --force-media-title="$displayed_title" "$video_link" 2>&1 | tee "$tmp_position"
                         fi
                     else
                         if [ -n "$resume_from" ]; then
-                            mpv --start="$resume_from" --force-media-title="$displayed_title" "$video_link" 2>&1 | tee "$tmp_position"
+                            "$player" --start="$resume_from" --force-media-title="$displayed_title" "$video_link" 2>&1 | tee "$tmp_position"
                         else
-                            mpv --force-media-title="$displayed_title" "$video_link" 2>&1 | tee "$tmp_position"
+                            "$player" --force-media-title="$displayed_title" "$video_link" 2>&1 | tee "$tmp_position"
                         fi
                     fi
 
@@ -441,19 +441,19 @@ EOF
                 else
                     if [ -n "$subs_links" ]; then
                         if [ "$quiet_output" = 1 ]; then
-                            [ -z "$resume_from" ] && mpv "$subs_arg"="$subs_links" --force-media-title="$displayed_title" "$video_link" >/dev/null 2>&1
-                            [ -n "$resume_from" ] && mpv "$subs_arg"="$subs_links" --start="$resume_from" --force-media-title="$displayed_title" "$video_link" >/dev/null 2>&1
+                            [ -z "$resume_from" ] && "$player" "$subs_arg"="$subs_links" --force-media-title="$displayed_title" "$video_link" >/dev/null 2>&1
+                            [ -n "$resume_from" ] && "$player" "$subs_arg"="$subs_links" --start="$resume_from" --force-media-title="$displayed_title" "$video_link" >/dev/null 2>&1
                         else
-                            [ -z "$resume_from" ] && mpv "$subs_arg"="$subs_links" --force-media-title="$displayed_title" "$video_link"
-                            [ -n "$resume_from" ] && mpv "$subs_arg"="$subs_links" --start="$resume_from" --force-media-title="$displayed_title" "$video_link"
+                            [ -z "$resume_from" ] && "$player" "$subs_arg"="$subs_links" --force-media-title="$displayed_title" "$video_link"
+                            [ -n "$resume_from" ] && "$player" "$subs_arg"="$subs_links" --start="$resume_from" --force-media-title="$displayed_title" "$video_link"
                         fi
                     else
                         if [ "$quiet_output" = 1 ]; then
-                            [ -z "$resume_from" ] && mpv --force-media-title="$displayed_title" "$video_link" >/dev/null 2>&1
-                            [ -n "$resume_from" ] && mpv --start="$resume_from" --force-media-title="$displayed_title" "$video_link" >/dev/null 2>&1
+                            [ -z "$resume_from" ] && "$player" --force-media-title="$displayed_title" "$video_link" >/dev/null 2>&1
+                            [ -n "$resume_from" ] && "$player" --start="$resume_from" --force-media-title="$displayed_title" "$video_link" >/dev/null 2>&1
                         else
-                            [ -z "$resume_from" ] && mpv --force-media-title="$displayed_title" "$video_link"
-                            [ -n "$resume_from" ] && mpv --start="$resume_from" --force-media-title="$displayed_title" "$video_link"
+                            [ -z "$resume_from" ] && "$player" --force-media-title="$displayed_title" "$video_link"
+                            [ -n "$resume_from" ] && "$player" --start="$resume_from" --force-media-title="$displayed_title" "$video_link"
                         fi
                     fi
                 fi
@@ -684,6 +684,15 @@ EOF
     }
 
     configuration
+    # Edge case for Windows, just exits with dep_ch's error message if it can't find mpv.exe either
+    if [ "$player" = "mpv" -a -z "$(command -v mpv)" ]; then
+        if [ -n "$(command -v mpv.exe)" ]; then
+            player="mpv.exe"
+        else
+            dep_ch mpv.exe
+        fi
+    fi
+
     [ "$debug" = 1 ] && set -x
     query=""
     while [ $# -gt 0 ]; do
