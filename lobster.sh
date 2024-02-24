@@ -334,7 +334,7 @@ EOF
 
             keyString=""
             for key in $keys; do
-                keyString="$keyString$(printf "\\$(printf %o $key)")"
+                keyString="$keyString$(printf "\\%s" "$(printf %o "$key")")"
             done
 
             final_key=$(printf "%s" "$keyString" | base64)
@@ -685,7 +685,7 @@ EOF
 
     configuration
     # Edge case for Windows, just exits with dep_ch's error message if it can't find mpv.exe either
-    if [ "$player" = "mpv" -a -z "$(command -v mpv)" ]; then
+    if [ "$player" = "mpv" ] && [ -z "$(command -v mpv)" ]; then
         if [ -n "$(command -v mpv.exe)" ]; then
             player="mpv.exe"
         else
