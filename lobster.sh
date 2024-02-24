@@ -684,9 +684,10 @@ EOF
     }
 
     configuration
+
     # Edge case for Windows, just exits with dep_ch's error message if it can't find mpv.exe either
-    if [ "$player" = "mpv" ] && [ -z "$(command -v mpv)" ]; then
-        if [ -n "$(command -v mpv.exe)" ]; then
+    if [ "$player" = "mpv" ] && ! command -v mpv >/dev/null; then
+        if command -v mpv.exe >/dev/null; then
             player="mpv.exe"
         else
             dep_ch mpv.exe
