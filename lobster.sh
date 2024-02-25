@@ -417,7 +417,7 @@ EOF
             vlc)
                 vlc "$video_link" --meta-title "$displayed_title"
                 ;;
-            mpv|mpv.exe)
+            mpv | mpv.exe)
                 [ -z "$continue_choice" ] && check_history
                 if [ "$history" = 1 ]; then
                     if [ -n "$subs_links" ]; then
