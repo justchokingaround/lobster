@@ -1,6 +1,6 @@
 #!/bin/sh
 
-LOBSTER_VERSION="4.2.2"
+LOBSTER_VERSION="4.2.3"
 
 config_file="$HOME/.config/lobster/lobster_config.txt"
 lobster_editor=${VISUAL:-${EDITOR}}
@@ -415,7 +415,8 @@ EOF
                 fi
                 ;;
             vlc)
-                vlc "$video_link" --meta-title "$displayed_title"
+                vlc_subs_links=$(printf "%s" "$subs_links" | sed 's/https\\:/https:/g; s/:\([^\/]\)/#\1/g')
+                vlc "$video_link" --meta-title "$displayed_title" --input-slave="$vlc_subs_links"
                 ;;
             mpv | mpv.exe)
                 [ -z "$continue_choice" ] && check_history
