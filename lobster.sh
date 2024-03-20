@@ -1,6 +1,6 @@
 #!/bin/sh
 
-LOBSTER_VERSION="4.2.3"
+LOBSTER_VERSION="4.2.4"
 
 config_file="$HOME/.config/lobster/lobster_config.txt"
 lobster_editor=${VISUAL:-${EDITOR}}
@@ -69,7 +69,7 @@ trap cleanup EXIT INT TERM
     tmp_position="/tmp/lobster_position"
     case "$(uname -s)" in
         MINGW* | *Msys) separator=';' && path_thing='' && sed="sed" ;;
-        *arwin) sed="gsed" ;;
+        *arwin) separator=':' && path_thing="\\" && sed="gsed" ;;
         *) separator=':' && path_thing="\\" && sed="sed" ;;
     esac
 
@@ -321,43 +321,16 @@ EOF
     }
 
     extract_from_json() {
-        json_key="file"
-        encrypted=$(printf "%s" "$json_data" | tr "{}" "\n" | $sed -nE "s_.*\"${json_key}\":\"([^\"]*)\".*_\1_p" | grep "\.m3u8")
-        if [ -n "$encrypted" ]; then
-            video_link=$(printf "%s" "$json_data" | tr "{|}" "\n" | $sed -nE "s_.*\"${json_key}\":\"([^\"]*)\".*_\1_p" | head -1)
-        else
-            json_key="sources"
-            encrypted=$(printf "%s" "$json_data" | tr "{}" "\n" | $sed -nE "s_.*\"${json_key}\":\"([^\"]*)\".*_\1_p")
-            encrypted_video_link=$(printf "%s" "$json_data" | tr "{|}" "\n" | $sed -nE "s_.*\"sources\":\"([^\"]*)\".*_\1_p" | head -1)
-
-            keys="$(curl -s "https://keys4.fun/" | tr -d '\n ' | tr ',' ' ' | sed -nE "s@.*\"rabbitstream\":\{\"keys\":\[([0-9 ]*)\].*@\1@p")"
-
-            keyString=""
-            for key in $keys; do
-                keyString="$keyString$(printf "\\%s" "$(printf %o "$key")")"
-            done
-
-            final_key=$(printf "%s" "$keyString" | base64)
-
-            # ty @CoolnsX for helping me with figuring out how to implement aes in openssl
-            video_link=$(printf "%s" "$encrypted_video_link" | base64 -d |
-                openssl enc -aes-256-cbc -d -md md5 -k "$final_key" 2>/dev/null | $sed -nE "s_.*\"file\":\"([^\"]*)\".*_\1_p")
-
-            json_data=$(printf "%s" "$json_data" | $sed -e "s|${encrypted_video_link}|${video_link}|")
-        fi
+        video_link=$(printf "%s" "$json_data" | tr '[' '\n' | $sed -nE 's@.*\\\"file\\\":\\\"(.*\.m3u8).*@\1@p' | head -1)
         [ -n "$quality" ] && video_link=$(printf "%s" "$video_link" | $sed -e "s|/playlist.m3u8|/$quality/index.m3u8|")
 
         [ "$json_output" = "1" ] && printf "%s\n" "$json_data" && exit 0
-        case "$json_key" in
-            file) subs_links=$(printf "%s" "$json_data" | tr "{}" "\n" | $sed -nE "s@\"${json_key}\":\"([^\"]*)\",\"label\":\"(.$subs_language)[,\"\ ].*@\1@p") ;;
-            sources) subs_links=$(printf "%s" "$json_data" | tr "{}" "\n" | $sed -nE "s@.*\"file\":\"([^\"]*)\",\"label\":\"(.$subs_language)[,\"\ ].*@\1@p") ;;
-            *) subs_links="" ;;
-        esac
+        subs_links=$(printf "%s" "$json_data" | tr "{}" "\n" | $sed -nE "s@.*\"file\":\"([^\"]*)\",\"label\":\"(.$subs_language)[,\"\ ].*@\1@p")
         subs_arg="--sub-file"
         num_subs=$(printf "%s" "$subs_links" | wc -l)
         if [ "$num_subs" -gt 0 ]; then
             subs_links=$(printf "%s" "$subs_links" | $sed -e "s/:/\\$path_thing:/g" -e "H;1h;\$!d;x;y/\n/$separator/" -e "s/$separator\$//")
-            subs_arg="--sub-files"
+            [ "$num_subs" -gt 1 ] && subs_arg="--sub-files"
         fi
         [ -z "$subs_links" ] && send_notification "No subtitles found"
     }
@@ -368,7 +341,7 @@ EOF
         provider_link=$(printf "%s" "$parse_embed" | cut -f1)
         source_id=$(printf "%s" "$parse_embed" | cut -f3)
         embed_type=$(printf "%s" "$parse_embed" | cut -f2)
-        json_data=$(curl -s "${provider_link}/ajax/embed-${embed_type}/getSources?id=${source_id}" -H "X-Requested-With: XMLHttpRequest")
+        json_data=$(curl -s "https://api.fffapifree.cam/get-source?id=${source_id}")
         [ -n "$json_data" ] && extract_from_json
     }
 
