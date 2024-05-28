@@ -1,6 +1,6 @@
 #!/bin/sh
 
-LOBSTER_VERSION="4.2.4"
+LOBSTER_VERSION="4.2.5"
 
 config_file="$HOME/.config/lobster/lobster_config.txt"
 lobster_editor=${VISUAL:-${EDITOR}}
@@ -321,7 +321,7 @@ EOF
     }
 
     extract_from_json() {
-        video_link=$(printf "%s" "$json_data" | tr '[' '\n' | $sed -nE 's@.*\\\"file\\\":\\\"(.*\.m3u8).*@\1@p' | head -1)
+        video_link=$(printf "%s" "$json_data" | tr '[' '\n' | $sed -nE 's@.*\"file\":\"(.*\.m3u8).*@\1@p' | head -1)
         [ -n "$quality" ] && video_link=$(printf "%s" "$video_link" | $sed -e "s|/playlist.m3u8|/$quality/index.m3u8|")
 
         [ "$json_output" = "1" ] && printf "%s\n" "$json_data" && exit 0
@@ -341,7 +341,7 @@ EOF
         provider_link=$(printf "%s" "$parse_embed" | cut -f1)
         source_id=$(printf "%s" "$parse_embed" | cut -f3)
         embed_type=$(printf "%s" "$parse_embed" | cut -f2)
-        json_data=$(curl -s "https://api.fffapifree.cam/get-source?id=${source_id}")
+        json_data=$(curl -s "http://provider.akt2.yatara.be:31077/rabbit/${source_id}")
         [ -n "$json_data" ] && extract_from_json
     }
 
