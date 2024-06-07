@@ -1,6 +1,6 @@
 #!/bin/sh
 
-LOBSTER_VERSION="4.2.5"
+LOBSTER_VERSION="4.2.6"
 
 config_file="$HOME/.config/lobster/lobster_config.txt"
 lobster_editor=${VISUAL:-${EDITOR}}
@@ -341,7 +341,7 @@ EOF
         provider_link=$(printf "%s" "$parse_embed" | cut -f1)
         source_id=$(printf "%s" "$parse_embed" | cut -f3)
         embed_type=$(printf "%s" "$parse_embed" | cut -f2)
-        json_data=$(curl -s "http://provider.akt2.yatara.be:31077/rabbit/${source_id}")
+        json_data=$(curl -s "http://provider.akash-palmito.org:30174/rabbit/${source_id}")
         [ -n "$json_data" ] && extract_from_json
     }
 
