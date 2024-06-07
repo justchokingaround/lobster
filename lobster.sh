@@ -1,6 +1,6 @@
 #!/bin/sh
 
-LOBSTER_VERSION="4.2.6"
+LOBSTER_VERSION="4.2.7"
 
 config_file="$HOME/.config/lobster/lobster_config.txt"
 lobster_editor=${VISUAL:-${EDITOR}}
@@ -112,7 +112,7 @@ trap cleanup EXIT INT TERM
         [ -z "$base" ] && base="flixhq.to"
         [ -z "$player" ] && player="mpv"
         [ -z "$download_dir" ] && download_dir="$PWD"
-        [ -z "$provider" ] && provider="UpCloud"
+        [ -z "$provider" ] && provider="Vidcloud"
         [ -z "$history" ] && history=0
         [ -z "$subs_language" ] && subs_language="english"
         subs_language="$(printf "%s" "$subs_language" | cut -c2-)"
@@ -195,7 +195,7 @@ EOF
     --rofi, --dmenu, --external-menu
       Use rofi instead of fzf
     -p, --provider
-      Specify the provider to watch from (if no provider is provided, it defaults to UpCloud) (currently supported: Upcloud, Vidcloud)
+      Specify the provider to watch from (if no provider is provided, it defaults to Vidcloud) (currently supported: Vidcloud, UpCloud)
     -q, --quality
       Specify the video quality (if no quality is provided, it defaults to 1080)
     --quiet
@@ -732,11 +732,11 @@ EOF
             -p | --provider)
                 provider="$2"
                 if [ -z "$provider" ]; then
-                    provider="UpCloud"
+                    provider="Vidcloud"
                     shift
                 else
                     if [ "${provider#-}" != "$provider" ]; then
-                        provider="UpCloud"
+                        provider="Vidcloud"
                         shift
                     else
                         shift 2
@@ -812,7 +812,7 @@ EOF
             [ ! -L "$applications" ] && ln -sf "/tmp/lobster/applications/" "$applications"
         fi
     fi
-    [ -z "$provider" ] && provider="UpCloud"
+    [ -z "$provider" ] && provider="Vidcloud"
     [ "$trending" = "1" ] && choose_from_trending
     [ "$recent" = "movie" ] && choose_from_recent_movie
     [ "$recent" = "tv" ] && choose_from_recent_tv
