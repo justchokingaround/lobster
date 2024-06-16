@@ -30,7 +30,8 @@ send_notification() {
 command -v "hxunent" >/dev/null 2>&1 && hxunent="hxunent" || hxunent="tee /dev/null" # use hxunent if installed, else do nothing
 
 ### Discord Rich Presence Variables ###
-presence_client_id="1239340948048187472"       # Discord Client ID
+presence_client_id="1239340948048187472" # Discord Client ID
+# shellcheck disable=SC2154
 discord_ipc="${XDG_RUNTIME_DIR}/discord-ipc-0" # Discord IPC Socket (Could also be discord-ipc-1 if using arRPC afaik)
 handshook="$tmp_dir/handshook"                 # Indicates if the RPC handshake has been done
 ipclog="$tmp_dir/ipclog"                       # Logs the RPC events
@@ -41,6 +42,7 @@ small_image="https://www.pngarts.com/files/9/Juvenile-American-Lobster-PNG-Trans
 separator=':'   # default value
 path_thing="\\" # default value
 sed='sed'       # default value
+# shellcheck disable=SC2249
 case "$(uname -s)" in
     MINGW* | *Msys) separator=';' && path_thing='' ;;
     *arwin) sed="gsed" ;;
@@ -60,7 +62,7 @@ fi
 ### Cleanup Functions ###
 rpc_cleanup() {
     pkill -f "nc -U $discord_ipc" >/dev/null
-    pkill -f "tail -f "$presence >/dev/null
+    pkill -f "tail -f $presence" >/dev/null
     rm "$handshook" "$ipclog" "$presence" >/dev/null
 }
 cleanup() {
