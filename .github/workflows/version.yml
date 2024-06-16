@@ -1,16 +1,15 @@
-name: 'lobster checks'
+name: "lobster checks"
 on:
   pull_request:
-    paths: 
-      - "**lobster"
-      
+    paths:
+      - "lobster.sh"
 jobs:
   version-bump:
     name: Version Bump
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
-      with:
-        fetch-depth: 0
-    - name: check version bump
-      run: git diff origin/master | grep LOBSTER_VERSION
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: check version bump
+        run: git diff origin/main | grep LOBSTER_VERSION

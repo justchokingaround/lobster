@@ -1,28 +1,28 @@
-name: 'lobster checks'
+name: "lobster checks"
 on:
   push:
     branches:
       - main
   pull_request:
-    paths: 
-      - "**lobster"
+    paths:
+      - "lobster.sh"
 
 jobs:
   sh-checker:
     name: Shellcheck + Shfmt
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
-    - name: Run the sh-checker
-      uses: luizm/action-sh-checker@master
-      env:
-        SHELLCHECK_OPTS: -s sh -o all -e 2250
-        SHFMT_OPTS: -i 4 -ci -d
-      
+      - uses: actions/checkout@v3
+      - name: Run the sh-checker
+        uses: luizm/action-sh-checker@master
+        env:
+          SHELLCHECK_OPTS: -s sh -o all -e 2250
+          SHFMT_OPTS: -i 4 -ci -d
+
   check-exec:
     name: Executable Bit
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
-    - name: test exec bit
-      run: test -x "./lobster.sh"
+      - uses: actions/checkout@v3
+      - name: test exec bit
+        run: test -x "./lobster.sh"
