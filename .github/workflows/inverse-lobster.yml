@@ -1,11 +1,11 @@
 # Added due to required but conditional checks
 # Read more: https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/troubleshooting-required-status-checks#handling-skipped-but-required-checks
 
-name: 'lobster checks'
+name: "lobster checks"
 on:
   pull_request:
     paths-ignore:
-      - "**lobster"
+      - "lobster.sh"
 jobs:
   sh-checker:
     name: Shellcheck + Shfmt

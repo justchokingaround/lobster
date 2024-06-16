@@ -1,6 +1,6 @@
-{ coreutils,
+{
+  coreutils,
   curl,
-  fetchFromGitHub,
   ffmpeg,
   fzf,
   gnugrep,
@@ -11,12 +11,13 @@
   makeWrapper,
   mpv,
   openssl,
+  awk,
   stdenv,
   testers,
 }:
 stdenv.mkDerivation (finalAttrs: {
   pname = "lobster";
-  version = "4.1.1";
+  version = "4.3.0";
 
   src = ./.;
   # src = fetchFromGitHub {
@@ -38,25 +39,27 @@ stdenv.mkDerivation (finalAttrs: {
     makeWrapper
     mpv
     openssl
+    awk
   ];
 
   installPhase = ''
-      mkdir -p $out/bin
-      cp lobster.sh $out/bin/lobster
-      wrapProgram $out/bin/lobster \
-        --prefix PATH : ${lib.makeBinPath [
-          coreutils
-          curl
-          ffmpeg
-          fzf
-          gnugrep
-          gnupatch
-          gnused
-          html-xml-utils
-          mpv
-          openssl
-        ]}
-    '';
+    mkdir -p $out/bin
+    cp lobster.sh $out/bin/lobster
+    wrapProgram $out/bin/lobster \
+      --prefix PATH : ${lib.makeBinPath [
+      coreutils
+      curl
+      ffmpeg
+      fzf
+      gnugrep
+      gnupatch
+      gnused
+      html-xml-utils
+      mpv
+      openssl
+      awk
+    ]}
+  '';
 
   passthru.tests.version = testers.testVersion {
     package = finalAttrs.finalPackage;
@@ -66,7 +69,7 @@ stdenv.mkDerivation (finalAttrs: {
     description = "CLI to watch Movies/TV Shows from the terminal";
     homepage = "https://github.com/justchokingaround/lobster";
     license = licenses.gpl3;
-    maintainers = with maintainers; [ benediktbroich ];
+    maintainers = with maintainers; [benediktbroich];
     platforms = platforms.unix;
   };
 })
