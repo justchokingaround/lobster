@@ -1,4 +1,5 @@
-{ coreutils,
+{
+  coreutils,
   curl,
   fetchFromGitHub,
   ffmpeg,
@@ -41,22 +42,22 @@ stdenv.mkDerivation (finalAttrs: {
   ];
 
   installPhase = ''
-      mkdir -p $out/bin
-      cp lobster.sh $out/bin/lobster
-      wrapProgram $out/bin/lobster \
-        --prefix PATH : ${lib.makeBinPath [
-          coreutils
-          curl
-          ffmpeg
-          fzf
-          gnugrep
-          gnupatch
-          gnused
-          html-xml-utils
-          mpv
-          openssl
-        ]}
-    '';
+    mkdir -p $out/bin
+    cp lobster.sh $out/bin/lobster
+    wrapProgram $out/bin/lobster \
+      --prefix PATH : ${lib.makeBinPath [
+      coreutils
+      curl
+      ffmpeg
+      fzf
+      gnugrep
+      gnupatch
+      gnused
+      html-xml-utils
+      mpv
+      openssl
+    ]}
+  '';
 
   passthru.tests.version = testers.testVersion {
     package = finalAttrs.finalPackage;
@@ -66,7 +67,7 @@ stdenv.mkDerivation (finalAttrs: {
     description = "CLI to watch Movies/TV Shows from the terminal";
     homepage = "https://github.com/justchokingaround/lobster";
     license = licenses.gpl3;
-    maintainers = with maintainers; [ benediktbroich ];
+    maintainers = with maintainers; [benediktbroich];
     platforms = platforms.unix;
   };
 })
