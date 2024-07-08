@@ -2,9 +2,13 @@
 
 https://github.com/justchokingaround/lobster/assets/44473782/d597335c-42a9-4e45-8948-122744aa5ca9
 
-## Join the discord server!
+## Join the discord server (it is bridged to the matrix space)
 
 ### https://discord.gg/JTDS2CKjQU
+
+## Join the matrix server (I am more active there)
+
+### https://matrix.to/#/#lobster-and-jerry:matrix.org
 
 ## Overview
 
