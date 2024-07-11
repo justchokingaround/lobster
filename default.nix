@@ -66,6 +66,8 @@ stdenvNoCC.mkDerivation (finalAttrs: {
     homepage = "https://github.com/justchokingaround/lobster";
     license = lib.licenses.gpl3;
     maintainers = with lib.maintainers; [NotAShelf];
+    mainProgram = "lobster";
     platforms = lib.platforms.unix;
+    sourceProvenance = lib.sourceTypes.fromSource;
   };
 })
