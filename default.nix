@@ -39,10 +39,16 @@ stdenvNoCC.mkDerivation (finalAttrs: {
     openssl
   ];
 
+  dontBuild = true;
+
+  preInstall = ''
+    patchShebangs --host lobster.sh
+  '';
+
   installPhase = ''
     runHook preInstall;
     mkdir -p $out/bin
-    cp ./lobster.sh $out/bin/lobster
+    cp lobster.sh $out/bin/lobster
     runHook postInstall
   '';
 
