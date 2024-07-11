@@ -64,7 +64,7 @@ stdenvNoCC.mkDerivation (finalAttrs: {
   meta = {
     description = "CLI to watch Movies/TV Shows from the terminal";
     homepage = "https://github.com/justchokingaround/lobster";
-    license = lib.licenses.gpl3;
+    license = lib.licenses.gpl2;
     maintainers = with lib.maintainers; [NotAShelf];
     mainProgram = "lobster";
     platforms = lib.platforms.unix;
