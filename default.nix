@@ -68,6 +68,6 @@ stdenvNoCC.mkDerivation (finalAttrs: {
     maintainers = with lib.maintainers; [NotAShelf];
     mainProgram = "lobster";
     platforms = lib.platforms.unix;
-    sourceProvenance = lib.sourceTypes.fromSource;
+    sourceProvenance = [lib.sourceTypes.fromSource];
   };
 })
