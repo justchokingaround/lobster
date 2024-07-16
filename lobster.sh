@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env sh
 
 LOBSTER_VERSION="4.2.7"
 
@@ -213,7 +213,7 @@ EOF
     -x, --debug
       Enable debug mode (prints out debug info to stdout and also saves it to /tmp/lobster.log)
 
-  Note: 
+  Note:
     All arguments can be specified in the config file as well.
     If an argument is specified in both the config file and the command line, the command line argument will be used.
 
