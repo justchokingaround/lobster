@@ -95,7 +95,7 @@ usage() {
     -h, --help
       Show this help message and exit
     -i, --image-preview
-      Shows image previews during media selection (optionally you can use ueberzugpp if installed)
+      Shows image previews during media selection (requires chafa, you can optionally use ueberzugpp)
     -j, --json
       Outputs the json containing video links, subtitle links, referrers etc. to stdout
     -l, --language [language]
@@ -119,7 +119,7 @@ usage() {
     -x, --debug
       Enable debug mode (prints out debug info to stdout and also saves it to /tmp/lobster.log)
 
-  Note: 
+  Note:
     All arguments can be specified in the config file as well.
     If an argument is specified in both the config file and the command line, the command line argument will be used.
 
