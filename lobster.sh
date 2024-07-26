@@ -575,12 +575,32 @@ EOF
         fi
         exit 0
     }
+    make_sub_ops() {
+        num_subs="$(echo "$subs_links" | sed 's/\([^\]\):/\1\n/g' | wc -l)"
+        sub_input="$(
+            printf "%s" "$subs_links" |
+                sed 's/^/-i /g; s/\([^\]\):/\1 -i /g; s/\\:/:/g'
+        )"
+        sub_ops="$sub_input -map 0:v -map 0:a"
+        i=0
+        while [ "$i" -lt "$num_subs" ]; do
+            sub_ops="$sub_ops -map $((i + 1))"
+            i=$((i + 1))
+        done
+        sub_ops="$sub_ops -c:v copy -c:a copy -c:s srt"
+        i=0
+        while [ "$i" -lt "$num_subs" ]; do
+            # FIXME
+            sub_ops="$sub_ops -metadata:s:s:$i language=unknown"
+            i=$((i + 1))
+        done
+        echo "$sub_ops"
+    }
     # download_video [url] [title] [download_dir] [thumbnail_file]
-    # TODO: add subtitles
     download_video() {
         title="$(printf "%s" "$2" | tr -d ':/')"
         dir="${3}/${title}"
-        ffmpeg -loglevel error -stats -i "$1" -c copy "$dir.mp4"
+        echo "ffmpeg -loglevel error -stats -i '$1' $(make_sub_ops) -c copy '$dir.mkv'"
     }
     choose_from_trending_or_recent() {
         path=$1
