@@ -365,7 +365,7 @@ EOF
         _provider_link=$(printf "%s" "$parse_embed" | cut -f1)
         source_id=$(printf "%s" "$parse_embed" | cut -f3)
         _embed_type=$(printf "%s" "$parse_embed" | cut -f2)
-        json_data=$(curl -s "http://provider.akash-palmito.org:30174/rabbit/${source_id}")
+        json_data=$(curl -s "https://lobster-decryption.netlify.app/decrypt?id=${source_id}")
         [ -n "$json_data" ] && extract_from_json
     }
 
