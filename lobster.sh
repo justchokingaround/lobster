@@ -490,7 +490,8 @@ EOF
     }
 
     download_video() {
-        dir="$(printf "%s/%s" "$3" "$2" | tr -d ':')"
+        title="$(printf "%s" "$2" | tr -d ':/')"
+        dir="${3}/${title}"
         ffmpeg -loglevel error -stats -i "$1" -c copy "$dir.mp4"
     }
 
