@@ -301,11 +301,11 @@ lobster -d "../rick_and_morty/" rick and morty
 
 ### `--discord` / `--discord-presence` / `--rpc` / `--presence` argument
 
-By passing this argument you make use of discord rich presence so you can let your friends know what you are enjoying.
+By passing this argument you make use of discord rich presence so you can let your friends know what you are watching.
 
 This argument requires BSD netcat to be installed.
 
-On Arch Linux you can install it using ether pacman or your aur helper of choice with:
+On Arch Linux you can install it using either pacman or your aur helper of choice with:
 
 ```sh
 paru -S openbsd-netcat
@@ -330,7 +330,7 @@ Example using my custom rofi configuration (to customize how your rofi image pre
 
 </details>
 
-For `fzf` you will need to ether install [chafa](https://github.com/hpjansson/chafa/) or [ueberzugpp](https://github.com/jstkdng/ueberzugpp/).
+For `fzf` you will need to either install [chafa](https://github.com/hpjansson/chafa/) or [ueberzugpp](https://github.com/jstkdng/ueberzugpp/).
 
 <details>
 <summary>Showcase</summary>

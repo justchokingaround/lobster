@@ -575,32 +575,21 @@ EOF
         fi
         exit 0
     }
-    make_sub_ops() {
-        num_subs="$(echo "$subs_links" | sed 's/\([^\]\):/\1\n/g' | wc -l)"
-        sub_input="$(
-            printf "%s" "$subs_links" |
-                sed 's/^/-i /g; s/\([^\]\):/\1 -i /g; s/\\:/:/g'
-        )"
-        sub_ops="$sub_input -map 0:v -map 0:a"
-        i=0
-        while [ "$i" -lt "$num_subs" ]; do
-            sub_ops="$sub_ops -map $((i + 1))"
-            i=$((i + 1))
-        done
-        sub_ops="$sub_ops -c:v copy -c:a copy -c:s srt"
-        i=0
-        while [ "$i" -lt "$num_subs" ]; do
-            # FIXME
-            sub_ops="$sub_ops -metadata:s:s:$i language=unknown"
-            i=$((i + 1))
-        done
-        echo "$sub_ops"
-    }
     # download_video [url] [title] [download_dir] [thumbnail_file]
     download_video() {
         title="$(printf "%s" "$2" | tr -d ':/')"
         dir="${3}/${title}"
-        sub_ops="$(make_sub_ops)"
+        num_subs="$(echo "$subs_links" | sed 's/:\([^\/]\)/\n\\1/g' | wc -l)"
+        ffmpeg_subs_links=$(printf "%s" "$subs_links" | sed -E 's/https(\\)?:/-i https:/g; s/:\([^\/]\)/ \\1/g')
+        sub_ops="$ffmpeg_subs_links -map 0:v -map 0:a"
+        i=0
+        while [ "$i" -lt "$num_subs" ]; do
+            ffmpeg_maps="$ffmpeg_maps -map $((i + 1))"
+            # FIXME: use filename for language
+            ffmpeg_meta="$ffmpeg_meta -metadata:s:s:$i language=unknown"
+            i=$((i + 1))
+        done
+        sub_ops="$sub_ops $ffmpeg_maps -c:v copy -c:a copy -c:s srt $ffmpeg_meta"
         eval "ffmpeg -loglevel error -stats -i '$1' $sub_ops -c copy '$dir.mkv'"
     }
     choose_from_trending_or_recent() {
