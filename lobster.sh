@@ -600,7 +600,8 @@ EOF
     download_video() {
         title="$(printf "%s" "$2" | tr -d ':/')"
         dir="${3}/${title}"
-        echo "ffmpeg -loglevel error -stats -i '$1' $(make_sub_ops) -c copy '$dir.mkv'"
+        sub_ops="$(make_sub_ops)"
+        eval "ffmpeg -loglevel error -stats -i '$1' $sub_ops -c copy '$dir.mkv'"
     }
     choose_from_trending_or_recent() {
         path=$1
