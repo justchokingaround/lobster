@@ -600,7 +600,7 @@ EOF
 
         sub_ops="$sub_ops $ffmpeg_maps -c:v copy -c:a copy -c:s srt $ffmpeg_meta"
         # shellcheck disable=SC2086
-        ffmpeg -loglevel error -stats -i "$1" $sub_ops -c copy -threads 6 "$dir.mkv"
+        ffmpeg -loglevel error -stats -i "$1" $sub_ops -c copy "$dir.mkv"
     }
     choose_from_trending_or_recent() {
         path=$1
