@@ -95,7 +95,7 @@ usage() {
     -h, --help
       Show this help message and exit
     -i, --image-preview
-      Shows image previews during media selection (optionally you can use ueberzugpp if installed)
+      Shows image previews during media selection (requires chafa, you can optionally use ueberzugpp)
     -j, --json
       Outputs the json containing video links, subtitle links, referrers etc. to stdout
     -l, --language [language]
@@ -119,7 +119,7 @@ usage() {
     -x, --debug
       Enable debug mode (prints out debug info to stdout and also saves it to /tmp/lobster.log)
 
-  Note: 
+  Note:
     All arguments can be specified in the config file as well.
     If an argument is specified in both the config file and the command line, the command line argument will be used.
 
@@ -365,7 +365,7 @@ EOF
         _provider_link=$(printf "%s" "$parse_embed" | cut -f1)
         source_id=$(printf "%s" "$parse_embed" | cut -f3)
         _embed_type=$(printf "%s" "$parse_embed" | cut -f2)
-        json_data=$(curl -s "http://provider.akash-palmito.org:30174/rabbit/${source_id}")
+        json_data=$(curl -s "https://lobster-decryption.netlify.app/decrypt?id=${source_id}")
         [ -n "$json_data" ] && extract_from_json
     }
 
@@ -575,12 +575,32 @@ EOF
         fi
         exit 0
     }
-    # download_video [url] [title] [download_dir] [thumbnail_file]
-    # TODO: add subtitles
+    # download_video [url] [title] [download_dir] [json_data] [thumbnail_file (only when image_preview is enabled)]
     download_video() {
         title="$(printf "%s" "$2" | tr -d ':/')"
         dir="${3}/${title}"
-        ffmpeg -loglevel error -stats -i "$1" -c copy "$dir.mp4"
+        # ik this is dumb idc
+        language=$(printf "%s" "$4" | sed -nE "s@.*\"file\":\"[^\"]*\".*\"label\":\"(.$subs_language)[,\"\ ].*@\1@p")
+        num_subs="$(printf "%s" "$subs_links" | sed 's/:\([^\/]\)/\n\\1/g' | wc -l)"
+        ffmpeg_subs_links=$(printf "%s" "$subs_links" | sed 's/:\([^\/]\)/\nh/g; s/\\:/:/g' | while read -r sub_link; do
+            printf " -i %s" "$sub_link"
+        done)
+        sub_ops="$ffmpeg_subs_links -map 0:v -map 0:a"
+        if [ "$num_subs" -eq 0 ]; then
+            sub_ops=" -i $subs_links -map 0:v -map 0:a -map 1"
+            ffmpeg_meta="-metadata:s:s:0 language=$language"
+        else
+            i=1
+            for i in $(seq 1 "$num_subs"); do
+                ffmpeg_maps="$ffmpeg_maps -map $i"
+                ffmpeg_meta="$ffmpeg_meta -metadata:s:s:$((i - 1)) language=$(printf "%s_%s" "$language" "$i")"
+                i=$((i + 1))
+            done
+        fi
+
+        sub_ops="$sub_ops $ffmpeg_maps -c:v copy -c:a copy -c:s srt $ffmpeg_meta"
+        # shellcheck disable=SC2086
+        ffmpeg -loglevel error -stats -i "$1" $sub_ops -c copy "$dir.mkv"
     }
     choose_from_trending_or_recent() {
         path=$1
@@ -605,18 +625,18 @@ EOF
             if [ "$download" = "1" ]; then
                 if [ "$media_type" = "movie" ]; then
                     if [ "$image_preview" = "true" ]; then
-                        download_video "$video_link" "$title" "$download_dir" "$images_cache_dir/  $title ($media_type)  $media_id.jpg" || exit 1
+                        download_video "$video_link" "$title" "$download_dir" "$json_data" "$images_cache_dir/  $title ($media_type)  $media_id.jpg" &
                         send_notification "Finished downloading" "5000" "$images_cache_dir/  $title ($media_type)  $media_id.jpg" "$title"
                     else
-                        download_video "$video_link" "$title" "$download_dir" || exit 1
+                        download_video "$video_link" "$title" "$download_dir" "$json_data" &
                         send_notification "Finished downloading" "5000" "" "$title"
                     fi
                 else
                     if [ "$image_preview" = "true" ]; then
-                        download_video "$video_link" "$title - $season_title - $episode_title" "$download_dir" "$images_cache_dir/  $title ($media_type)  $media_id.jpg" || exit 1
+                        download_video "$video_link" "$title - $season_title - $episode_title" "$download_dir" "$json_data" "$images_cache_dir/  $title ($media_type)  $media_id.jpg" &
                         send_notification "Finished downloading" "5000" "$images_cache_dir/  $title - $season_title - $episode_title ($media_type)  $media_id.jpg" "$title - $season_title - $episode_title"
                     else
-                        download_video "$video_link" "$title - $season_title - $episode_title" "$download_dir" || exit 1
+                        download_video "$video_link" "$title - $season_title - $episode_title" "$download_dir" "$json_data" &
                         send_notification "Finished downloading" "5000" "" "$title - $season_title - $episode_title"
                     fi
                 fi

@@ -19,11 +19,12 @@ https://github.com/justchokingaround/lobster/assets/44473782/d597335c-42a9-4e45-
   - [`-c` / `--continue`](#-c----continue-argument)
   - [`--clear-history / --delete-history`](#--clear-history----delete-history-argument)
   - [`-d` / `--download`](#-d----download-path-argument)
+  - [`--discord` / `--discord-presence` / `--rpc` / `--presence`](#--discord----discord-presence----rpc----presence-argument)
   - [`-e` / `--edit`](#-e----edit-argument)
   - [`-i` / `--image-preview`](#-i----image-preview-argument)
   - [`-j` / `--json`](#-j----json-argument)
   - [`-l` / `--language`](#-l----language-language-argument)
-  - [`--rofi` / `--dmenu` / `--external-menu`](#--rofi----dmenu----external-menu-argument)
+  - [`--rofi` / `--external-menu`](#--rofi----external-menu-argument)
   - [`-p` / `--provider`](#-p----provider-provider-argument)
   - [`-q` / `--quality`](#-q----quality-quality-argument)
   - [`--quiet`](#--quiet-argument)
@@ -192,24 +193,24 @@ Options:
       Continue watching from current history
     -d, --download [path]
       Downloads movie or episode that is selected (if no path is provided, it defaults to the current directory)
+    --discord, --discord-presence, --rpc, --presence
+      Enables discord rich presence
     -e, --edit
       Edit config file using an editor defined with lobster_editor in the config (\$EDITOR by default)
     -h, --help
       Show this help message and exit
     -i, --image-preview
-      Shows image previews during media selection (requires ueberzugpp to be installed to work with fzf)
+      Shows image previews during media selection (requires chafa, you can optionally use ueberzugpp)
     -j, --json
       Outputs the json containing video links, subtitle links, referrers etc. to stdout
     -l, --language [language]
       Specify the subtitle language (if no language is provided, it defaults to english)
-    --rofi, --dmenu, --external-menu
+    --rofi, --external-menu
       Use rofi instead of fzf
     -p, --provider
-      Specify the provider to watch from (if no provider is provided, it defaults to UpCloud) (currently supported: Upcloud, Vidcloud)
+      Specify the provider to watch from (if no provider is provided, it defaults to Vidcloud) (currently supported: Vidcloud, UpCloud)
     -q, --quality
       Specify the video quality (if no quality is provided, it defaults to 1080)
-    --quiet
-      Suppress the output from mpv when playing a video
     -r, --recent [movies|tv]
       Lets you select from the most recent movies or tv shows (if no argument is provided, it defaults to movies)
     -s, --syncplay
@@ -236,10 +237,10 @@ Options:
 
 ### `-c` / `--continue` argument
 
-This feature is disabled by default because it relies on history, to enable it, you need add the following line to the `lobster_config.txt` file:
+This feature is disabled by default because it relies on history, to enable it, you need add the following line to the `lobster_config.sh` file:
 
 ```sh
-history=1
+history=true
 ```
 
 In a similar fashion to how saving your position when you watch videos on YouTube or Netflix works, lobster has history support and saves the last minute you watched for a Movie or TV Show episode. To use this feature, simply watch a Movie or an Episode from a TV Show, and after you quit mpv the history will be automatically updated. The next time you want to resume from the last position watched, you can just run
@@ -298,9 +299,21 @@ or using a relative path:
 lobster -d "../rick_and_morty/" rick and morty
 ```
 
+### `--discord` / `--discord-presence` / `--rpc` / `--presence` argument
+
+By passing this argument you make use of discord rich presence so you can let your friends know what you are watching.
+
+This argument requires BSD netcat to be installed.
+
+On Arch Linux you can install it using either pacman or your aur helper of choice with:
+
+```sh
+paru -S openbsd-netcat
+```
+
 ### `-e` / `--edit` argument
 
-By passing this argument you can edit the config file using an editor of your choice. By default it will use the editor defined in the `lobster_config.txt` file, but if you don't have one defined, it will use the `$EDITOR` environment variable (if it's not set, it will default to `vim`).
+By passing this argument you can edit the config file using an editor of your choice. By default it will use the editor defined in the `lobster_config.sh` file, but if you don't have one defined, it will use the `$EDITOR` environment variable (if it's not set, it will default to `vim`).
 
 ### `-i` / `--image-preview` argument
 
@@ -317,7 +330,7 @@ Example using my custom rofi configuration (to customize how your rofi image pre
 
 </details>
 
-For `fzf` you will need to install [ueberzugpp](https://github.com/jstkdng/ueberzugpp/).
+For `fzf` you will need to either install [chafa](https://github.com/hpjansson/chafa/) or [ueberzugpp](https://github.com/jstkdng/ueberzugpp/).
 
 <details>
 <summary>Showcase</summary>
@@ -327,10 +340,14 @@ For `fzf` you will need to install [ueberzugpp](https://github.com/jstkdng/ueber
 </details>
 
 <details>
-<summary>Installation instructions for ueberzugpp</summary>
+<summary>Installation instructions for chafa/ueberzugpp</summary>
 
 On Arch Linux you can install it using your aur helper of choice with:
 
+```sh
+paru -S chafa
+```
+or
 ```sh
 paru -S ueberzugpp
 ```
@@ -344,6 +361,13 @@ rm ueberzugpp
 ```
 
 In other cases, you can build it from [source](https://github.com/jstkdng/ueberzugpp/#build-from-source).
+
+
+Using ueberzugpp is disabled by default in favor of chafa, to enable it, you need add the following line to the `lobster_config.sh` file:
+
+```sh
+use_ueberzugpp=true
+```
 
 </details>
 
@@ -367,7 +391,7 @@ This is also valid, and will use english as the defined subtitles language:
 lobster -l weathering with you
 ```
 
-### `--rofi` / `--dmenu` / `--external-menu` argument
+### `--rofi` / `--external-menu` argument
 
 By passing this argument, you can use rofi instead of fzf to interact with the lobster script.
 
@@ -412,16 +436,6 @@ This is also valid, but will use `1080` instead:
 
 ```sh
 lobster the godfather -q
-```
-
-### `--quiet` argument
-
-By passing this argument, you can suppress the output of mpv, when playing a video.
-
-Example use case:
-
-```sh
-lobster --quiet fight club
 ```
 
 ### `-r` / `--recent` `<tv|movie>` argument
