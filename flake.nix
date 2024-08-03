@@ -3,19 +3,27 @@
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
-    flake-utils.url = "github:numtide/flake-utils";
+    systems.url = "github:nix-systems/default-linux";
   };
 
   outputs = {
     self,
     nixpkgs,
-    flake-utils,
-  }:
-    flake-utils.lib.eachDefaultSystem (system:
-      with import nixpkgs {system = "${system}";}; let
-        pkgs = import nixpkgs {inherit system;};
-      in {
-        packages.lobster = callPackage ./default.nix {};
-        packages.default = self.packages.${system}.lobster;
+    systems,
+  }: let
+    inherit (nixpkgs) lib;
+    eachSystem = lib.genAttrs (import systems);
+    pkgsFor = eachSystem (system:
+      import nixpkgs {
+        config = {};
+        localSystem = system;
+        overlays = [];
       });
+  in {
+    packages = eachSystem (system: {
+      lobster = pkgsFor.${system}.callPackage ./default.nix {};
+      default = self.packages.${system}.lobster;
+    });
+  };
 }
+

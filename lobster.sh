@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env sh
 
 LOBSTER_VERSION="4.3.0"
 
