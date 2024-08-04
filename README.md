@@ -216,7 +216,7 @@ Options:
     -d, --download [path]
       Downloads movie or episode that is selected (if no path is provided, it defaults to the current directory)
     --discord, --discord-presence, --rpc, --presence
-      Enables discord rich presence
+      Enables discord rich presence (beta feature, but should work fine on Linux)
     -e, --edit
       Edit config file using an editor defined with lobster_editor in the config (\$EDITOR by default)
     -h, --help
@@ -336,6 +336,8 @@ lobster -d "../rick_and_morty/" rick and morty
 ```
 
 ### `--discord` / `--discord-presence` / `--rpc` / `--presence` argument
+
+#### Note: beta feature
 
 By passing this argument you make use of discord rich presence so you can let
 your friends know what you are watching.
@@ -630,4 +632,3 @@ rm "$(brew --prefix)"/bin/lobster
 ```sh
 rm /usr/bin/lobster
 ```
-

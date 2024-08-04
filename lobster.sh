@@ -90,7 +90,7 @@ usage() {
     -d, --download [path]
       Downloads movie or episode that is selected (if no path is provided, it defaults to the current directory)
     --discord, --discord-presence, --rpc, --presence
-      Enables discord rich presence
+      Enables discord rich presence (beta feature, but should work fine on Linux)
     -e, --edit
       Edit config file using an editor defined with lobster_editor in the config (\$EDITOR by default)
     -h, --help
