@@ -30,6 +30,7 @@ send_notification() {
 command -v "hxunent" >/dev/null 2>&1 && hxunent="hxunent" || hxunent="tee /dev/null" # use hxunent if installed, else do nothing
 
 ### Discord Rich Presence Variables ###
+# Note: experimental feature
 presence_client_id="1239340948048187472" # Discord Client ID
 # shellcheck disable=SC2154
 discord_ipc="${XDG_RUNTIME_DIR}/discord-ipc-0" # Discord IPC Socket (Could also be discord-ipc-1 if using arRPC afaik)
@@ -157,6 +158,7 @@ configuration() {
     [ -z "$subs_language" ] && subs_language="english"
     subs_language="$(printf "%s" "$subs_language" | cut -c2-)"
     [ -z "$histfile" ] && histfile="$data_dir/lobster_history.txt" && mkdir -p "$(dirname "$histfile")"
+    [ -z "$history" ] && history=false
     [ -z "$use_external_menu" ] && use_external_menu="false"
     [ -z "$image_preview" ] && image_preview="false"
     [ -z "$debug" ] && debug="false"
@@ -359,14 +361,23 @@ EOF
         fi
         [ -z "$subs_links" ] && send_notification "No subtitles found"
     }
+    json_from_id() {
+        # json_data=$(curl -s "http://localhost:8888/.netlify/functions/decrypt?id=${source_id}")
+        json_data=$(curl -s "https://lobster-decryption.netlify.app/decrypt?id=${source_id}")
+    }
     get_json() {
         # get the juicy links
         parse_embed=$(printf "%s" "$embed_link" | $sed -nE "s_(.*)/embed-(4|6)/(.*)\?z=\$_\1\t\2\t\3_p")
         _provider_link=$(printf "%s" "$parse_embed" | cut -f1)
         source_id=$(printf "%s" "$parse_embed" | cut -f3)
         _embed_type=$(printf "%s" "$parse_embed" | cut -f2)
-        json_data=$(curl -s "https://lobster-decryption.netlify.app/decrypt?id=${source_id}")
-        [ -n "$json_data" ] && extract_from_json
+        json_from_id
+        if [ -n "$json_data" ]; then
+            extract_from_json
+        else
+            send_notification "Error" "Could not get json data"
+            exit 1
+        fi
     }
 
     ### History ###
@@ -408,8 +419,10 @@ EOF
                 else
                     if grep -q -- "$media_id" "$histfile" 2>/dev/null; then
                         $sed -i "s|\t[0-9:]*\t$media_id|\t$position\t$media_id|1" "$histfile"
+                        send_notification "Saved to history" "5000" "" "$title"
                     else
                         printf "%s\t%s\t%s\t%s\t%s\n" "$title" "$position" "$media_id" "$media_type" "$image_link" >>"$histfile"
+                        send_notification "Saved to history" "5000" "$images_cache_dir/  $title ($media_type)  $media_id.jpg" "$title"
                     fi
                 fi
                 ;;
@@ -430,9 +443,11 @@ EOF
                 else
                     if grep -q -- "$media_id" "$histfile" 2>/dev/null; then
                         $sed -i "/$media_id/d" "$histfile"
+                        send_notification "Deleted from history" "5000" "" "$title"
                     fi
                     printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n" "$title" "$position" "$media_id" "$media_type" \
                         "$season_id" "$episode_id" "$season_title" "$episode_title" "$data_id" "$image_link" >>"$histfile"
+                    send_notification "Saved to history" "5000" "$images_cache_dir/  $title ($media_type)  $media_id.jpg" "$title"
                 fi
                 ;;
             *) notify-send "Error" "Unknown media type" ;;
@@ -485,6 +500,37 @@ EOF
     }
 
     ### Video Playback ###
+    update_discord_presence() {
+        total=$(printf "%02d:%02d:%02d" $((total_duration / 3600)) $((total_duration % 3600 / 60)) $((total_duration % 60)))
+
+        [ -z "$image_link" ] && image_link="$(grep "$media_id" "$tmp_dir/image_links" | cut -f1)"
+        sleep 2
+
+        while :; do
+            if command -v nc >/dev/null 2>&1 && [ -S "$lobster_socket" ] 2>/dev/null; then
+                position=$(echo '{ "command": ["get_property", "time-pos"] }' | nc -U "$lobster_socket" 2>/dev/null | head -1)
+                [ -z "$position" ] && break
+                position=$(printf "%s" "$position" | sed -nE "s@.*\"data\":([0-9]*)\..*@\1@p")
+                position=$(printf "%02d:%02d:%02d" $((position / 3600)) $((position % 3600 / 60)) $((position % 60)))
+                update_rich_presence "$(printf "%s / %s" "$position" "$total")" &
+            else
+                # Fallback method if nc or Unix domain sockets are not available
+                sleep 5
+                update_rich_presence "Watching" &
+            fi
+            sleep 0.5
+        done
+
+        rpc_cleanup
+    }
+    save_progress() {
+        position=$(cat "$watchlater_dir/"* 2>/dev/null | grep -A1 "$video_link" | $sed -nE "s@start=([0-9.]*)@\1@p" | cut -d'.' -f1)
+        if [ -n "$position" ]; then
+            progress=$((position * 100 / total_duration))
+            position=$(printf "%02d:%02d:%02d" $((position / 3600)) $((position / 60 % 60)) $((position % 60)))
+            send_notification "Stopped at" "5000" "$images_cache_dir/  $title ($media_type)  $media_id.jpg" "$position"
+        fi
+    }
     play_video() {
         [ "$media_type" = "tv" ] && displayed_title="$title - $season_title - $episode_title" || displayed_title="$title"
         case $player in
@@ -503,54 +549,33 @@ EOF
                 ;;
             mpv | mpv.exe)
                 [ -z "$continue_choice" ] && check_history
-                if [ -n "$subs_links" ]; then
-                    if [ -n "$resume_from" ]; then
-                        "$player" --start="$resume_from" "$subs_arg"="$subs_links" --force-media-title="$displayed_title" "$video_link" \
-                            --input-ipc-server="$lobster_socket" --watch-later-dir="$watchlater_dir" --write-filename-in-watch-later-config --quiet >&3 &
-                    else
-                        "$player" "$subs_arg"="$subs_links" --force-media-title="$displayed_title" "$video_link" \
-                            --input-ipc-server="$lobster_socket" --watch-later-dir="$watchlater_dir" --write-filename-in-watch-later-config --quiet >&3 &
-                    fi
-                else
-                    if [ -n "$resume_from" ]; then
-                        "$player" --start="$resume_from" --force-media-title="$displayed_title" "$video_link" \
-                            --input-ipc-server="$lobster_socket" --watch-later-dir="$watchlater_dir" --write-filename-in-watch-later-config --quiet >&3 &
-                    else
-                        "$player" --force-media-title="$displayed_title" "$video_link" \
-                            --input-ipc-server="$lobster_socket" --watch-later-dir="$watchlater_dir" --write-filename-in-watch-later-config --quiet >&3 &
-                    fi
+                player_cmd="$player"
+                [ -n "$resume_from" ] && player_cmd="$player_cmd --start='$resume_from'"
+                [ -n "$subs_links" ] && player_cmd="$player_cmd $subs_arg='$subs_links'"
+                player_cmd="$player_cmd --force-media-title='$displayed_title' '$video_link'"
+                player_cmd="$player_cmd --watch-later-dir='$watchlater_dir' --write-filename-in-watch-later-config --save-position-on-quit --quiet"
+
+                # Check if the system supports Unix domain sockets
+                if command -v nc >/dev/null 2>&1 && [ -S "$lobster_socket" ] 2>/dev/null; then
+                    player_cmd="$player_cmd --input-ipc-server='$lobster_socket'"
                 fi
-                if [ -n "$quality" ]; then
-                    link=$video_link
-                else
+
+                # Use eval to properly handle spaces in the command
+                eval "$player_cmd" >&3 &
+
+                if [ -z "$quality" ]; then
                     link=$(printf "%s" "$video_link" | $sed "s/\/playlist.m3u8/\/1080\/index.m3u8/g")
+                else
+                    link=$video_link
                 fi
+
                 content=$(curl -s "$link")
                 durations=$(printf "%s" "$content" | grep -oE 'EXTINF:[0-9.]+,' | cut -d':' -f2 | tr -d ',')
                 total_duration=$(printf "%s" "$durations" | xargs echo | awk '{for(i=1;i<=NF;i++)sum+=$i} END {print sum}' | cut -d'.' -f1)
-                total=$(printf "%02d:%02d:%02d" $((total_duration / 3600)) $((total_duration % 3600 / 60)) $((total_duration % 60)))
 
-                if [ "$discord_presence" = "true" ]; then
-                    [ -z "$image_link" ] && image_link="$(grep "$media_id" "$tmp_dir/image_links" | cut -f1)"
-                    sleep 2
-                    while :; do
-                        position=$(echo '{ "command": ["get_property", "time-pos"] }' | nc -U "$lobster_socket" 2>/dev/null | head -1)
-                        [ -z "$position" ] && break
-                        position=$(printf "%s" "$position" | sed -nE "s@.*\"data\":([0-9]*)\..*@\1@p")
-                        position=$(printf "%02d:%02d:%02d" $((position / 3600)) $((position % 3600 / 60)) $((position % 60)))
-                        update_rich_presence "$(printf "%s / %s" "$position" "$total")" &
-                        sleep 0.5
-                    done
-                    rpc_cleanup
-                fi
-
+                [ "$discord_presence" = "true" ] && update_discord_presence
                 wait
-                position=$(cat "$watchlater_dir/"* 2>/dev/null | grep -A1 "$video_link" | $sed -nE "s@start=([0-9.]*)@\1@p" | cut -d'.' -f1)
-                if [ -n "$position" ]; then
-                    progress=$((position * 100 / total_duration))
-                    position=$(printf "%02d:%02d:%02d" $((position / 3600)) $((position / 60 % 60)) $((position % 60)))
-                    send_notification "Stopped at" "5000" "$images_cache_dir/  $title ($media_type)  $media_id.jpg" "$position"
-                fi
+                save_progress
                 ;;
             *yncpla*) nohup "syncplay" "$video_link" -- --force-media-title="${displayed_title}" >/dev/null 2>&1 & ;;
             *) $player "$video_link" ;;
@@ -622,7 +647,7 @@ EOF
             [ -z "$embed_link" ] && exit 1
             get_json
             [ -z "$video_link" ] && exit 1
-            if [ "$download" = "1" ]; then
+            if [ "$download" = "true" ]; then
                 if [ "$media_type" = "movie" ]; then
                     if [ "$image_preview" = "true" ]; then
                         download_video "$video_link" "$title" "$download_dir" "$json_data" "$images_cache_dir/  $title ($media_type)  $media_id.jpg" &
@@ -649,7 +674,9 @@ EOF
                 update_rich_presence "00:00:00" &
             fi
             play_video
-            [ -n "$position" ] && save_history
+            if [ -n "$position" ] && [ "$history" = "true" ]; then
+                save_history
+            fi
             prompt_to_continue
             case "$continue_choice" in
                 "Next episode")
@@ -740,7 +767,7 @@ EOF
             -c | --continue) play_from_history && exit ;;
             --discord | --discord-presence | --rpc | --presence) discord_presence="true" && shift ;;
             -d | --download)
-                download="1"
+                download="true"
                 if [ -n "$download_dir" ]; then
                     shift
                 else
