@@ -176,7 +176,14 @@ configuration() {
     [ -z "$json_output" ] && json_output="false"
     [ -z "$discord_presence" ] && discord_presence="false"
     case "$(uname -s)" in
-        MINGW* | *Msys) watchlater_dir="$LOCALAPPDATA/mpv/watch_later" ;;
+        MINGW* | *Msys) 
+            if [ -z "$watchlater_dir" ]; then
+                case "$(which "$player")" in
+                    *scoop*) watchlater_dir="$HOMEPATH/scoop/apps/mpv/current/portable_config/watch_later/" ;;
+                    *) watchlater_dir="$LOCALAPPDATA/mpv/watch_later" ;;
+                esac
+            fi
+            ;;
         *) [ -z "$watchlater_dir" ] && watchlater_dir="$tmp_dir/watchlater" && mkdir -p "$watchlater_dir" ;;
     esac
 }
