@@ -176,7 +176,7 @@ configuration() {
     [ -z "$json_output" ] && json_output="false"
     [ -z "$discord_presence" ] && discord_presence="false"
     case "$(uname -s)" in
-        MINGW* | *Msys) 
+        MINGW* | *Msys)
             if [ -z "$watchlater_dir" ]; then
                 case "$(which "$player")" in
                     *scoop*) watchlater_dir="$HOMEPATH/scoop/apps/mpv/current/portable_config/watch_later/" ;;
@@ -567,7 +567,7 @@ EOF
                     MINGW* | *Msys) player_cmd="$player_cmd --write-filename-in-watch-later-config --save-position-on-quit --quiet" ;;
                     *) player_cmd="$player_cmd --watch-later-dir='$watchlater_dir' --write-filename-in-watch-later-config --save-position-on-quit --quiet" ;;
                 esac
-                
+
                 # Check if the system supports Unix domain sockets
                 if command -v nc >/dev/null 2>&1 && [ -S "$lobster_socket" ] 2>/dev/null; then
                     player_cmd="$player_cmd --input-ipc-server='$lobster_socket'"
