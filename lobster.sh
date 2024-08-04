@@ -178,7 +178,8 @@ configuration() {
     case "$(uname -s)" in
         MINGW* | *Msys)
             if [ -z "$watchlater_dir" ]; then
-                case "$(which "$player")" in
+                # shellcheck disable=SC2154
+                case "$(command -v "$player")" in
                     *scoop*) watchlater_dir="$HOMEPATH/scoop/apps/mpv/current/portable_config/watch_later/" ;;
                     *) watchlater_dir="$LOCALAPPDATA/mpv/watch_later" ;;
                 esac
