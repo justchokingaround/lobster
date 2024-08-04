@@ -16,7 +16,7 @@
 }:
 stdenvNoCC.mkDerivation (finalAttrs: {
   pname = "lobster";
-  version = "4.1.1";
+  version = "4.3.0";
 
   src = builtins.path {
     name = "${finalAttrs.pname}-${finalAttrs.version}";
@@ -71,3 +71,4 @@ stdenvNoCC.mkDerivation (finalAttrs: {
     sourceProvenance = [lib.sourceTypes.fromSource];
   };
 })
+
