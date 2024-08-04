@@ -175,7 +175,10 @@ configuration() {
     [ -z "$remove_tmp_lobster" ] && remove_tmp_lobster="true"
     [ -z "$json_output" ] && json_output="false"
     [ -z "$discord_presence" ] && discord_presence="false"
-    [ -z "$watchlater_dir" ] && watchlater_dir="$tmp_dir/watchlater" && mkdir -p "$watchlater_dir"
+    case "$(uname -s)" in
+        MINGW* | *Msys) watchlater_dir="$LOCALAPPDATA/mpv/watch_later" ;;
+        *) [ -z "$watchlater_dir" ] && watchlater_dir="$tmp_dir/watchlater" && mkdir -p "$watchlater_dir" ;;
+    esac
 }
 
 # The reason I use additional file descriptors is because of the use of tee
@@ -553,8 +556,11 @@ EOF
                 [ -n "$resume_from" ] && player_cmd="$player_cmd --start='$resume_from'"
                 [ -n "$subs_links" ] && player_cmd="$player_cmd $subs_arg='$subs_links'"
                 player_cmd="$player_cmd --force-media-title='$displayed_title' '$video_link'"
-                player_cmd="$player_cmd --watch-later-dir='$watchlater_dir' --write-filename-in-watch-later-config --save-position-on-quit --quiet"
-
+                case "$(uname -s)" in
+                    MINGW* | *Msys) player_cmd="$player_cmd --write-filename-in-watch-later-config --save-position-on-quit --quiet" ;;
+                    *) player_cmd="$player_cmd --watch-later-dir='$watchlater_dir' --write-filename-in-watch-later-config --save-position-on-quit --quiet" ;;
+                esac
+                
                 # Check if the system supports Unix domain sockets
                 if command -v nc >/dev/null 2>&1 && [ -S "$lobster_socket" ] 2>/dev/null; then
                     player_cmd="$player_cmd --input-ipc-server='$lobster_socket'"
