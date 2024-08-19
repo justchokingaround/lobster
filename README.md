@@ -105,14 +105,12 @@ sudo chmod +x /usr/local/bin/lobster
 #### Android (requires Termux and [mpv-android](https://github.com/mpv-android/mpv-android))
 
 ```sh
-curl -sL github.com/justchokingaround/lobster/raw/main/lobster.sh -o lobster &&
-chmod +x lobster
-```
-```sh
-./lobster
+curl -sL github.com/justchokingaround/lobster/raw/main/lobster.sh &&
+chmod +x lobster.sh &&
+mv lobster.sh /data/data/com.termux/files/usr/bin/lobster
 ```
 
-If you're using Android 14 make sure to run this before:
+If you're using Android 14 or newer make sure to run this before:
 ```sh
 pkg install termux-am
 ```
