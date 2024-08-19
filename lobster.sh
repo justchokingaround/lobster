@@ -47,6 +47,7 @@ sed='sed'       # default value
 case "$(uname -s)" in
     MINGW* | *Msys) separator=';' && path_thing='' ;;
     *arwin) sed="gsed" ;;
+    *ndroid*) player="mpv_android" ;;
 esac
 
 # Checks if any of the provided arguments are -e or --edit
@@ -591,6 +592,7 @@ EOF
                 wait
                 save_progress
                 ;;
+            mpv_android) nohup am start --user 0 -a android.intent.action.VIEW -d "$video_link" -n is.xyz.mpv/.MPVActivity -e "title" "$displayed_title" >/dev/null 2>&1 & ;;
             *yncpla*) nohup "syncplay" "$video_link" -- --force-media-title="${displayed_title}" >/dev/null 2>&1 & ;;
             *) $player "$video_link" ;;
         esac
