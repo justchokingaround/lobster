@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 
-LOBSTER_VERSION="4.3.0"
+LOBSTER_VERSION="4.3.1"
 
 ### General Variables ###
 config_file="$HOME/.config/lobster/lobster_config.sh"
