@@ -49,7 +49,6 @@ ueberzugpp_tmp_dir="/tmp" # for some reason ueberzugpp only uses $TMPDIR on Darw
 case "$(uname -s)" in
     MINGW* | *Msys) separator=';' && path_thing='' ;;
     *arwin) sed="gsed" && ueberzugpp_tmp_dir="${TMPDIR:-/tmp}" ;;
-    *ndroid*) player="mpv_android" ;;
 esac
 
 # Checks if any of the provided arguments are -e or --edit
@@ -762,10 +761,12 @@ EOF
 
     configuration
 
-    # Edge case for Windows, just exits with dep_ch's error message if it can't find mpv.exe either
+    # Edge case for Windows and Android, just exits with dep_ch's error message if it can't find mpv.exe or not on Android either
     if [ "$player" = "mpv" ] && ! command -v mpv >/dev/null; then
         if command -v mpv.exe >/dev/null; then
             player="mpv.exe"
+        elif echo "$(uname -a)" | grep -q "ndroid" 2>/dev/null; then
+            player="mpv_android"
         else
             dep_ch mpv.exe
         fi
