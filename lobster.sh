@@ -6,10 +6,10 @@ LOBSTER_VERSION="4.3.1"
 config_file="$HOME/.config/lobster/lobster_config.sh"
 lobster_editor=${VISUAL:-${EDITOR}}
 tmp_dir="${TMPDIR:-/tmp}/lobster" && mkdir -p "$tmp_dir"
-lobster_socket="${TMPDIR:-/tmp}/lobster.sock"                     # Used by mpv (check the play_video function)
+lobster_socket="${TMPDIR:-/tmp}/lobster.sock" # Used by mpv (check the play_video function)
 lobster_logfile="${TMPDIR:-/tmp}/lobster.log"
 applications="$HOME/.local/share/applications/lobster" # Used for external menus (for now just rofi)
-images_cache_dir="$tmp_dir/lobster-images"         # Used for storing downloaded images of movie covers
+images_cache_dir="$tmp_dir/lobster-images"             # Used for storing downloaded images of movie covers
 
 ### Notifications ###
 command -v notify-send >/dev/null 2>&1 && notify="true" || notify="false" # check if notify-send is installed
@@ -41,9 +41,9 @@ presence="$tmp_dir/presence"                   # Used by the rich presence funct
 small_image="https://www.pngarts.com/files/9/Juvenile-American-Lobster-PNG-Transparent-Image.png"
 
 ### OS Specific Variables ###
-separator=':'   # default value
-path_thing="\\" # default value
-sed='sed'       # default value
+separator=':'             # default value
+path_thing="\\"           # default value
+sed='sed'                 # default value
 ueberzugpp_tmp_dir="/tmp" # for some reason ueberzugpp only uses $TMPDIR on Darwin
 # shellcheck disable=SC2249
 case "$(uname -s)" in
