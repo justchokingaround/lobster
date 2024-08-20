@@ -765,7 +765,7 @@ EOF
     if [ "$player" = "mpv" ] && ! command -v mpv >/dev/null; then
         if command -v mpv.exe >/dev/null; then
             player="mpv.exe"
-        elif echo "$(uname -a)" | grep -q "ndroid" 2>/dev/null; then
+        elif "$(uname -a)" | grep -q "ndroid" 2>/dev/null; then
             player="mpv_android"
         else
             dep_ch mpv.exe
