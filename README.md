@@ -16,6 +16,7 @@ https://github.com/justchokingaround/lobster/assets/44473782/d597335c-42a9-4e45-
   - [Arch linux](#arch)
   - [Debian linux](#debian-using-makedeb-and-mist)
   - [Linux](#linux-from-source)
+  - [Android](#android-requires-termux-and-mpv-android)
   - [NixOS](#nixos-flake)
   - [Mac](#mac)
   - [Windows](#windows)
@@ -99,6 +100,19 @@ mist update && mist install lobster-git
 ```sh
 sudo curl -sL github.com/justchokingaround/lobster/raw/main/lobster.sh -o /usr/local/bin/lobster &&
 sudo chmod +x /usr/local/bin/lobster
+```
+
+#### Android (requires Termux and [mpv-android](https://github.com/mpv-android/mpv-android))
+
+```sh
+curl -sLO github.com/justchokingaround/lobster/raw/main/lobster.sh &&
+chmod +x lobster.sh &&
+mv lobster.sh /data/data/com.termux/files/usr/bin/lobster
+```
+
+If you're using Android 14 or newer make sure to run this before:
+```sh
+pkg install termux-am
 ```
 
 #### Nixos (Flake)
