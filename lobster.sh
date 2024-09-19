@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 
-LOBSTER_VERSION="4.3.2"
+LOBSTER_VERSION="4.3.3"
 
 ### General Variables ###
 config_file="$HOME/.config/lobster/lobster_config.sh"
@@ -376,7 +376,7 @@ EOF
     }
     json_from_id() {
         # json_data=$(curl -s "http://localhost:8888/.netlify/functions/decrypt?id=${source_id}")
-        json_data=$(curl -s "https://lobster-decryption.netlify.app/decrypt?id=${source_id}")
+        json_data=$(curl -s "https://long-rosana-justchokingaround-11175a7c.koyeb.app/rabbit/${source_id}")
     }
     get_json() {
         # get the juicy links
