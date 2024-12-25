@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 
-LOBSTER_VERSION="4.3.3"
+LOBSTER_VERSION="4.3.4"
 
 ### General Variables ###
 config_file="$HOME/.config/lobster/lobster_config.sh"
@@ -354,7 +354,7 @@ EOF
             episode_id=$(printf "%s" "$movie_page" | $sed -nE "s_.*-([0-9]*)\.([0-9]*)\$_\2_p")
         fi
         # request to get the embed
-        embed_link=$(curl -s "https://${base}/ajax/sources/${episode_id}" | $sed -nE "s_.*\"link\":\"([^\"]*)\".*_\1_p")
+        embed_link=$(curl -s "https://${base}/ajax/episode/sources/${episode_id}" | $sed -nE "s_.*\"link\":\"([^\"]*)\".*_\1_p")
         if [ -z "$embed_link" ]; then
             send_notification "Error" "Could not get embed link"
             exit 1
@@ -375,15 +375,9 @@ EOF
         [ -z "$subs_links" ] && send_notification "No subtitles found"
     }
     json_from_id() {
-        # json_data=$(curl -s "http://localhost:8888/.netlify/functions/decrypt?id=${source_id}")
-        json_data=$(curl -s "https://long-rosana-justchokingaround-11175a7c.koyeb.app/rabbit/${source_id}")
+        json_data=$(curl -s "https://testing-embed-decrypt.harc6r.easypanel.host/embed?embed_url=${embed_link}&referrer=https://${base}")
     }
     get_json() {
-        # get the juicy links
-        parse_embed=$(printf "%s" "$embed_link" | $sed -nE "s_(.*)/embed-(4|6)/(.*)\?z=\$_\1\t\2\t\3_p")
-        _provider_link=$(printf "%s" "$parse_embed" | cut -f1)
-        source_id=$(printf "%s" "$parse_embed" | cut -f3)
-        _embed_type=$(printf "%s" "$parse_embed" | cut -f2)
         json_from_id
         if [ -n "$json_data" ]; then
             extract_from_json
