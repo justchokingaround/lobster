@@ -1,7 +1,3 @@
-# Lobster is currently broken
-There are problems with the decryption of rabbitstream, I'll have time to fix it again in march.
-The tool will still be maintained, it is not discountinued yet.
-
 ### Showcase
 
 https://github.com/justchokingaround/lobster/assets/44473782/d597335c-42a9-4e45-8948-122744aa5ca9
