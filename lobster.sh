@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 
-LOBSTER_VERSION="4.3.4"
+LOBSTER_VERSION="4.3.5"
 
 ### General Variables ###
 config_file="$HOME/.config/lobster/lobster_config.sh"
@@ -375,7 +375,7 @@ EOF
         [ -z "$subs_links" ] && send_notification "No subtitles found"
     }
     json_from_id() {
-        json_data=$(curl -s "https://testing-embed-decrypt.harc6r.easypanel.host/embed?embed_url=${embed_link}&referrer=https://${base}")
+        json_data=$(curl -s "https://misc-embed-decrypt.v4sq52.easypanel.host/embed?embed_url=${embed_link}&referrer=https://${base}")
     }
     get_json() {
         json_from_id
