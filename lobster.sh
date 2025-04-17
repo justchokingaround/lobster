@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 
-LOBSTER_VERSION="4.3.5"
+LOBSTER_VERSION="4.3.6"
 
 ### General Variables ###
 config_file="$HOME/.config/lobster/lobster_config.sh"
@@ -559,7 +559,9 @@ EOF
                 player_cmd="$player"
                 [ -n "$resume_from" ] && player_cmd="$player_cmd --start='$resume_from'"
                 [ -n "$subs_links" ] && player_cmd="$player_cmd $subs_arg='$subs_links'"
-                player_cmd="$player_cmd --force-media-title='$displayed_title' '$video_link'"
+                # Escape ' symbols in titles to prevent unterminated string error
+                escaped_title=$(printf "%s" "$displayed_title" | "$sed" "s/'/'\\\\''/g")
+                player_cmd="$player_cmd --force-media-title='$escaped_title' '$video_link'"
                 case "$(uname -s)" in
                     MINGW* | *Msys) player_cmd="$player_cmd --write-filename-in-watch-later-config --save-position-on-quit --quiet" ;;
                     *) player_cmd="$player_cmd --watch-later-dir='$watchlater_dir' --write-filename-in-watch-later-config --save-position-on-quit --quiet" ;;
