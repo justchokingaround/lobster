@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 
-LOBSTER_VERSION="4.3.6"
+LOBSTER_VERSION="4.3.7"
 
 ### General Variables ###
 config_file="$HOME/.config/lobster/lobster_config.sh"
@@ -564,7 +564,7 @@ EOF
                 player_cmd="$player_cmd --force-media-title='$escaped_title' '$video_link'"
                 case "$(uname -s)" in
                     MINGW* | *Msys) player_cmd="$player_cmd --write-filename-in-watch-later-config --save-position-on-quit --quiet" ;;
-                    *) player_cmd="$player_cmd --watch-later-dir='$watchlater_dir' --write-filename-in-watch-later-config --save-position-on-quit --quiet" ;;
+                    *) player_cmd="$player_cmd --watch-later-directory='$watchlater_dir' --write-filename-in-watch-later-config --save-position-on-quit --quiet" ;;
                 esac
 
                 # Check if the system supports Unix domain sockets
