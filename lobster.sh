@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 
-LOBSTER_VERSION="4.3.7"
+LOBSTER_VERSION="4.3.8"
 
 ### General Variables ###
 config_file="$HOME/.config/lobster/lobster_config.sh"
@@ -687,6 +687,7 @@ EOF
                 update_rich_presence "00:00:00" &
             fi
             play_video
+            next_episode=""
             if [ -n "$position" ] && [ "$history" = "true" ]; then
                 save_history
             fi
@@ -694,7 +695,9 @@ EOF
             case "$continue_choice" in
                 "Next episode")
                     resume_from=""
-                    next_episode_exists
+                    if [ -z "$next_episode" ]; then
+                        next_episode_exists
+                    fi
                     if [ -n "$next_episode" ]; then
                         episode_title=$(printf "%s" "$next_episode" | cut -f1)
                         data_id=$(printf "%s" "$next_episode" | cut -f2)
