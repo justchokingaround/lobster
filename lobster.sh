@@ -10,6 +10,7 @@ lobster_socket="${TMPDIR:-/tmp}/lobster.sock" # Used by mpv (check the play_vide
 lobster_logfile="${TMPDIR:-/tmp}/lobster.log"
 applications="$HOME/.local/share/applications/lobster" # Used for external menus (for now just rofi)
 images_cache_dir="$tmp_dir/lobster-images"             # Used for storing downloaded images of movie covers
+STATE=""                                               # Used for main state machine
 
 ### Notifications ###
 command -v notify-send >/dev/null 2>&1 && notify="true" || notify="false" # check if notify-send is installed
@@ -225,8 +226,8 @@ EOF
                 [ -n "$2" ] && rofi -sort -dmenu -i -width 1500 -p "" -mesg "$1" -display-columns "$2"
                 ;;
             *)
-                [ -z "$2" ] && fzf --reverse --prompt "$1"
-                [ -n "$2" ] && fzf --reverse --prompt "$1" --with-nth "$2" -d "\t"
+                [ -z "$2" ] && fzf --bind "left:abort,right:accept" --reverse --prompt "$1"
+                [ -n "$2" ] && fzf --bind "left:abort,right:accept" --reverse --prompt "$1" --with-nth "$2" -d "\t"
                 ;;
         esac
     }
@@ -268,51 +269,92 @@ EOF
             $sed -nE "s@.*img data-src=\"([^\"]*)\".*<a href=\".*/(tv|movie)/watch-.*-([0-9]*)\".*title=\"([^\"]*)\".*class=\"fdi-item\">([^<]*)</span>.*@\1\t\3\t\2\t\4 [\5]@p")
         [ -z "$response" ] && send_notification "Error" "1000" "" "No results found" && exit 1
     }
+    choose_search() {
+        if [ -z "$response" ]; then
+            [ -z "$query" ] && get_input
+            search "$query"
+            [ -z "$response" ] && exit 1
+        fi
+        STATE="MEDIA"
+    }
+    choose_media() {
+        if [ "$image_preview" = "true" ]; then
+            if [ "$use_external_menu" = "false" ] && [ "$use_ueberzugpp" = "true" ]; then
+                command -v "ueberzugpp" >/dev/null || send_notification "Please install ueberzugpp if you want to use it for image previews"
+                use_ueberzugpp="false"
+            fi
+            download_thumbnails "$response" "3"
+            select_desktop_entry ""
+        else
+            if [ "$use_external_menu" = "true" ]; then
+                choice=$(printf "%s" "$response" | rofi -dmenu -i -p "" -mesg "Choose a Movie or TV Show" -display-columns 4)
+            else
+                choice=$(printf "%s" "$response" | fzf --bind "left:print-query+abort,right:print-query+accept" --reverse --with-nth 4 -d "\t" --header "Choose a Movie or TV Show")
+            fi
+            image_link=$(printf "%s" "$choice" | cut -f1)
+            media_id=$(printf "%s" "$choice" | cut -f2)
+            title=$(printf "%s" "$choice" | $sed -nE "s@.* *(tv|movie)[[:space:]]*(.*) \[.*\]@\2@p")
+            media_type=$(printf "%s" "$choice" | $sed -nE "s@.* *(tv|movie)[[:space:]]*(.*) \[.*\]@\1@p")
+        fi
+        if [ "$media_type" = "tv" ]; then
+            STATE="SEASON"
+        elif [ "$media_type" = "movie" ]; then
+            keep_running="true"
+            STATE="PLAY"
+        else
+            STATE="SEARCH"
+            response=""
+            query=""
+        fi
+    }
     choose_season() {
-        local season_line
-
         season_line=$(
             curl -s "https://${base}/ajax/v2/tv/seasons/${media_id}" |
-            $sed -nE 's@.*href=".*-([0-9]*)">(.*)</a>@\2\t\1@p' |
-            launcher "Select a season: " "1"
+                $sed -nE 's@.*href=".*-([0-9]*)">(.*)</a>@\2\t\1@p' |
+                launcher "Select a season: " "1"
         )
 
-        # user pressed Esc / ← (launcher returns empty or abort code)
-        [ -z "$season_line" ] && return 1
+        if [ -z "$season_line" ]; then
+            STATE="MEDIA"
+            return 0
+        fi
 
         season_title=$(printf '%s' "$season_line" | cut -f1)
-        season_id=$(printf '%s'   "$season_line" | cut -f2)
+        season_id=$(printf '%s' "$season_line" | cut -f2)
+
+        STATE="EPISODE"
         return 0
     }
     choose_episode() {
-        # Step 1: make sure we have season info
         if [ -z "$season_id" ]; then
-            choose_season || return 1     # back from season menu
+            choose_season || return 1
         fi
 
-        # Step 2: ask for an episode in that season
-        local ep_line
         ep_line=$(
             curl -s "https://${base}/ajax/v2/season/episodes/${season_id}" |
-            $sed ':a;N;$!ba;s/\n//g;s/class="nav-item"/\n/g' |
-            $sed -nE 's@.*data-id="([0-9]*)".*title="([^"]*)">.*@\2\t\1@p' |
-            $hxunent |
-            launcher "Select an episode: " "1"
+                $sed ':a;N;$!ba;s/\n//g;s/class="nav-item"/\n/g' |
+                $sed -nE 's@.*data-id="([0-9]*)".*title="([^"]*)">.*@\2\t\1@p' |
+                $hxunent |
+                launcher "Select an episode: " "1"
         )
 
-        [ -z "$ep_line" ] && return 1     # back from episode menu
+        if [ -z "$ep_line" ]; then
+            STATE="SEASON"
+            return 0
+        fi
 
         episode_title=$(printf '%s' "$ep_line" | cut -f1)
-        data_id=$(       printf '%s' "$ep_line" | cut -f2)
+        data_id=$(printf '%s' "$ep_line" | cut -f2)
 
-        # Step 3: resolve server for the chosen provider
         episode_id=$(
             curl -s "https://${base}/ajax/v2/episode/servers/${data_id}" |
-            $sed ':a;N;$!ba;s/\n//g;s/class="nav-item"/\n/g' |
-            $sed -nE 's@.*data-id="([0-9]*)".*title="([^"]*)".*@\1\t\2@p' |
-            grep "$provider" | cut -f1 | head -n1
+                $sed ':a;N;$!ba;s/\n//g;s/class="nav-item"/\n/g' |
+                $sed -nE 's@.*data-id="([0-9]*)".*title="([^"]*)".*@\1\t\2@p' |
+                grep "$provider" | cut -f1 | head -n1
         )
 
+        keep_running="true"
+        STATE="PLAY"
         return 0
     }
     next_episode_exists() {
@@ -510,10 +552,8 @@ EOF
             episode_title=$(printf "%s" "$choice" | cut -f8)
             data_id=$(printf "%s" "$choice" | cut -f9)
             image_link=$(printf "%s" "$choice" | cut -f10)
-            choose_season
-            choose_episode
         fi
-        keep_running="true" && loop
+        STATE="PLAY" && keep_running="true" && loop
     }
 
     ### Discord Rich Presence ###
@@ -756,6 +796,7 @@ EOF
                     title=""
                     data_id=""
                     resume_from=""
+                    STATE=""
                     main
                     ;;
                 *) keep_running="false" && exit ;;
@@ -763,37 +804,18 @@ EOF
         done
     }
     main() {
-        # Get search query then get shows list
-        if [ -z "$response" ]; then
-            [ -z "$query" ] && get_input
-            search "$query"
-            [ -z "$response" ] && exit 1
-        fi
-
-        # Pick show / search show
-        if [ "$image_preview" = "true" ]; then
-            if [ "$use_external_menu" = "false" ] && [ "$use_ueberzugpp" = "true" ]; then
-                command -v "ueberzugpp" >/dev/null || send_notification "Please install ueberzugpp if you want to use it for image previews"
-                use_ueberzugpp="false"
-            fi
-            download_thumbnails "$response" "3"
-            select_desktop_entry ""
-        else
-            if [ "$use_external_menu" = "true" ]; then
-                choice=$(printf "%s" "$response" | rofi -dmenu -i -p "" -mesg "Choose a Movie or TV Show" -display-columns 4)
-            else
-                choice=$(printf "%s" "$response" | fzf --reverse --with-nth 4 -d "\t" --header "Choose a Movie or TV Show")
-            fi
-            image_link=$(printf "%s" "$choice" | cut -f1)
-            media_id=$(printf "%s" "$choice" | cut -f2)
-            title=$(printf "%s" "$choice" | $sed -nE "s@.* *(tv|movie)[[:space:]]*(.*) \[.*\]@\2@p")
-            media_type=$(printf "%s" "$choice" | $sed -nE "s@.* *(tv|movie)[[:space:]]*(.*) \[.*\]@\1@p")
-        fi
-
-        # Pick season / episode
-        [ "$media_type" = "tv" ] && choose_season && choose_episode
-        keep_running="true"
-        loop
+        STATE="SEARCH"
+        while :; do
+            case "$STATE" in
+                SEARCH) choose_search ;;
+                MEDIA) choose_media ;;
+                SEASON) choose_season ;;
+                EPISODE) choose_episode ;;
+                PLAY) loop ;;
+                EXIT) break ;;
+                *) break ;;
+            esac
+        done
     }
 
     configuration
