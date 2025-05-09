@@ -268,20 +268,52 @@ EOF
             $sed -nE "s@.*img data-src=\"([^\"]*)\".*<a href=\".*/(tv|movie)/watch-.*-([0-9]*)\".*title=\"([^\"]*)\".*class=\"fdi-item\">([^<]*)</span>.*@\1\t\3\t\2\t\4 [\5]@p")
         [ -z "$response" ] && send_notification "Error" "1000" "" "No results found" && exit 1
     }
+    choose_season() {
+        local season_line
+
+        season_line=$(
+            curl -s "https://${base}/ajax/v2/tv/seasons/${media_id}" |
+            $sed -nE 's@.*href=".*-([0-9]*)">(.*)</a>@\2\t\1@p' |
+            launcher "Select a season: " "1"
+        )
+
+        # user pressed Esc / ← (launcher returns empty or abort code)
+        [ -z "$season_line" ] && return 1
+
+        season_title=$(printf '%s' "$season_line" | cut -f1)
+        season_id=$(printf '%s'   "$season_line" | cut -f2)
+        return 0
+    }
     choose_episode() {
+        # Step 1: make sure we have season info
         if [ -z "$season_id" ]; then
-            tmp_season_id=$(curl -s "https://${base}/ajax/v2/tv/seasons/${media_id}" | $sed -nE "s@.*href=\".*-([0-9]*)\">(.*)</a>@\2\t\1@p" | launcher "Select a season: " "1")
-            [ -z "$tmp_season_id" ] && exit 1
-            season_title=$(printf "%s" "$tmp_season_id" | cut -f1)
-            season_id=$(printf "%s" "$tmp_season_id" | cut -f2)
-            tmp_ep_id=$(curl -s "https://${base}/ajax/v2/season/episodes/${season_id}" | $sed ':a;N;$!ba;s/\n//g;s/class="nav-item"/\n/g' |
-                $sed -nE "s@.*data-id=\"([0-9]*)\".*title=\"([^\"]*)\">.*@\2\t\1@p" | $hxunent | launcher "Select an episode: " "1")
-            [ -z "$tmp_ep_id" ] && exit 1
+            choose_season || return 1     # back from season menu
         fi
-        [ -z "$episode_title" ] && episode_title=$(printf "%s" "$tmp_ep_id" | cut -f1)
-        [ -z "$data_id" ] && data_id=$(printf "%s" "$tmp_ep_id" | cut -f2)
-        episode_id=$(curl -s "https://${base}/ajax/v2/episode/servers/${data_id}" | $sed ':a;N;$!ba;s/\n//g;s/class="nav-item"/\n/g' |
-            $sed -nE "s@.*data-id=\"([0-9]*)\".*title=\"([^\"]*)\".*@\1\t\2@p" | grep "$provider" | cut -f1)
+
+        # Step 2: ask for an episode in that season
+        local ep_line
+        ep_line=$(
+            curl -s "https://${base}/ajax/v2/season/episodes/${season_id}" |
+            $sed ':a;N;$!ba;s/\n//g;s/class="nav-item"/\n/g' |
+            $sed -nE 's@.*data-id="([0-9]*)".*title="([^"]*)">.*@\2\t\1@p' |
+            $hxunent |
+            launcher "Select an episode: " "1"
+        )
+
+        [ -z "$ep_line" ] && return 1     # back from episode menu
+
+        episode_title=$(printf '%s' "$ep_line" | cut -f1)
+        data_id=$(       printf '%s' "$ep_line" | cut -f2)
+
+        # Step 3: resolve server for the chosen provider
+        episode_id=$(
+            curl -s "https://${base}/ajax/v2/episode/servers/${data_id}" |
+            $sed ':a;N;$!ba;s/\n//g;s/class="nav-item"/\n/g' |
+            $sed -nE 's@.*data-id="([0-9]*)".*title="([^"]*)".*@\1\t\2@p' |
+            grep "$provider" | cut -f1 | head -n1
+        )
+
+        return 0
     }
     next_episode_exists() {
         episodes_list=$(curl -s "https://${base}/ajax/v2/season/episodes/${season_id}" | $sed ':a;N;$!ba;s/\n//g;s/class="nav-item"/\n/g' |
@@ -478,6 +510,7 @@ EOF
             episode_title=$(printf "%s" "$choice" | cut -f8)
             data_id=$(printf "%s" "$choice" | cut -f9)
             image_link=$(printf "%s" "$choice" | cut -f10)
+            choose_season
             choose_episode
         fi
         keep_running="true" && loop
@@ -730,11 +763,14 @@ EOF
         done
     }
     main() {
+        # Get search query then get shows list
         if [ -z "$response" ]; then
             [ -z "$query" ] && get_input
             search "$query"
             [ -z "$response" ] && exit 1
         fi
+
+        # Pick show / search show
         if [ "$image_preview" = "true" ]; then
             if [ "$use_external_menu" = "false" ] && [ "$use_ueberzugpp" = "true" ]; then
                 command -v "ueberzugpp" >/dev/null || send_notification "Please install ueberzugpp if you want to use it for image previews"
@@ -753,7 +789,9 @@ EOF
             title=$(printf "%s" "$choice" | $sed -nE "s@.* *(tv|movie)[[:space:]]*(.*) \[.*\]@\2@p")
             media_type=$(printf "%s" "$choice" | $sed -nE "s@.* *(tv|movie)[[:space:]]*(.*) \[.*\]@\1@p")
         fi
-        [ "$media_type" = "tv" ] && choose_episode
+
+        # Pick season / episode
+        [ "$media_type" = "tv" ] && choose_season && choose_episode
         keep_running="true"
         loop
     }
