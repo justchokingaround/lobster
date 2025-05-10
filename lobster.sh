@@ -11,6 +11,8 @@ lobster_logfile="${TMPDIR:-/tmp}/lobster.log"
 applications="$HOME/.local/share/applications/lobster" # Used for external menus (for now just rofi)
 images_cache_dir="$tmp_dir/lobster-images"             # Used for storing downloaded images of movie covers
 STATE=""                                               # Used for main state machine
+nl='
+' # Literal newline for use in pattern matching
 
 ### Notifications ###
 command -v notify-send >/dev/null 2>&1 && notify="true" || notify="false" # check if notify-send is installed
@@ -222,14 +224,28 @@ EOF
     launcher() {
         case "$use_external_menu" in
             "true")
-                [ -z "$2" ] && rofi -sort -dmenu -i -width 1500 -p "" -mesg "$1"
-                [ -n "$2" ] && rofi -sort -dmenu -i -width 1500 -p "" -mesg "$1" -display-columns "$2"
+                [ -z "$2" ] && rofi -kb-mode-next "" -kb-mode-previous "" -kb-custom-1 Shift+Left -kb-custom-2 Shift+Right -sort -dmenu -i -width 1500 -p "" -mesg "$1"
+                [ -n "$2" ] && rofi -kb-mode-next "" -kb-mode-previous "" -kb-custom-1 Shift+Left -kb-custom-2 Shift+Right -sort -dmenu -i -width 1500 -p "" -mesg "$1" -display-columns "$2"
+                # Gives rc=10 on pressing kb-custom-1 and rc=11 on pressing kb-custom-2
+                rc=$?
                 ;;
             *)
-                [ -z "$2" ] && fzf --bind "left:abort,right:accept" --reverse --prompt "$1"
-                [ -n "$2" ] && fzf --bind "left:abort,right:accept" --reverse --prompt "$1" --with-nth "$2" -d "\t"
+                [ -z "$2" ] && fzf_out=$(fzf --bind "shift-right:accept" --expect=shift-left --reverse --prompt "$1")
+                [ -n "$2" ] && fzf_out=$(fzf --bind "shift-right:accept" --expect=shift-left --reverse --prompt "$1" --with-nth "$2" -d "\t")
+                rc=$?
+                # Uses fzf expect to look for back button press
+                case $fzf_out in
+                    shift-left"$nl"*)
+                        rc=10
+                        fzf_out=${fzf_out#*"$nl"}
+                        ;;
+                    "$nl"*) fzf_out=${fzf_out#"$nl"} ;;
+                    *) exit 1 ;; # Should not reach here
+                esac
+                printf '%s\n' "$fzf_out"
                 ;;
         esac
+        return "$rc"
     }
     # helper function to be able to display only an "nth" column in fzf/rofi without altering the stdin
     nth() {
@@ -248,6 +264,8 @@ EOF
         else
             continue_choice=$(printf "Exit\nSearch" | launcher "Select: ")
         fi
+        rc=$?
+        [ "$rc" -eq 10 ] && exit 0
     }
 
     ### Searching/Selecting ###
@@ -256,11 +274,14 @@ EOF
             printf "Search Movie/TV Show: " && read -r query
         else
             if [ -n "$rofi_prompt_config" ]; then
-                query=$(printf "" | rofi -theme "$rofi_prompt_config" -sort -dmenu -i -width 1500 -p "" -mesg "Search Movie/TV Show")
+                query=$(printf "" | rofi -kb-mode-next "" -kb-mode-previous "" -kb-custom-1 Shift+Left -theme "$rofi_prompt_config" -sort -dmenu -i -width 1500 -p "" -mesg "Search Movie/TV Show")
             else
                 query=$(printf "" | launcher "Search Movie/TV Show")
             fi
         fi
+        rc=$?
+        # rofi return exit code 1 when user submits custom text, so check >1 for exit
+        [ "$rc" -gt 1 ] && exit 0
         [ -n "$query" ] && query=$(echo "$query" | tr ' ' '-')
         [ -z "$query" ] && send_notification "Error" "1000" "" "No query provided" && exit 1
     }
@@ -285,26 +306,47 @@ EOF
             fi
             download_thumbnails "$response" "3"
             select_desktop_entry ""
+            rc=$?
         else
             if [ "$use_external_menu" = "true" ]; then
-                choice=$(printf "%s" "$response" | rofi -dmenu -i -p "" -mesg "Choose a Movie or TV Show" -display-columns 4)
+                choice=$(printf "%s" "$response" | rofi -kb-mode-next "" -kb-mode-previous "" -kb-custom-1 Shift+Left -kb-custom-2 Shift+Right -dmenu -i -p "" -mesg "Choose a Movie or TV Show" -display-columns 4)
+                rc=$?
             else
-                choice=$(printf "%s" "$response" | fzf --bind "left:print-query+abort,right:print-query+accept" --reverse --with-nth 4 -d "\t" --header "Choose a Movie or TV Show")
+                choice=$(printf "%s" "$response" | fzf --bind "shift-right:accept" --expect=shift-left --reverse --with-nth 4 -d "\t" --header "Choose a Movie or TV Show")
+                rc=$?
+                # Check for back-button
+                case $choice in
+                    shift-left"$nl"*)
+                        rc=10
+                        choice=${choice#*"$nl"}
+                        ;;
+                    "$nl"*) choice=${choice#"$nl"} ;;
+                    *) exit 1 ;;
+                esac
             fi
             image_link=$(printf "%s" "$choice" | cut -f1)
             media_id=$(printf "%s" "$choice" | cut -f2)
             title=$(printf "%s" "$choice" | $sed -nE "s@.* *(tv|movie)[[:space:]]*(.*) \[.*\]@\2@p")
             media_type=$(printf "%s" "$choice" | $sed -nE "s@.* *(tv|movie)[[:space:]]*(.*) \[.*\]@\1@p")
         fi
-        if [ "$media_type" = "tv" ]; then
-            STATE="SEASON"
-        elif [ "$media_type" = "movie" ]; then
-            keep_running="true"
-            STATE="PLAY"
-        else
+
+        # Check if back button pressed
+        if [ "$rc" -eq 10 ]; then
             STATE="SEARCH"
             response=""
             query=""
+            choice=""
+            return 0
+        # Don't exit on rc=11, it means rofi kb-custom-2 was pressed
+        elif [ "$rc" -ne 0 ] && [ "$rc" -ne 11 ]; then
+            exit 0
+        fi
+
+        if [ "$media_type" = "tv" ]; then
+            STATE="SEASON"
+        else
+            keep_running="true"
+            STATE="PLAY"
         fi
     }
     choose_season() {
@@ -313,23 +355,21 @@ EOF
                 $sed -nE 's@.*href=".*-([0-9]*)">(.*)</a>@\2\t\1@p' |
                 launcher "Select a season: " "1"
         )
-
-        if [ -z "$season_line" ]; then
+        rc=$?
+        if [ "$rc" -eq 10 ]; then
             STATE="MEDIA"
             return 0
+        elif [ "$rc" -ne 0 ] && [ "$rc" -ne 11 ]; then
+            exit 0
         fi
+
+        [ -z "$season_line" ] && exit 1
 
         season_title=$(printf '%s' "$season_line" | cut -f1)
         season_id=$(printf '%s' "$season_line" | cut -f2)
-
         STATE="EPISODE"
-        return 0
     }
     choose_episode() {
-        if [ -z "$season_id" ]; then
-            choose_season || return 1
-        fi
-
         ep_line=$(
             curl -s "https://${base}/ajax/v2/season/episodes/${season_id}" |
                 $sed ':a;N;$!ba;s/\n//g;s/class="nav-item"/\n/g' |
@@ -337,10 +377,13 @@ EOF
                 $hxunent |
                 launcher "Select an episode: " "1"
         )
+        rc=$?
 
-        if [ -z "$ep_line" ]; then
+        if [ "$rc" -eq 10 ]; then
             STATE="SEASON"
             return 0
+        elif [ "$rc" -ne 0 ] && [ "$rc" -ne 11 ]; then
+            exit 0
         fi
 
         episode_title=$(printf '%s' "$ep_line" | cut -f1)
@@ -355,7 +398,6 @@ EOF
 
         keep_running="true"
         STATE="PLAY"
-        return 0
     }
     next_episode_exists() {
         episodes_list=$(curl -s "https://${base}/ajax/v2/season/episodes/${season_id}" | $sed ':a;N;$!ba;s/\n//g;s/class="nav-item"/\n/g' |
@@ -397,26 +439,58 @@ EOF
             fi
             UB_PID="$(cat "$UB_PID_FILE")"
             LOBSTER_UEBERZUG_SOCKET="$ueberzugpp_tmp_dir/ueberzugpp-$UB_PID.socket"
-            choice=$(find "$images_cache_dir" -type f -exec basename {} \; | fzf -i -q "$1" --cycle --preview-window="$preview_window_size" --preview="ueberzugpp cmd -s $LOBSTER_UEBERZUG_SOCKET -i fzfpreview -a add -x $ueberzug_x -y $ueberzug_y --max-width $ueberzug_max_width --max-height $ueberzug_max_height -f $images_cache_dir/{}" --reverse --with-nth 2 -d "  ")
+            choice=$(find "$images_cache_dir" -type f -exec basename {} \; | fzf --bind "shift-right:accept" --expect=shift-left -i -q "$1" --cycle --preview-window="$preview_window_size" --preview="ueberzugpp cmd -s $LOBSTER_UEBERZUG_SOCKET -i fzfpreview -a add -x $ueberzug_x -y $ueberzug_y --max-width $ueberzug_max_width --max-height $ueberzug_max_height -f $images_cache_dir/{}" --reverse --with-nth 2 -d "  ")
+            rc=$?
+
+            case $choice in
+                shift-left"$nl"*)
+                    rc=10
+                    choice=${choice#*"$nl"}
+                    ;;
+                "$nl"*) choice=${choice#"$nl"} ;;
+                *) exit 1 ;;
+            esac
             ueberzugpp cmd -s "$LOBSTER_UEBERZUG_SOCKET" -a exit
         else
             dep_ch "chafa" || true
-            choice=$(find "$images_cache_dir" -type f -exec basename {} \; | fzf -i -q "$1" --cycle --preview-window="$preview_window_size" --preview="chafa -f sixels -s $chafa_dims $images_cache_dir/{}" --reverse --with-nth 2 -d "  ")
+            choice=$(find "$images_cache_dir" -type f -exec basename {} \; | fzf --bind "shift-right:accept" --expect=shift-left -i -q "$1" --cycle --preview-window="$preview_window_size" --preview="chafa -f sixels -s $chafa_dims $images_cache_dir/{}" --reverse --with-nth 2 -d "  ")
+            rc=$?
+
+            case $choice in
+                shift-left"$nl"*)
+                    rc=10
+                    choice=${choice#*"$nl"}
+                    ;;
+                "$nl"*) choice=${choice#"$nl"} ;;
+                *) exit 1 ;;
+            esac
         fi
+        return "$rc"
     }
     select_desktop_entry() {
         if [ "$use_external_menu" = "true" ]; then
-            [ -n "$image_config_path" ] && choice=$(rofi -show drun -drun-categories lobster -filter "$1" -show-icons -theme "$image_config_path" | $sed -nE "s@.*/([0-9]*)\.desktop@\1@p") 2>/dev/null || choice=$(rofi -show drun -drun-categories lobster -filter "$1" -show-icons | $sed -nE "s@.*/([0-9]*)\.desktop@\1@p") 2>/dev/null
+            if [ -n "$image_config_path" ]; then
+                rofi_out=$(rofi -show drun -drun-categories lobster -filter "$1" -show-icons -theme "$image_config_path")
+            else
+                rofi_out=$(rofi -show drun -drun-categories lobster -filter "$1" -show-icons)
+            fi
+            rc=$?
+            choice=$(echo "$rofi_out" | $sed -nE "s@.*/([0-9]*)\.desktop@\1@p") 2>/dev/null
+
+            [ -z "$choice" ] && exit 0
+
             media_id=$(printf "%s" "$choice" | cut -d\  -f1)
             title=$(printf "%s" "$choice" | $sed -nE "s@[0-9]* (.*) \((tv|movie)\)@\1@p")
             media_type=$(printf "%s" "$choice" | $sed -nE "s@[0-9]* (.*) \((tv|movie)\)@\2@p")
         else
             image_preview_fzf "$1"
+            rc=$?
             tput reset
             media_id=$(printf "%s" "$choice" | $sed -nE "s@.* ([0-9]*)\.jpg@\1@p")
             title=$(printf "%s" "$choice" | $sed -nE "s@[[:space:]]* (.*) \[.*\] \((tv|movie)\)  [0-9]*\.jpg@\1@p")
             media_type=$(printf "%s" "$choice" | $sed -nE "s@[[:space:]]* (.*) \[.*\] \((tv|movie)\)  [0-9]*\.jpg@\2@p")
         fi
+        return "$rc"
     }
 
     ### Scraping/Decryption ###
@@ -796,7 +870,6 @@ EOF
                     title=""
                     data_id=""
                     resume_from=""
-                    STATE=""
                     main
                     ;;
                 *) keep_running="false" && exit ;;
