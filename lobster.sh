@@ -283,7 +283,10 @@ EOF
         # rofi return exit code 1 when user submits custom text, so check >1 for exit
         [ "$rc" -gt 1 ] && exit 0
         [ -n "$query" ] && query=$(echo "$query" | tr ' ' '-')
-        [ -z "$query" ] && send_notification "Error" "1000" "" "No query provided" && exit 1
+        if [ -z "$query" ]; then
+            send_notification "Error" "1000" "" "No query provided"
+            exit 1
+        fi
     }
     search() {
         response=$(curl -s "https://${base}/search/$1" | $sed ':a;N;$!ba;s/\n//g;s/class="flw-item"/\n/g' |
