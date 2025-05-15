@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 
-LOBSTER_VERSION="4.3.9"
+LOBSTER_VERSION="4.3.10"
 
 ### General Variables ###
 config_file="$HOME/.config/lobster/lobster_config.sh"
@@ -230,8 +230,8 @@ EOF
                 rc=$?
                 ;;
             *)
-                [ -z "$2" ] && fzf_out=$(fzf --bind "shift-right:accept" --expect=shift-left --reverse --prompt "$1")
-                [ -n "$2" ] && fzf_out=$(fzf --bind "shift-right:accept" --expect=shift-left --reverse --prompt "$1" --with-nth "$2" -d "\t")
+                [ -z "$2" ] && fzf_out=$(fzf --bind "shift-right:accept" --expect=shift-left --cycle --reverse --prompt "$1")
+                [ -n "$2" ] && fzf_out=$(fzf --bind "shift-right:accept" --expect=shift-left --cycle --reverse --prompt "$1" --with-nth "$2" -d "\t")
                 rc=$?
                 # Uses fzf expect to look for back button press
                 case $fzf_out in
@@ -315,7 +315,7 @@ EOF
                 choice=$(printf "%s" "$response" | rofi -kb-mode-next "" -kb-mode-previous "" -kb-custom-1 Shift+Left -kb-custom-2 Shift+Right -dmenu -i -p "" -mesg "Choose a Movie or TV Show" -display-columns 4)
                 rc=$?
             else
-                choice=$(printf "%s" "$response" | fzf --bind "shift-right:accept" --expect=shift-left --reverse --with-nth 4 -d "\t" --header "Choose a Movie or TV Show")
+                choice=$(printf "%s" "$response" | fzf --bind "shift-right:accept" --expect=shift-left --cycle --reverse --with-nth 4 -d "\t" --header "Choose a Movie or TV Show")
                 rc=$?
                 # Check for back-button
                 case $choice in
@@ -442,7 +442,7 @@ EOF
             fi
             UB_PID="$(cat "$UB_PID_FILE")"
             LOBSTER_UEBERZUG_SOCKET="$ueberzugpp_tmp_dir/ueberzugpp-$UB_PID.socket"
-            choice=$(find "$images_cache_dir" -type f -exec basename {} \; | fzf --bind "shift-right:accept" --expect=shift-left -i -q "$1" --cycle --preview-window="$preview_window_size" --preview="ueberzugpp cmd -s $LOBSTER_UEBERZUG_SOCKET -i fzfpreview -a add -x $ueberzug_x -y $ueberzug_y --max-width $ueberzug_max_width --max-height $ueberzug_max_height -f $images_cache_dir/{}" --reverse --with-nth 2 -d "  ")
+            choice=$(find "$images_cache_dir" -type f -exec basename {} \; | fzf --bind "shift-right:accept" --expect=shift-left --cycle -i -q "$1" --cycle --preview-window="$preview_window_size" --preview="ueberzugpp cmd -s $LOBSTER_UEBERZUG_SOCKET -i fzfpreview -a add -x $ueberzug_x -y $ueberzug_y --max-width $ueberzug_max_width --max-height $ueberzug_max_height -f $images_cache_dir/{}" --reverse --with-nth 2 -d "  ")
             rc=$?
 
             case $choice in
@@ -456,7 +456,7 @@ EOF
             ueberzugpp cmd -s "$LOBSTER_UEBERZUG_SOCKET" -a exit
         else
             dep_ch "chafa" || true
-            choice=$(find "$images_cache_dir" -type f -exec basename {} \; | fzf --bind "shift-right:accept" --expect=shift-left -i -q "$1" --cycle --preview-window="$preview_window_size" --preview="chafa -f sixels -s $chafa_dims $images_cache_dir/{}" --reverse --with-nth 2 -d "  ")
+            choice=$(find "$images_cache_dir" -type f -exec basename {} \; | fzf --bind "shift-right:accept" --expect=shift-left --cycle -i -q "$1" --cycle --preview-window="$preview_window_size" --preview="chafa -f sixels -s $chafa_dims $images_cache_dir/{}" --reverse --with-nth 2 -d "  ")
             rc=$?
 
             case $choice in
