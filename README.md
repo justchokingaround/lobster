@@ -39,6 +39,7 @@ https://github.com/justchokingaround/lobster/assets/44473782/d597335c-42a9-4e45-
   - [`-u` / `-U` / `--update`](#u---u----update-argument)
   - [`-v` / `-V` / `--version`](#v---v----version-argument)
   - [`-x` / `--debug`](#-x----debug-argument)
+  - [Navigation](#navigation)
 - [Configuration](#configuration)
 - [Contributing](#contributing)
 - [Uninstall](#uninstall)
@@ -568,6 +569,9 @@ also saving it to a log file: `/tmp/lobter.log`
 Note: fzf prints the finder to stderr, so this will also be redirected to
 stdout, and by extension printed to the terminal and saved to the log file.
 
+### Navigation
+- Shift+Left: Go to previous menu
+- Shift+Right / Enter: Confirm
 ## Configuration
 
 Please refer to the
