@@ -11,8 +11,13 @@ lobster_logfile="${TMPDIR:-/tmp}/lobster.log"
 applications="$HOME/.local/share/applications/lobster" # Used for external menus (for now just rofi)
 images_cache_dir="$tmp_dir/lobster-images"             # Used for storing downloaded images of movie covers
 STATE=""                                               # Used for main state machine
+
+# Constants
 nl='
 ' # Literal newline for use in pattern matching
+# These are not arbitrary, but determined by rofi kb-custom-1 and kb-custom-2 exit codes
+BACK_CODE=10
+FORWARD_CODE=11
 
 ### Notifications ###
 command -v notify-send >/dev/null 2>&1 && notify="true" || notify="false" # check if notify-send is installed
@@ -236,7 +241,7 @@ EOF
                 # Uses fzf expect to look for back button press
                 case $fzf_out in
                     shift-left"$nl"*)
-                        rc=10
+                        rc="$BACK_CODE"
                         fzf_out=${fzf_out#*"$nl"}
                         ;;
                     "$nl"*) fzf_out=${fzf_out#"$nl"} ;;
@@ -265,7 +270,7 @@ EOF
             continue_choice=$(printf "Exit\nSearch" | launcher "Select: ")
         fi
         rc=$?
-        [ "$rc" -eq 10 ] && exit 0
+        [ "$rc" -eq "$BACK_CODE" ] && exit 0
     }
 
     ### Searching/Selecting ###
@@ -320,7 +325,7 @@ EOF
                 # Check for back-button
                 case $choice in
                     shift-left"$nl"*)
-                        rc=10
+                        rc="$BACK_CODE"
                         choice=${choice#*"$nl"}
                         ;;
                     "$nl"*) choice=${choice#"$nl"} ;;
@@ -334,14 +339,14 @@ EOF
         fi
 
         # Check if back button pressed
-        if [ "$rc" -eq 10 ]; then
+        if [ "$rc" -eq "$BACK_CODE" ]; then
             STATE="SEARCH"
             response=""
             query=""
             choice=""
             return 0
-        # Don't exit on rc=11, it means rofi kb-custom-2 was pressed
-        elif [ "$rc" -ne 0 ] && [ "$rc" -ne 11 ]; then
+        # Don't exit on rc="$FORWARD_CODE", it means rofi kb-custom-2 was pressed
+        elif [ "$rc" -ne 0 ] && [ "$rc" -ne "$FORWARD_CODE" ]; then
             exit 0
         fi
 
@@ -359,10 +364,10 @@ EOF
                 launcher "Select a season: " "1"
         )
         rc=$?
-        if [ "$rc" -eq 10 ]; then
+        if [ "$rc" -eq "$BACK_CODE" ]; then
             STATE="MEDIA"
             return 0
-        elif [ "$rc" -ne 0 ] && [ "$rc" -ne 11 ]; then
+        elif [ "$rc" -ne 0 ] && [ "$rc" -ne "$FORWARD_CODE" ]; then
             exit 0
         fi
 
@@ -382,10 +387,10 @@ EOF
         )
         rc=$?
 
-        if [ "$rc" -eq 10 ]; then
+        if [ "$rc" -eq "$BACK_CODE" ]; then
             STATE="SEASON"
             return 0
-        elif [ "$rc" -ne 0 ] && [ "$rc" -ne 11 ]; then
+        elif [ "$rc" -ne 0 ] && [ "$rc" -ne "$FORWARD_CODE" ]; then
             exit 0
         fi
 
@@ -447,7 +452,7 @@ EOF
 
             case $choice in
                 shift-left"$nl"*)
-                    rc=10
+                    rc="$BACK_CODE"
                     choice=${choice#*"$nl"}
                     ;;
                 "$nl"*) choice=${choice#"$nl"} ;;
@@ -461,7 +466,7 @@ EOF
 
             case $choice in
                 shift-left"$nl"*)
-                    rc=10
+                    rc="$BACK_CODE"
                     choice=${choice#*"$nl"}
                     ;;
                 "$nl"*) choice=${choice#"$nl"} ;;
