@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 
-LOBSTER_VERSION="4.4.1"
+LOBSTER_VERSION="4.4.2"
 
 ### General Variables ###
 config_file="$HOME/.config/lobster/lobster_config.sh"
@@ -312,7 +312,7 @@ EOF
                 command -v "ueberzugpp" >/dev/null || send_notification "Please install ueberzugpp if you want to use it for image previews"
                 use_ueberzugpp="false"
             fi
-            download_thumbnails "$response"
+            maybe_download_thumbnails "$response"
             select_desktop_entry ""
             rc=$?
         else
@@ -422,6 +422,26 @@ EOF
     }
 
     ### Image Preview ###
+    maybe_download_thumbnails() {
+        # Only downloads thumbnails again if every thumbnail is not already in images_cache_dir
+        need_dl=0
+        # keep the while-loop in the current shell
+        while IFS='	' read -r cover_url id type title; do
+            [ -z "$cover_url" ] && continue # skip empty lines
+            poster="$images_cache_dir/  $title ($type)  $id.jpg"
+            if [ ! -f "$poster" ]; then
+                need_dl=1
+                break # one miss is enough
+            fi
+        done <<EOF
+$1
+EOF
+
+        if [ "$need_dl" -eq 1 ]; then
+            rm -f "$images_cache_dir"/* 2>/dev/null
+            download_thumbnails "$1"
+        fi
+    }
     download_thumbnails() {
         echo "$1" >"$tmp_dir/image_links" # used for the discord rich presence thumbnail
         pids=""
@@ -657,7 +677,7 @@ EOF
                 done <"$histfile"
             )
 
-            download_thumbnails "$history_response"
+            maybe_download_thumbnails "$history_response"
             select_desktop_entry ""
             if [ "$media_type" = "tv" ]; then
                 line=$(grep -m1 -F "$media_id" "$histfile")
