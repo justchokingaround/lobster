@@ -312,7 +312,7 @@ EOF
                 command -v "ueberzugpp" >/dev/null || send_notification "Please install ueberzugpp if you want to use it for image previews"
                 use_ueberzugpp="false"
             fi
-            download_thumbnails "$response" "3"
+            download_thumbnails "$response"
             select_desktop_entry ""
             rc=$?
         else
@@ -424,17 +424,32 @@ EOF
     ### Image Preview ###
     download_thumbnails() {
         echo "$1" >"$tmp_dir/image_links" # used for the discord rich presence thumbnail
-        printf "%s\n" "$1" | while read -r cover_url id type title; do
-            cover_url=$(printf "%s" "$cover_url" | sed -E 's/\/[[:digit:]]+x[[:digit:]]+\//\/1000x1000\//')
+        pids=""
+
+        # run the while-loop in the current shell
+        while IFS='	' read -r cover_url id type title; do
+            [ -z "$cover_url" ] && continue
+            cover_url=$(printf '%s\n' "$cover_url" |
+                sed -E 's:/[0-9]+x[0-9]+/:/1000x1000/:')
+
             curl -s -o "$images_cache_dir/  $title ($type)  $id.jpg" "$cover_url" &
+            pids="$pids $!"
+
             if [ "$use_external_menu" = "true" ]; then
                 entry="$tmp_dir/applications/$id.desktop"
                 # The reason for the spaces is so that only the title can be displayed when using rofi
                 # or fzf, while still keeping the id and type in the string after it's selected
                 generate_desktop "$title ($type)" "$images_cache_dir/  $title ($type)  $id.jpg" >"$entry" &
+                pids="$pids $!"
             fi
+        done <<EOF
+$1
+EOF
+
+        # wait for every background job to finish before returning
+        for pid in $pids; do
+            wait "$pid" 2>/dev/null
         done
-        sleep "$2"
     }
     # defaults to chafa
     image_preview_fzf() {
@@ -642,7 +657,7 @@ EOF
                 done <"$histfile"
             )
 
-            download_thumbnails "$history_response" "3"
+            download_thumbnails "$history_response"
             select_desktop_entry ""
             if [ "$media_type" = "tv" ]; then
                 line=$(grep -m1 -F "$media_id" "$histfile")
