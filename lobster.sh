@@ -574,6 +574,7 @@ EOF
         esac
     }
     save_history() {
+        [ -z "$image_link" ] && image_link="$(grep "$media_id" "$tmp_dir/image_links" | cut -f1)"
         case $media_type in
             movie)
                 if [ "$progress" -gt "90" ]; then
