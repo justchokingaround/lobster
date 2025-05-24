@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 
-LOBSTER_VERSION="4.4.0"
+LOBSTER_VERSION="4.4.1"
 
 ### General Variables ###
 config_file="$HOME/.config/lobster/lobster_config.sh"
@@ -593,24 +593,27 @@ EOF
                 if [ "$progress" -gt "90" ]; then
                     next_episode_exists
                     if [ -n "$next_episode" ]; then
+                        position="00:00:00"
                         episode_title=$(printf "%s" "$next_episode" | cut -f1)
                         data_id=$(printf "%s" "$next_episode" | cut -f2)
                         episode_id=$(curl -s "https://${base}/ajax/v2/episode/servers/${data_id}" | $sed ':a;N;$!ba;s/\n//g;s/class="nav-item"/\n/g' |
                             $sed -nE "s@.*data-id=\"([0-9]*)\".*title=\"([^\"]*)\".*@\1\t\2@p" | grep "$provider" | cut -f1)
-                        $sed -i "/$media_id\t/ s|\t[0-9:]*\t[0-9]*\ttv\t[0-9]*\t[0-9]*.*\t.*\t[0-9]*|\t00:00:00\t$media_id\ttv\t$season_id\t$episode_id\t$season_title\t$episode_title\t$data_id\t|" "$histfile"
                         send_notification "Updated to next episode" "5000" "" "$episode_title"
                     else
-                        $sed -i "/$episode_id/d" "$histfile"
+                        $sed -i "/$media_id/d" "$histfile"
                         send_notification "Completed" "5000" "" "$title"
+                        return
                     fi
                 else
-                    if grep -q -- "$media_id" "$histfile" 2>/dev/null; then
-                        $sed -i "/$media_id/d" "$histfile"
-                        send_notification "Deleted from history" "5000" "" "$title"
-                    fi
+                    send_notification "Saved to history" "5000" "$images_cache_dir/  $title ($media_type)  $media_id.jpg" "$title"
+                fi
+
+                # If entry exists in hist file then update it, otherwise append new line
+                if grep -q -- "$media_id" "$histfile" 2>/dev/null; then
+                    $sed -i "s|^.*\t$media_id\t.*$|$title\t$position\t$media_id\t$media_type\t$season_id\t$episode_id\t$season_title\t$episode_title\t$data_id\t$image_link|" "$histfile"
+                else
                     printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n" "$title" "$position" "$media_id" "$media_type" \
                         "$season_id" "$episode_id" "$season_title" "$episode_title" "$data_id" "$image_link" >>"$histfile"
-                    send_notification "Saved to history" "5000" "$images_cache_dir/  $title ($media_type)  $media_id.jpg" "$title"
                 fi
                 ;;
             *) notify-send "Error" "Unknown media type" ;;
