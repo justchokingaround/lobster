@@ -172,7 +172,7 @@ configuration() {
     [ -z "$use_external_menu" ] && use_external_menu="false"
     [ -z "$image_preview" ] && image_preview="false"
     [ -z "$debug" ] && debug="false"
-    [ -z "$preview_window_size" ] && preview_window_size=up:60%:wrap
+    [ -z "$preview_window_size" ] && preview_window_size=right:60%:wrap
     if [ -z "$use_ueberzugpp" ]; then
         use_ueberzugpp="false"
     elif [ "$use_ueberzugpp" = "true" ]; then
@@ -494,9 +494,9 @@ EOF
             image_preview_fzf "$1"
             rc=$?
             tput reset
-            media_id=$(printf "%s" "$choice" | $sed -nE "s@.* ([0-9]*)\.jpg@\1@p")
-            title=$(printf "%s" "$choice" | $sed -nE "s@[[:space:]]* (.*) \[.*\] \((tv|movie)\)  [0-9]*\.jpg@\1@p")
-            media_type=$(printf "%s" "$choice" | $sed -nE "s@[[:space:]]* (.*) \[.*\] \((tv|movie)\)  [0-9]*\.jpg@\2@p")
+            media_id=$(printf "%s" "$choice" | $sed -nE 's@.* ([0-9]+)\.jpg@\1@p')
+            title=$(printf "%s" "$choice" | $sed -nE 's@^[[:space:]]*(.*) \((tv|movie)\)  [0-9]+\.jpg@\1@p')
+            media_type=$(printf "%s" "$choice" | $sed -nE 's@^[[:space:]]*(.*) \((tv|movie)\)  [0-9]+\.jpg@\2@p')
         fi
         return "$rc"
     }
@@ -620,25 +620,56 @@ EOF
             *) notify-send "Error" "Unknown media type" ;;
         esac
     }
-    # TODO: Add image_preview support
     play_from_history() {
         [ ! -f "$histfile" ] && send_notification "No history file found" "5000" "" && exit 1
         [ "$watched_history" = 1 ] && exit 0
         watched_history=1
-        choice=$($sed -n "1h;1!{x;H;};\${g;p;}" "$histfile" | nl -w 1 | nth "Choose an entry: ")
-        [ -z "$choice" ] && exit 1
-        media_type=$(printf "%s" "$choice" | cut -f4)
-        title=$(printf "%s" "$choice" | cut -f1)
-        resume_from=$(printf "%s" "$choice" | cut -f2)
-        media_id=$(printf "%s" "$choice" | cut -f3)
-        if [ "$media_type" = "tv" ]; then
-            season_id=$(printf "%s" "$choice" | cut -f5)
-            episode_id=$(printf "%s" "$choice" | cut -f6)
-            season_title=$(printf "%s" "$choice" | cut -f7)
-            episode_title=$(printf "%s" "$choice" | cut -f8)
-            data_id=$(printf "%s" "$choice" | cut -f9)
-            image_link=$(printf "%s" "$choice" | cut -f10)
+
+        if [ "$image_preview" = "true" ]; then
+            test -d "$images_cache_dir" || mkdir -p "$images_cache_dir"
+            if [ "$use_external_menu" = "true" ]; then
+                mkdir -p "$tmp_dir/applications/"
+                [ ! -L "$applications" ] && ln -sf "$tmp_dir/applications/" "$applications"
+            fi
+            history_response=$(
+                while IFS= read -r line; do
+                    # 1=title, 2=position, 3=media_id, 4=media_type, …, 10=image_link
+                    cover_url=$(printf '%s' "$line" | cut -f10)
+                    id=$(printf '%s' "$line" | cut -f3)
+                    type=$(printf '%s' "$line" | cut -f4)
+                    title=$(printf '%s' "$line" | cut -f1)
+                    printf '%s\t%s\t%s\t%s\n' "$cover_url" "$id" "$type" "$title"
+                done <"$histfile"
+            )
+
+            download_thumbnails "$history_response" "3"
+            select_desktop_entry ""
+            if [ "$media_type" = "tv" ]; then
+                line=$(grep -m1 -F "$media_id" "$histfile")
+                season_id=$(printf "%s" "$line" | cut -f5)
+                episode_id=$(printf "%s" "$line" | cut -f6)
+                season_title=$(printf "%s" "$line" | cut -f7)
+                episode_title=$(printf "%s" "$line" | cut -f8)
+                data_id=$(printf "%s" "$line" | cut -f9)
+                image_link=$(printf "%s" "$line" | cut -f10)
+            fi
+        else
+            choice=$($sed -n "1h;1!{x;H;};\${g;p;}" "$histfile" | nl -w 1 | nth "Choose an entry: ")
+            [ -z "$choice" ] && exit 1
+            media_type=$(printf "%s" "$choice" | cut -f4)
+            title=$(printf "%s" "$choice" | cut -f1)
+            resume_from=$(printf "%s" "$choice" | cut -f2)
+            media_id=$(printf "%s" "$choice" | cut -f3)
+            if [ "$media_type" = "tv" ]; then
+                season_id=$(printf "%s" "$choice" | cut -f5)
+                episode_id=$(printf "%s" "$choice" | cut -f6)
+                season_title=$(printf "%s" "$choice" | cut -f7)
+                episode_title=$(printf "%s" "$choice" | cut -f8)
+                data_id=$(printf "%s" "$choice" | cut -f9)
+                image_link=$(printf "%s" "$choice" | cut -f10)
+            fi
         fi
+
         STATE="PLAY" && keep_running="true" && loop
     }
 
