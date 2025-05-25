@@ -181,7 +181,6 @@ configuration() {
         [ -z "$ueberzug_max_width" ] && ueberzug_max_width=$(($(tput lines) / 2))
         [ -z "$ueberzug_max_height" ] && ueberzug_max_height=$(($(tput lines) / 2))
     fi
-    [ -z "$chafa_dims" ] && chafa_dims=30x40
     [ -z "$remove_tmp_lobster" ] && remove_tmp_lobster="true"
     [ -z "$json_output" ] && json_output="false"
     [ -z "$discord_presence" ] && discord_presence="false"
@@ -496,7 +495,14 @@ EOF
             ueberzugpp cmd -s "$LOBSTER_UEBERZUG_SOCKET" -a exit
         else
             dep_ch "chafa" || true
-            choice=$(find "$images_cache_dir" -type f -exec basename {} \; | fzf --bind "shift-right:accept" --expect=shift-left --cycle -i -q "$1" --cycle --preview-window="$preview_window_size" --preview="chafa -f sixels -s $chafa_dims $images_cache_dir/{}" --reverse --with-nth 2 -d "  ")
+            # shellcheck disable=SC2154
+            [ "$TERM_PROGRAM" = "vscode" ] && fmt="-f sixels --margin-bottom 8" || fmt=""
+            [ -n "$chafa_dims" ] && dim="-s $chafa_dims"
+            choice=$(find "$images_cache_dir" -type f -exec basename {} \; | fzf \
+                --bind "shift-right:accept" --expect=shift-left --cycle -i -q "$1" \
+                --preview-window="$preview_window_size" \
+                --preview="chafa $fmt $dim $images_cache_dir/{}" \
+                --reverse --with-nth 2 -d "  ")
             rc=$?
 
             case $choice in
