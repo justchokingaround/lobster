@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 
-LOBSTER_VERSION="4.4.0"
+LOBSTER_VERSION="4.4.2"
 
 ### General Variables ###
 config_file="$HOME/.config/lobster/lobster_config.sh"
@@ -172,7 +172,7 @@ configuration() {
     [ -z "$use_external_menu" ] && use_external_menu="false"
     [ -z "$image_preview" ] && image_preview="false"
     [ -z "$debug" ] && debug="false"
-    [ -z "$preview_window_size" ] && preview_window_size=up:60%:wrap
+    [ -z "$preview_window_size" ] && preview_window_size=right:60%:wrap
     if [ -z "$use_ueberzugpp" ]; then
         use_ueberzugpp="false"
     elif [ "$use_ueberzugpp" = "true" ]; then
@@ -181,7 +181,6 @@ configuration() {
         [ -z "$ueberzug_max_width" ] && ueberzug_max_width=$(($(tput lines) / 2))
         [ -z "$ueberzug_max_height" ] && ueberzug_max_height=$(($(tput lines) / 2))
     fi
-    [ -z "$chafa_dims" ] && chafa_dims=30x40
     [ -z "$remove_tmp_lobster" ] && remove_tmp_lobster="true"
     [ -z "$json_output" ] && json_output="false"
     [ -z "$discord_presence" ] && discord_presence="false"
@@ -312,7 +311,7 @@ EOF
                 command -v "ueberzugpp" >/dev/null || send_notification "Please install ueberzugpp if you want to use it for image previews"
                 use_ueberzugpp="false"
             fi
-            download_thumbnails "$response" "3"
+            maybe_download_thumbnails "$response"
             select_desktop_entry ""
             rc=$?
         else
@@ -422,19 +421,54 @@ EOF
     }
 
     ### Image Preview ###
+    maybe_download_thumbnails() {
+        # Only downloads thumbnails again if every thumbnail is not already in images_cache_dir
+        need_dl=0
+        # keep the while-loop in the current shell
+        while IFS='	' read -r cover_url id type title; do
+            [ -z "$cover_url" ] && continue # skip empty lines
+            poster="$images_cache_dir/  $title ($type)  $id.jpg"
+            if [ ! -f "$poster" ]; then
+                need_dl=1
+                break # one miss is enough
+            fi
+        done <<EOF
+$1
+EOF
+
+        if [ "$need_dl" -eq 1 ]; then
+            rm -f "$images_cache_dir"/* 2>/dev/null
+            download_thumbnails "$1"
+        fi
+    }
     download_thumbnails() {
         echo "$1" >"$tmp_dir/image_links" # used for the discord rich presence thumbnail
-        printf "%s\n" "$1" | while read -r cover_url id type title; do
-            cover_url=$(printf "%s" "$cover_url" | sed -E 's/\/[[:digit:]]+x[[:digit:]]+\//\/1000x1000\//')
+        pids=""
+
+        # run the while-loop in the current shell
+        while IFS='	' read -r cover_url id type title; do
+            [ -z "$cover_url" ] && continue
+            cover_url=$(printf '%s\n' "$cover_url" |
+                sed -E 's:/[0-9]+x[0-9]+/:/1000x1000/:')
+
             curl -s -o "$images_cache_dir/  $title ($type)  $id.jpg" "$cover_url" &
+            pids="$pids $!"
+
             if [ "$use_external_menu" = "true" ]; then
                 entry="$tmp_dir/applications/$id.desktop"
                 # The reason for the spaces is so that only the title can be displayed when using rofi
                 # or fzf, while still keeping the id and type in the string after it's selected
                 generate_desktop "$title ($type)" "$images_cache_dir/  $title ($type)  $id.jpg" >"$entry" &
+                pids="$pids $!"
             fi
+        done <<EOF
+$1
+EOF
+
+        # wait for every background job to finish before returning
+        for pid in $pids; do
+            wait "$pid" 2>/dev/null
         done
-        sleep "$2"
     }
     # defaults to chafa
     image_preview_fzf() {
@@ -461,7 +495,14 @@ EOF
             ueberzugpp cmd -s "$LOBSTER_UEBERZUG_SOCKET" -a exit
         else
             dep_ch "chafa" || true
-            choice=$(find "$images_cache_dir" -type f -exec basename {} \; | fzf --bind "shift-right:accept" --expect=shift-left --cycle -i -q "$1" --cycle --preview-window="$preview_window_size" --preview="chafa -f sixels -s $chafa_dims $images_cache_dir/{}" --reverse --with-nth 2 -d "  ")
+            # shellcheck disable=SC2154
+            [ "$TERM_PROGRAM" = "vscode" ] && fmt="-f sixels --margin-bottom 8" || fmt=""
+            [ -n "$chafa_dims" ] && dim="-s $chafa_dims"
+            choice=$(find "$images_cache_dir" -type f -exec basename {} \; | fzf \
+                --bind "shift-right:accept" --expect=shift-left --cycle -i -q "$1" \
+                --preview-window="$preview_window_size" \
+                --preview="chafa $fmt $dim $images_cache_dir/{}" \
+                --reverse --with-nth 2 -d "  ")
             rc=$?
 
             case $choice in
@@ -494,9 +535,9 @@ EOF
             image_preview_fzf "$1"
             rc=$?
             tput reset
-            media_id=$(printf "%s" "$choice" | $sed -nE "s@.* ([0-9]*)\.jpg@\1@p")
-            title=$(printf "%s" "$choice" | $sed -nE "s@[[:space:]]* (.*) \[.*\] \((tv|movie)\)  [0-9]*\.jpg@\1@p")
-            media_type=$(printf "%s" "$choice" | $sed -nE "s@[[:space:]]* (.*) \[.*\] \((tv|movie)\)  [0-9]*\.jpg@\2@p")
+            media_id=$(printf "%s" "$choice" | $sed -nE 's@.* ([0-9]+)\.jpg@\1@p')
+            title=$(printf "%s" "$choice" | $sed -nE 's@^[[:space:]]*(.*) \((tv|movie)\)  [0-9]+\.jpg@\1@p')
+            media_type=$(printf "%s" "$choice" | $sed -nE 's@^[[:space:]]*(.*) \((tv|movie)\)  [0-9]+\.jpg@\2@p')
         fi
         return "$rc"
     }
@@ -574,6 +615,7 @@ EOF
         esac
     }
     save_history() {
+        [ -z "$image_link" ] && image_link="$(grep "$media_id" "$tmp_dir/image_links" | cut -f1)"
         case $media_type in
             movie)
                 if [ "$progress" -gt "90" ]; then
@@ -593,48 +635,82 @@ EOF
                 if [ "$progress" -gt "90" ]; then
                     next_episode_exists
                     if [ -n "$next_episode" ]; then
+                        position="00:00:00"
                         episode_title=$(printf "%s" "$next_episode" | cut -f1)
                         data_id=$(printf "%s" "$next_episode" | cut -f2)
                         episode_id=$(curl -s "https://${base}/ajax/v2/episode/servers/${data_id}" | $sed ':a;N;$!ba;s/\n//g;s/class="nav-item"/\n/g' |
                             $sed -nE "s@.*data-id=\"([0-9]*)\".*title=\"([^\"]*)\".*@\1\t\2@p" | grep "$provider" | cut -f1)
-                        $sed -i "s|\t[0-9:]*\t[0-9]*\ttv\t[0-9]*\t[0-9]*.*\t.*\t[0-9]*|\t00:00:00\t$media_id\ttv\t$season_id\t$episode_id\t$season_title\t$episode_title\t$data_id|1" "$histfile"
                         send_notification "Updated to next episode" "5000" "" "$episode_title"
                     else
-                        $sed -i "/$episode_id/d" "$histfile"
+                        $sed -i "/$media_id/d" "$histfile"
                         send_notification "Completed" "5000" "" "$title"
+                        return
                     fi
                 else
-                    if grep -q -- "$media_id" "$histfile" 2>/dev/null; then
-                        $sed -i "/$media_id/d" "$histfile"
-                        send_notification "Deleted from history" "5000" "" "$title"
-                    fi
+                    send_notification "Saved to history" "5000" "$images_cache_dir/  $title ($media_type)  $media_id.jpg" "$title"
+                fi
+
+                # If entry exists in hist file then update it, otherwise append new line
+                if grep -q -- "$media_id" "$histfile" 2>/dev/null; then
+                    $sed -i "s|^.*\t$media_id\t.*$|$title\t$position\t$media_id\t$media_type\t$season_id\t$episode_id\t$season_title\t$episode_title\t$data_id\t$image_link|" "$histfile"
+                else
                     printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n" "$title" "$position" "$media_id" "$media_type" \
                         "$season_id" "$episode_id" "$season_title" "$episode_title" "$data_id" "$image_link" >>"$histfile"
-                    send_notification "Saved to history" "5000" "$images_cache_dir/  $title ($media_type)  $media_id.jpg" "$title"
                 fi
                 ;;
             *) notify-send "Error" "Unknown media type" ;;
         esac
     }
-    # TODO: Add image_preview support
     play_from_history() {
         [ ! -f "$histfile" ] && send_notification "No history file found" "5000" "" && exit 1
         [ "$watched_history" = 1 ] && exit 0
         watched_history=1
-        choice=$($sed -n "1h;1!{x;H;};\${g;p;}" "$histfile" | nl -w 1 | nth "Choose an entry: ")
-        [ -z "$choice" ] && exit 1
-        media_type=$(printf "%s" "$choice" | cut -f4)
-        title=$(printf "%s" "$choice" | cut -f1)
-        resume_from=$(printf "%s" "$choice" | cut -f2)
-        media_id=$(printf "%s" "$choice" | cut -f3)
-        if [ "$media_type" = "tv" ]; then
-            season_id=$(printf "%s" "$choice" | cut -f5)
-            episode_id=$(printf "%s" "$choice" | cut -f6)
-            season_title=$(printf "%s" "$choice" | cut -f7)
-            episode_title=$(printf "%s" "$choice" | cut -f8)
-            data_id=$(printf "%s" "$choice" | cut -f9)
-            image_link=$(printf "%s" "$choice" | cut -f10)
+
+        if [ "$image_preview" = "true" ]; then
+            test -d "$images_cache_dir" || mkdir -p "$images_cache_dir"
+            if [ "$use_external_menu" = "true" ]; then
+                mkdir -p "$tmp_dir/applications/"
+                [ ! -L "$applications" ] && ln -sf "$tmp_dir/applications/" "$applications"
+            fi
+            history_response=$(
+                while IFS= read -r line; do
+                    # 1=title, 2=position, 3=media_id, 4=media_type, …, 10=image_link
+                    cover_url=$(printf '%s' "$line" | cut -f10)
+                    id=$(printf '%s' "$line" | cut -f3)
+                    type=$(printf '%s' "$line" | cut -f4)
+                    title=$(printf '%s' "$line" | cut -f1)
+                    printf '%s\t%s\t%s\t%s\n' "$cover_url" "$id" "$type" "$title"
+                done <"$histfile"
+            )
+
+            maybe_download_thumbnails "$history_response"
+            select_desktop_entry ""
+            if [ "$media_type" = "tv" ]; then
+                line=$(grep -m1 -F "$media_id" "$histfile")
+                season_id=$(printf "%s" "$line" | cut -f5)
+                episode_id=$(printf "%s" "$line" | cut -f6)
+                season_title=$(printf "%s" "$line" | cut -f7)
+                episode_title=$(printf "%s" "$line" | cut -f8)
+                data_id=$(printf "%s" "$line" | cut -f9)
+                image_link=$(printf "%s" "$line" | cut -f10)
+            fi
+        else
+            choice=$($sed -n "1h;1!{x;H;};\${g;p;}" "$histfile" | nl -w 1 | nth "Choose an entry: ")
+            [ -z "$choice" ] && exit 1
+            media_type=$(printf "%s" "$choice" | cut -f4)
+            title=$(printf "%s" "$choice" | cut -f1)
+            resume_from=$(printf "%s" "$choice" | cut -f2)
+            media_id=$(printf "%s" "$choice" | cut -f3)
+            if [ "$media_type" = "tv" ]; then
+                season_id=$(printf "%s" "$choice" | cut -f5)
+                episode_id=$(printf "%s" "$choice" | cut -f6)
+                season_title=$(printf "%s" "$choice" | cut -f7)
+                episode_title=$(printf "%s" "$choice" | cut -f8)
+                data_id=$(printf "%s" "$choice" | cut -f9)
+                image_link=$(printf "%s" "$choice" | cut -f10)
+            fi
         fi
+
         STATE="PLAY" && keep_running="true" && loop
     }
 
