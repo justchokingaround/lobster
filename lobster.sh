@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 
-LOBSTER_VERSION="4.4.0"
+LOBSTER_VERSION="4.4.1"
 
 ### General Variables ###
 config_file="$HOME/.config/lobster/lobster_config.sh"
@@ -727,18 +727,28 @@ EOF
                     player_cmd="$player_cmd --input-ipc-server='$lobster_socket'"
                 fi
 
+                # Start mpv in the background
                 # Use eval to properly handle spaces in the command
                 eval "$player_cmd" >&3 &
 
-                if [ -z "$quality" ]; then
-                    link=$(printf "%s" "$video_link" | $sed "s/\/playlist.m3u8/\/1080\/index.m3u8/g")
-                else
-                    link=$video_link
-                fi
+                # Wait for the IPC socket to appear
+                for _ in $(seq 20); do
+                    [ -S "$lobster_socket" ] && lsof -U "$lobster_socket" >/dev/null && break
+                    sleep 0.25
+                done
 
-                content=$(curl -s "$link")
-                durations=$(printf "%s" "$content" | grep -oE 'EXTINF:[0-9.]+,' | cut -d':' -f2 | tr -d ',')
-                total_duration=$(printf "%s" "$durations" | xargs echo | awk '{for(i=1;i<=NF;i++)sum+=$i} END {print sum}' | cut -d'.' -f1)
+                # Poll for total_duration before save_progress
+                total_duration=0
+                for _ in $(seq 20); do
+                    raw=$(printf '%s\n' '{ "command": ["get_property", "duration"] }' |
+                        nc -U "$lobster_socket" 2>/dev/null |
+                        sed -nE 's/.*"data":([^,}]+).*/\1/p')
+                    if [ -n "$raw" ] && [ "$raw" != "null" ]; then
+                        total_duration=${raw%%.*}
+                        break
+                    fi
+                    sleep 0.25
+                done
 
                 [ "$discord_presence" = "true" ] && update_discord_presence
                 wait
