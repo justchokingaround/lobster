@@ -424,14 +424,13 @@ EOF
     maybe_download_thumbnails() {
         # Only downloads thumbnails again if every thumbnail is not already in images_cache_dir
         need_dl=0
+        tab="$(printf '\t')"
+
         # keep the while-loop in the current shell
-        while IFS='	' read -r cover_url id type title; do
+        while IFS="$tab" read -r title id type cover_url; do
             [ -z "$cover_url" ] && continue # skip empty lines
             poster="$images_cache_dir/  $title ($type)  $id.jpg"
-            if [ ! -f "$poster" ]; then
-                need_dl=1
-                break # one miss is enough
-            fi
+            [ ! -f "$poster" ] && need_dl=1 && break # one miss is enough
         done <<EOF
 $1
 EOF
@@ -442,30 +441,33 @@ EOF
         fi
     }
     download_thumbnails() {
-        echo "$1" >"$tmp_dir/image_links" # used for the discord rich presence thumbnail
         pids=""
 
         # run the while-loop in the current shell
-        while IFS='	' read -r cover_url id type title; do
-            [ -z "$cover_url" ] && continue
+        while IFS='	' read -r title id type cover_url; do
+            [ -z "$cover_url" ] && continue                    # skip empty lines
+            printf '%s\n' "$cover_url" >"$tmp_dir/image_links" # For Discord rich presence
+
+            # Sets res to 1000x1000
             cover_url=$(printf '%s\n' "$cover_url" |
                 sed -E 's:/[0-9]+x[0-9]+/:/1000x1000/:')
 
-            curl -s -o "$images_cache_dir/  $title ($type)  $id.jpg" "$cover_url" &
+            poster_path="$images_cache_dir/  $title ($type)  $id.jpg"
+            curl -s -o "$poster_path" "$cover_url" &
             pids="$pids $!"
 
             if [ "$use_external_menu" = "true" ]; then
                 entry="$tmp_dir/applications/$id.desktop"
                 # The reason for the spaces is so that only the title can be displayed when using rofi
                 # or fzf, while still keeping the id and type in the string after it's selected
-                generate_desktop "$title ($type)" "$images_cache_dir/  $title ($type)  $id.jpg" >"$entry" &
+                generate_desktop "$title ($type)  $id" "$poster_path" >"$entry" &
                 pids="$pids $!"
             fi
         done <<EOF
 $1
 EOF
 
-        # wait for every background job to finish before returning
+        # Wait for background jobs to finish
         for pid in $pids; do
             wait "$pid" 2>/dev/null
         done
@@ -673,14 +675,15 @@ EOF
                 [ ! -L "$applications" ] && ln -sf "$tmp_dir/applications/" "$applications"
             fi
             history_response=$(
-                while IFS= read -r line; do
-                    # 1=title, 2=position, 3=media_id, 4=media_type, …, 10=image_link
-                    cover_url=$(printf '%s' "$line" | cut -f10)
-                    id=$(printf '%s' "$line" | cut -f3)
-                    type=$(printf '%s' "$line" | cut -f4)
-                    title=$(printf '%s' "$line" | cut -f1)
-                    printf '%s\t%s\t%s\t%s\n' "$cover_url" "$id" "$type" "$title"
-                done <"$histfile"
+                awk -F'\t' '
+                {
+                    title = $1
+                    id    = $3
+                    type  = $4
+                    cover = (type == "tv") ? $10 : $5
+                    print title "\t" id "\t" type "\t" cover
+                }
+                ' "$histfile"
             )
 
             maybe_download_thumbnails "$history_response"
@@ -697,10 +700,10 @@ EOF
         else
             choice=$($sed -n "1h;1!{x;H;};\${g;p;}" "$histfile" | nl -w 1 | nth "Choose an entry: ")
             [ -z "$choice" ] && exit 1
-            media_type=$(printf "%s" "$choice" | cut -f4)
             title=$(printf "%s" "$choice" | cut -f1)
             resume_from=$(printf "%s" "$choice" | cut -f2)
             media_id=$(printf "%s" "$choice" | cut -f3)
+            media_type=$(printf "%s" "$choice" | cut -f4)
             if [ "$media_type" = "tv" ]; then
                 season_id=$(printf "%s" "$choice" | cut -f5)
                 episode_id=$(printf "%s" "$choice" | cut -f6)
