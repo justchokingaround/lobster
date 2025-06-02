@@ -427,7 +427,7 @@ EOF
         tab="$(printf '\t')"
 
         # keep the while-loop in the current shell
-        while IFS="$tab" read -r title id type cover_url; do
+        while IFS="$tab" read -r cover_url id type title; do
             [ -z "$cover_url" ] && continue # skip empty lines
             poster="$images_cache_dir/  $title ($type)  $id.jpg"
             [ ! -f "$poster" ] && need_dl=1 && break # one miss is enough
@@ -444,7 +444,7 @@ EOF
         pids=""
 
         # run the while-loop in the current shell
-        while IFS='	' read -r title id type cover_url; do
+        while IFS='	' read -r cover_url id type title; do
             [ -z "$cover_url" ] && continue                    # skip empty lines
             printf '%s\n' "$cover_url" >"$tmp_dir/image_links" # For Discord rich presence
 
@@ -680,8 +680,8 @@ EOF
                     title = $1
                     id    = $3
                     type  = $4
-                    cover = (type == "tv") ? $10 : $5
-                    print title "\t" id "\t" type "\t" cover
+                    cover_url = (type == "tv") ? $10 : $5
+                    print cover_url "\t" id "\t" type "\t" title  
                 }
                 ' "$histfile"
             )
