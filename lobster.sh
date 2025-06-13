@@ -1,4 +1,4 @@
-/!/usr/bin/env sh
+#!/usr/bin/env sh
 
 LOBSTER_VERSION="4.4.3"
 
@@ -559,7 +559,7 @@ EOF
             exit 1
         fi
     }
-    
+
     extract_from_json() {
         encrypted_video_link=$(printf "%s" "$json_data" | tr "{|}" "\n" | $sed -nE "s_.*\"sources\":\"([^\"]*)\".*_\1_p" | head -1)
         key=$(curl -s "https://superbillgalaxy.github.io/megacloud-keys/api.json" | $sed -n 's/.*"rabbitstream": *"\([^"]*\)".*/\1/p')
