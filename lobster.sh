@@ -1,6 +1,6 @@
-#!/usr/bin/env sh
+/!/usr/bin/env sh
 
-LOBSTER_VERSION="4.4.2"
+LOBSTER_VERSION="4.4.3"
 
 ### General Variables ###
 config_file="$HOME/.config/lobster/lobster_config.sh"
@@ -559,8 +559,12 @@ EOF
             exit 1
         fi
     }
+    
     extract_from_json() {
-        video_link=$(printf "%s" "$json_data" | tr '[' '\n' | $sed -nE 's@.*\"file\":\"(.*\.m3u8).*@\1@p' | head -1)
+        encrypted_video_link=$(printf "%s" "$json_data" | tr "{|}" "\n" | $sed -nE "s_.*\"sources\":\"([^\"]*)\".*_\1_p" | head -1)
+        key=$(curl -s "https://superbillgalaxy.github.io/megacloud-keys/api.json" | $sed -n 's/.*"rabbitstream": *"\([^"]*\)".*/\1/p')
+        video_link=$(printf "%s" "$encrypted_video_link" | base64 -d | openssl enc -aes-256-cbc -d -md md5 -k "$key" 2>/dev/null | $sed -nE "s_.*\"file\":\"([^\"]*)\".*_\1_p")
+
         [ -n "$quality" ] && video_link=$(printf "%s" "$video_link" | $sed -e "s|/playlist.m3u8|/$quality/index.m3u8|")
 
         [ "$json_output" = "true" ] && printf "%s\n" "$json_data" && exit 0
@@ -573,17 +577,14 @@ EOF
         fi
         [ -z "$subs_links" ] && send_notification "No subtitles found"
     }
-    json_from_id() {
-        json_data=$(curl -s "https://decryptapi.broggl.farm/embed?embed_url=${embed_link}&referrer=https://${base}")
-    }
+
     get_json() {
-        json_from_id
-        if [ -n "$json_data" ]; then
-            extract_from_json
-        else
-            send_notification "Error" "Could not get json data"
-            exit 1
-        fi
+        # get the juicy links
+        parse_embed=$(printf "%s" "$embed_link" | $sed -nE "s_(.*)/embed-(1|2)/(.*)\?z=\$_\1\t\2\t\3_p")
+        provider_link=$(printf "%s" "$parse_embed" | cut -f1)
+        source_id=$(printf "%s" "$parse_embed" | cut -f3 | sed -E "s|.*/||")
+        json_data=$(curl -s "${provider_link}/embed-1/v2/e-1/getSources?id=${source_id}" -H "X-Requested-With: XMLHttpRequest")
+        [ -n "$json_data" ] && extract_from_json
     }
 
     ### History ###
