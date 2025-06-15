@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 
-LOBSTER_VERSION="4.5.0"
+LOBSTER_VERSION="4.5.1"
 
 ### General Variables ###
 config_file="$HOME/.config/lobster/lobster_config.sh"
@@ -562,7 +562,7 @@ EOF
 
     extract_from_json() {
         encrypted_video_link=$(printf "%s" "$json_data" | tr "{|}" "\n" | $sed -nE "s_.*\"sources\":\"([^\"]*)\".*_\1_p" | head -1)
-        key=$(curl -s "https://superbillgalaxy.github.io/megacloud-keys/api.json" | $sed -n 's/.*"rabbitstream": *"\([^"]*\)".*/\1/p')
+        key=$(curl -s "https://raw.githubusercontent.com/eatmynerds/key/refs/heads/e1/key.txt")
         video_link=$(printf "%s" "$encrypted_video_link" | base64 -d | openssl enc -aes-256-cbc -d -md md5 -k "$key" 2>/dev/null | $sed -nE "s_.*\"file\":\"([^\"]*)\".*_\1_p")
 
         [ -n "$quality" ] && video_link=$(printf "%s" "$video_link" | $sed -e "s|/playlist.m3u8|/$quality/index.m3u8|")
