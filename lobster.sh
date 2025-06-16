@@ -565,11 +565,11 @@ EOF
         key=$(curl -s "https://raw.githubusercontent.com/eatmynerds/key/refs/heads/e1/key.txt")
         if [ -n "$encrypted_video_link" ]; then
            video_link=`printf "%s" "$encrypted_video_link" | base64 -d | openssl enc -aes-256-cbc -d -md md5 -k "$key" 2>/dev/null | sed -nE 's_.*"file":"\([^"]*\)".*_\1_p'`
-       fi
+        fi
 
-       if [ -z "$video_link" ]; then
+        if [ -z "$video_link" ]; then
            video_link=`printf "%s" "$json_data" | sed -n 's_.*"file":"\([^"]*\.m3u8\)".*_\1_p' | head -n 1`
-       fi
+        fi
 
         [ -n "$quality" ] && video_link=$(printf "%s" "$video_link" | $sed -e "s|/playlist.m3u8|/$quality/index.m3u8|")
 
