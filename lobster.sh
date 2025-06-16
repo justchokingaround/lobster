@@ -564,11 +564,11 @@ EOF
         encrypted_video_link=$(printf "%s" "$json_data" | tr "{|}" "\n" | $sed -nE "s_.*\"sources\":\"([^\"]*)\".*_\1_p" | head -1)
         key=$(curl -s "https://raw.githubusercontent.com/eatmynerds/key/refs/heads/e1/key.txt")
         if [ -n "$encrypted_video_link" ]; then
-           video_link=$(printf "%s" "$encrypted_video_link" | base64 -d | openssl enc -aes-256-cbc -d -md md5 -k "$key" 2>/dev/null | $sed -nE "s_.*\"file\":\"([^\"]*)\".*_\1_p")
+            video_link=$(printf "%s" "$encrypted_video_link" | base64 -d | openssl enc -aes-256-cbc -d -md md5 -k "$key" 2>/dev/null | $sed -nE "s_.*\"file\":\"([^\"]*)\".*_\1_p")
         fi
 
         if [ -z "$video_link" ]; then
-           video_link=$(printf "%s" "$json_data" | $sed -nE "s_.*\"file\":\"([^\"]*\.m3u8)\".*_\1_p" | head -1)
+            video_link=$(printf "%s" "$json_data" | $sed -nE "s_.*\"file\":\"([^\"]*\.m3u8)\".*_\1_p" | head -1)
         fi
 
         [ -n "$quality" ] && video_link=$(printf "%s" "$video_link" | $sed -e "s|/playlist.m3u8|/$quality/index.m3u8|")
