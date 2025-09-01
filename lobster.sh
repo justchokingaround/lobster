@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 
-LOBSTER_VERSION="4.5.2"
+LOBSTER_VERSION="4.5.3"
 
 ### General Variables ###
 config_file="$HOME/.config/lobster/lobster_config.sh"
@@ -560,16 +560,9 @@ EOF
         fi
     }
 
-    extract_from_json() {
-        encrypted_video_link=$(printf "%s" "$json_data" | tr "{|}" "\n" | $sed -nE "s_.*\"sources\":\"([^\"]*)\".*_\1_p" | head -1)
-        key=$(curl -s "https://raw.githubusercontent.com/eatmynerds/key/refs/heads/e1/key.txt")
-        if [ -n "$encrypted_video_link" ]; then
-            video_link=$(printf "%s" "$encrypted_video_link" | base64 -d | openssl enc -aes-256-cbc -d -md md5 -k "$key" 2>/dev/null | $sed -nE "s_.*\"file\":\"([^\"]*)\".*_\1_p")
-        fi
-
-        if [ -z "$video_link" ]; then
-            video_link=$(printf "%s" "$json_data" | $sed -nE "s_.*\"file\":\"([^\"]*\.m3u8)\".*_\1_p" | head -1)
-        fi
+    extract_from_embed() {
+        json_data=$(curl -s "https://dec.eatmynerds.live/?url=${embed_link}")
+        video_link=$(printf "%s" "$json_data" | $sed -nE "s_.*\"file\":\"([^\"]*\.m3u8)\".*_\1_p" | head -1)
 
         [ -n "$quality" ] && video_link=$(printf "%s" "$video_link" | $sed -e "s|/playlist.m3u8|/$quality/index.m3u8|")
 
@@ -582,15 +575,6 @@ EOF
             subs_arg="--sub-files"
         fi
         [ -z "$subs_links" ] && send_notification "No subtitles found"
-    }
-
-    get_json() {
-        # get the juicy links
-        parse_embed=$(printf "%s" "$embed_link" | $sed -nE "s_(.*)/embed-(1|2)/(.*)\?z=\$_\1\t\2\t\3_p")
-        provider_link=$(printf "%s" "$parse_embed" | cut -f1)
-        source_id=$(printf "%s" "$parse_embed" | cut -f3 | sed -E "s|.*/||")
-        json_data=$(curl -s "${provider_link}/embed-1/v2/e-1/getSources?id=${source_id}" -H "X-Requested-With: XMLHttpRequest")
-        [ -n "$json_data" ] && extract_from_json
     }
 
     ### History ###
@@ -899,7 +883,7 @@ EOF
         while [ "$keep_running" = "true" ]; do
             get_embed
             [ -z "$embed_link" ] && exit 1
-            get_json
+            extract_from_embed
             [ -z "$video_link" ] && exit 1
             if [ "$download" = "true" ]; then
                 if [ "$media_type" = "movie" ]; then
