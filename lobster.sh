@@ -854,23 +854,32 @@ EOF
         ffmpeg_subs_links=$(printf "%s" "$subs_links" | sed 's/:\([^\/]\)/\nh/g; s/\\:/:/g' | while read -r sub_link; do
             printf " -i %s" "$sub_link"
         done)
-        sub_ops="$ffmpeg_subs_links -map 0:v -map 0:a"
-        if [ "$num_subs" -eq 0 ]; then
-            sub_ops=" -i $subs_links -map 0:v -map 0:a -map 1"
-            ffmpeg_meta="-metadata:s:s:0 language=$language"
+
+        sub_ops=""
+        ffmpeg_meta=""
+        ffmpeg_maps=""
+
+        if [ "$no_subs" = "true" ]; then
+            # no subtitles
+            sub_ops=""
         else
-            i=1
-            for i in $(seq 1 "$num_subs"); do
-                ffmpeg_maps="$ffmpeg_maps -map $i"
-                ffmpeg_meta="$ffmpeg_meta -metadata:s:s:$((i - 1)) language=$(printf "%s_%s" "$language" "$i")"
-                i=$((i + 1))
-            done
+            sub_ops="$ffmpeg_subs_links -map 0:v -map 0:a"
+            if [ "$num_subs" -eq 0 ]; then
+                sub_ops=" -i $subs_links -map 0:v -map 0:a -map 1"
+                ffmpeg_meta="-metadata:s:s:0 language=$language"
+            else
+                for i in $(seq 1 "$num_subs"); do
+                    ffmpeg_maps="$ffmpeg_maps -map $i"
+                    ffmpeg_meta="$ffmpeg_meta -metadata:s:s:$((i - 1)) language=$(printf "%s_%s" "$language" "$i")"
+                done
+            fi
+            sub_ops="$sub_ops $ffmpeg_maps -c:v copy -c:a copy -c:s srt $ffmpeg_meta"
         fi
 
-        sub_ops="$sub_ops $ffmpeg_maps -c:v copy -c:a copy -c:s srt $ffmpeg_meta"
         # shellcheck disable=SC2086
         ffmpeg -loglevel error -stats -i "$1" $sub_ops -c copy "$dir.mkv"
     }
+
     choose_from_trending_or_recent() {
         path=$1
         section=$2
