@@ -516,7 +516,7 @@ lobster the godfather -q
 ```
 
 ### `-n` / `--no-subs` `<quality>` argument
-By passing this argument, you can specify if you want to use subtitles. 
+By passing this argument, you can specify if you want to use subtitles.
 This will disable subtitles whenever you're downloading aswell.
 
 Example use case:
