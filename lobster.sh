@@ -1091,7 +1091,8 @@ EOF
                 shift
                 ;;
             -n | --no-subs)
-                no_subs="true" && shift ;;
+                no_subs="true" && shift
+                ;;
             *)
                 if [ "${1#-}" != "$1" ]; then
                     query="$query $1"
