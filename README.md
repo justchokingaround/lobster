@@ -33,7 +33,7 @@ https://github.com/justchokingaround/lobster/assets/44473782/d597335c-42a9-4e45-
   - [`-p` / `--provider`](#-p----provider-provider-argument)
   - [`-q` / `--quality`](#-q----quality-quality-argument)
   - [`--quiet`](#--quiet-argument)
-  - [`-n` / `--no-subs`](-n----no-subs-argument)
+  - [`-n` / `--no-subs`](#-n----no-subs-argument)
   - [`-r` / `--recent`](#r----recent-tvmovie-argument)
   - [`-s` / `--syncplay`](#-s----syncplay-argument)
   - [`-t` / `--trending`](#-t----trending-argument)
