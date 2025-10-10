@@ -32,12 +32,12 @@ https://github.com/justchokingaround/lobster/assets/44473782/d597335c-42a9-4e45-
   - [`--rofi` / `--external-menu`](#--rofi----external-menu-argument)
   - [`-p` / `--provider`](#-p----provider-provider-argument)
   - [`-q` / `--quality`](#-q----quality-quality-argument)
-  - [`--quiet`](#--quiet-argument)
-  - [`-r` / `--recent`](#r----recent-tvmovie-argument)
+  - [`-n` / `--no-subs`](#-n----no-subs-quality-argument)
+  - [`-r` / `--recent`](#-r----recent-tvmovie-argument)
   - [`-s` / `--syncplay`](#-s----syncplay-argument)
   - [`-t` / `--trending`](#-t----trending-argument)
-  - [`-u` / `-U` / `--update`](#u---u----update-argument)
-  - [`-v` / `-V` / `--version`](#v---v----version-argument)
+  - [`-u` / `-U` / `--update`](#-u---u----update-argument)
+  - [`-v` / `-V` / `--version`](#-v---v----version-argument)
   - [`-x` / `--debug`](#-x----debug-argument)
   - [Navigation](#navigation)
 - [Configuration](#configuration)
@@ -512,6 +512,15 @@ This is also valid, but will use `1080` instead:
 
 ```sh
 lobster the godfather -q
+```
+
+### `-n` / `--no-subs` `<quality>` argument
+By passing this argument, you can specify if you want to use subtitles.
+This will disable subtitles whenever you're downloading aswell.
+
+Example use case:
+```sh
+lobster -n
 ```
 
 ### `-r` / `--recent` `<tv|movie>` argument

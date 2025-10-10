@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 
-LOBSTER_VERSION="4.5.3"
+LOBSTER_VERSION="4.5.4"
 
 ### General Variables ###
 config_file="$HOME/.config/lobster/lobster_config.sh"
@@ -113,6 +113,8 @@ usage() {
       Specify the subtitle language (if no language is provided, it defaults to english)
     --rofi, --external-menu
       Use rofi instead of fzf
+    -n, --no-subs
+      Disable subtitles
     -p, --provider
       Specify the provider to watch from (if no provider is provided, it defaults to Vidcloud) (currently supported: Vidcloud, UpCloud)
     -q, --quality
@@ -444,7 +446,7 @@ EOF
         pids=""
 
         # run the while-loop in the current shell
-        while IFS='	' read -r cover_url id type title; do
+        while IFS='     ' read -r cover_url id type title; do
             [ -z "$cover_url" ] && continue                    # skip empty lines
             printf '%s\n' "$cover_url" >"$tmp_dir/image_links" # For Discord rich presence
 
@@ -567,14 +569,18 @@ EOF
         [ -n "$quality" ] && video_link=$(printf "%s" "$video_link" | $sed -e "s|/playlist.m3u8|/$quality/index.m3u8|")
 
         [ "$json_output" = "true" ] && printf "%s\n" "$json_data" && exit 0
-        subs_links=$(printf "%s" "$json_data" | tr "{}" "\n" | $sed -nE "s@.*\"file\":\"([^\"]*)\",\"label\":\"(.$subs_language)[,\"\ ].*@\1@p")
-        subs_arg="--sub-file"
-        num_subs=$(printf "%s" "$subs_links" | wc -l)
-        if [ "$num_subs" -gt 0 ]; then
-            subs_links=$(printf "%s" "$subs_links" | $sed -e "s/:/\\$path_thing:/g" -e "H;1h;\$!d;x;y/\n/$separator/" -e "s/$separator\$//")
-            subs_arg="--sub-files"
+        if [ "$no_subs" = "true" ]; then
+            send_notification "Continuing without subtitles"
+        else
+            subs_links=$(printf "%s" "$json_data" | tr "{}" "\n" | $sed -nE "s@.*\"file\":\"([^\"]*)\",\"label\":\"(.$subs_language)[,\"\ ].*@\1@p")
+            subs_arg="--sub-file"
+            num_subs=$(printf "%s" "$subs_links" | wc -l)
+            if [ "$num_subs" -gt 0 ]; then
+                subs_links=$(printf "%s" "$subs_links" | $sed -e "s/:/\\$path_thing:/g" -e "H;1h;\$!d;x;y/\n/$separator/" -e "s/$separator\$//")
+                subs_arg="--sub-files"
+            fi
+            [ -z "$subs_links" ] && send_notification "No subtitles found"
         fi
-        [ -z "$subs_links" ] && send_notification "No subtitles found"
     }
 
     ### History ###
@@ -672,7 +678,7 @@ EOF
                     id    = $3
                     type  = $4
                     cover_url = (type == "tv") ? $10 : $5
-                    print cover_url "\t" id "\t" type "\t" title  
+                    print cover_url "\t" id "\t" type "\t" title
                 }
                 ' "$histfile"
             )
@@ -852,23 +858,32 @@ EOF
         ffmpeg_subs_links=$(printf "%s" "$subs_links" | sed 's/:\([^\/]\)/\nh/g; s/\\:/:/g' | while read -r sub_link; do
             printf " -i %s" "$sub_link"
         done)
-        sub_ops="$ffmpeg_subs_links -map 0:v -map 0:a"
-        if [ "$num_subs" -eq 0 ]; then
-            sub_ops=" -i $subs_links -map 0:v -map 0:a -map 1"
-            ffmpeg_meta="-metadata:s:s:0 language=$language"
+
+        sub_ops=""
+        ffmpeg_meta=""
+        ffmpeg_maps=""
+
+        if [ "$no_subs" = "true" ]; then
+            # no subtitles
+            sub_ops=""
         else
-            i=1
-            for i in $(seq 1 "$num_subs"); do
-                ffmpeg_maps="$ffmpeg_maps -map $i"
-                ffmpeg_meta="$ffmpeg_meta -metadata:s:s:$((i - 1)) language=$(printf "%s_%s" "$language" "$i")"
-                i=$((i + 1))
-            done
+            sub_ops="$ffmpeg_subs_links -map 0:v -map 0:a"
+            if [ "$num_subs" -eq 0 ]; then
+                sub_ops=" -i $subs_links -map 0:v -map 0:a -map 1"
+                ffmpeg_meta="-metadata:s:s:0 language=$language"
+            else
+                for i in $(seq 1 "$num_subs"); do
+                    ffmpeg_maps="$ffmpeg_maps -map $i"
+                    ffmpeg_meta="$ffmpeg_meta -metadata:s:s:$((i - 1)) language=$(printf "%s_%s" "$language" "$i")"
+                done
+            fi
+            sub_ops="$sub_ops $ffmpeg_maps -c:v copy -c:a copy -c:s srt $ffmpeg_meta"
         fi
 
-        sub_ops="$sub_ops $ffmpeg_maps -c:v copy -c:a copy -c:s srt $ffmpeg_meta"
         # shellcheck disable=SC2086
         ffmpeg -loglevel error -stats -i "$1" $sub_ops -c copy "$dir.mkv"
     }
+
     choose_from_trending_or_recent() {
         path=$1
         section=$2
@@ -1089,6 +1104,9 @@ EOF
                 set -x
                 debug="true"
                 shift
+                ;;
+            -n | --no-subs)
+                no_subs="true" && shift
                 ;;
             *)
                 if [ "${1#-}" != "$1" ]; then
