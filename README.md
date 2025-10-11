@@ -168,7 +168,7 @@ apk update; apk add grep sed curl fzf patch
 <summary> Install lobster: </summary>
 
 ```sh
-curl -O "https://raw.githubusercontent.com/justchokingaround/lobster/main/lobster.sh
+curl -O "https://raw.githubusercontent.com/justchokingaround/lobster/main/lobster.sh"
 chmod +x lobster.sh
 mv lobster.sh /usr/local/bin/lobster
 ```
