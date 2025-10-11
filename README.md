@@ -159,6 +159,8 @@ chmod +x "$(brew --prefix)"/bin/lobster
 ```
 
 #### iOS
+Install iSH and VLC from the app store.
+
 <summary> Install dependencies: </summary>
 
 ```sh
