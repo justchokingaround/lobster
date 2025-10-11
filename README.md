@@ -19,6 +19,7 @@ https://github.com/justchokingaround/lobster/assets/44473782/d597335c-42a9-4e45-
   - [Android](#android-requires-termux-and-mpv-android)
   - [NixOS](#nixos-flake)
   - [Mac](#mac)
+  - [iOS](#ios)
   - [Windows](#windows)
 - [Usage](#usage)
   - [`-c` / `--continue`](#-c----continue-argument)
@@ -155,6 +156,21 @@ nix flake update
 ```sh
 curl -sL github.com/justchokingaround/lobster/raw/main/lobster.sh -o "$(brew --prefix)"/bin/lobster &&
 chmod +x "$(brew --prefix)"/bin/lobster
+```
+
+#### iOS
+<summary> Install dependencies: </summary>
+
+```sh
+apk update; apk add grep sed curl fzf patch
+```
+
+<summary> Install lobster: </summary>
+
+```sh
+curl -O "https://raw.githubusercontent.com/justchokingaround/lobster/main/lobster.sh
+chmod +x lobster.sh
+mv lobster.sh /usr/local/bin/lobster
 ```
 
 #### Windows
