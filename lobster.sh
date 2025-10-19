@@ -1,4 +1,4 @@
-#!/usr/bin/env sh
+﻿#!/usr/bin/env sh
 
 LOBSTER_VERSION="4.5.5"
 
@@ -310,8 +310,10 @@ EOF
     choose_media() {
         if [ "$image_preview" = "true" ]; then
             if [ "$use_external_menu" = "false" ] && [ "$use_ueberzugpp" = "true" ]; then
-                command -v "ueberzugpp" >/dev/null || send_notification "Please install ueberzugpp if you want to use it for image previews"
-                use_ueberzugpp="false"
+                if ! command -v ueberzugpp >/dev/null 2>&1; then
+                    send_notification "Please install ueberzugpp if you want to use it for image previews"
+                    use_ueberzugpp="false"
+                fi
             fi
             maybe_download_thumbnails "$response"
             select_desktop_entry ""
@@ -424,6 +426,7 @@ EOF
 
     ### Image Preview ###
     maybe_download_thumbnails() {
+        test -d "$images_cache_dir" || mkdir -p "$images_cache_dir"
         # Only downloads thumbnails again if every thumbnail is not already in images_cache_dir
         need_dl=0
         tab="$(printf '\t')"
@@ -446,7 +449,9 @@ EOF
         pids=""
 
         # run the while-loop in the current shell
-        while IFS='     ' read -r cover_url id type title; do
+        tab="$(printf '\t')"
+        test -d "$images_cache_dir" || mkdir -p "$images_cache_dir"
+        while IFS="$tab" read -r cover_url id type title; do
             [ -z "$cover_url" ] && continue                    # skip empty lines
             printf '%s\n' "$cover_url" >"$tmp_dir/image_links" # For Discord rich presence
 
@@ -477,6 +482,7 @@ EOF
     # defaults to chafa
     image_preview_fzf() {
         if [ "$use_ueberzugpp" = "true" ]; then
+            [ "$debug" = "true" ] && send_notification "Using ueberzugpp preview"
             UB_PID_FILE="$tmp_dir.$(uuidgen)"
             if [ -z "$ueberzug_output" ]; then
                 ueberzugpp layer --no-stdin --silent --use-escape-codes --pid-file "$UB_PID_FILE"
@@ -498,15 +504,20 @@ EOF
             esac
             ueberzugpp cmd -s "$LOBSTER_UEBERZUG_SOCKET" -a exit
         else
-            dep_ch "chafa" || true
-            # shellcheck disable=SC2154
-            [ "$TERM_PROGRAM" = "vscode" ] && fmt="-f sixels --margin-bottom 8" || fmt=""
-            [ -n "$chafa_dims" ] && dim="-s $chafa_dims"
-            choice=$(find "$images_cache_dir" -type f -exec basename {} \; | fzf \
-                --bind "shift-right:accept" --expect=shift-left --cycle -i -q "$1" \
-                --preview-window="$preview_window_size" \
-                --preview="chafa $fmt $dim $images_cache_dir/{}" \
-                --reverse --with-nth 2 -d "  ")
+            if command -v chafa >/dev/null 2>&1; then
+                [ "$debug" = "true" ] && send_notification "Using chafa preview"
+                # shellcheck disable=SC2154
+                [ "$TERM_PROGRAM" = "vscode" ] && fmt="-f sixels --margin-bottom 8" || fmt=""
+                [ -n "$chafa_dims" ] && dim="-s $chafa_dims"
+                choice=$(find "$images_cache_dir" -type f -exec basename {} \; | fzf \
+                    --bind "shift-right:accept" --expect=shift-left --cycle -i -q "$1" \
+                    --preview-window="$preview_window_size" \
+                    --preview="chafa $fmt $dim $images_cache_dir/{}" \
+                    --reverse --with-nth 2 -d "  ")
+            else
+                [ "$debug" = "true" ] && send_notification "chafa not found; listing without previews"
+                choice=$(find "$images_cache_dir" -type f -exec basename {} \; | fzf --bind "shift-right:accept" --expect=shift-left --cycle -i -q "$1" --reverse --with-nth 2 -d "  ")
+            fi
             rc=$?
 
             case $choice in
@@ -563,7 +574,24 @@ EOF
     }
 
     extract_from_embed() {
-        json_data=$(curl -s "https://dec.eatmynerds.live/?url=${embed_link}")
+        # Prefer local decoder service if running
+        json_data=$(curl -s "http://127.0.0.1:8787/?url=${embed_link}" || true)
+        if [ -z "$json_data" ] || ! printf "%s" "$json_data" | $sed -nE 's_.*\"file\":\"([^\"]*\.m3u8)\".*_\1_p' | head -1 >/dev/null; then
+            # Remote decoder (fallback)
+            json_data=$(curl -s "https://dec.eatmynerds.live/?url=${embed_link}" || true)
+        fi
+
+        # If services return nothing or no m3u8, fall back to local decoder.js when available
+        if [ -z "$json_data" ] || ! printf "%s" "$json_data" | $sed -nE 's_.*\"file\":\"([^\"]*\.m3u8)\".*_\1_p' | head -1 >/dev/null; then
+            if command -v node >/dev/null 2>&1; then
+                if [ -f "$HOME/.config/lobster/decoder.js" ]; then
+                    json_data=$(node "$HOME/.config/lobster/decoder.js" "${embed_link}" 2>/dev/null || true)
+                elif [ -f "./decoder.js" ]; then
+                    json_data=$(node "./decoder.js" "${embed_link}" 2>/dev/null || true)
+                fi
+            fi
+        fi
+
         video_link=$(printf "%s" "$json_data" | $sed -nE "s_.*\"file\":\"([^\"]*\.m3u8)\".*_\1_p" | head -1)
 
         [ -n "$quality" ] && video_link=$(printf "%s" "$video_link" | $sed -e "s|/playlist.m3u8|/$quality/index.m3u8|")
@@ -888,13 +916,15 @@ EOF
         path=$1
         section=$2
         if [ "$path" = "home" ]; then
-            response=$(curl -s "https://${base}/${path}" | $sed -n "/id=\"${section}\"/,/class=\"block_area block_area_home section-id-02\"/p" | $sed ':a;N;$!ba;s/\n//g;s/class="flw-item"/\n/g' |
+            response=$(curl -s "https://${base}/${path}" | $sed -n '/class="block_area block_area_home section-id-01"/,/<\/section>/p' | $sed ':a;N;$!ba;s/\n//g;s/class="flw-item"/\n/g' |
                 $sed -nE "s@.*img data-src=\"([^\"]*)\".*<a href=\".*/(tv|movie)/watch-.*-([0-9]*)\".*title=\"([^\"]*)\".*class=\"fdi-item\">([^<]*)</span>.*@\1\t\3\t\2\t\4 [\5]@p" | $hxunent)
         else
             response=$(curl -s "https://${base}/${path}" | $sed ':a;N;$!ba;s/\n//g;s/class="flw-item"/\n/g' |
                 $sed -nE "s@.*img data-src=\"([^\"]*)\".*<a href=\".*/(tv|movie)/watch-.*-([0-9]*)\".*title=\"([^\"]*)\".*class=\"fdi-item\">([^<]*)</span>.*@\1\t\3\t\2\t\4 [\5]@p" | $hxunent)
         fi
         main
+
+
     }
 
     ### Main ###
