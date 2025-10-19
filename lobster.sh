@@ -117,8 +117,12 @@ usage() {
       Disable subtitles
     -p, --provider
       Specify the provider to watch from (if no provider is provided, it defaults to Vidcloud) (currently supported: Vidcloud, UpCloud)
+    --ask-provider
+      Prompt to choose streaming provider per title (overrides --provider)
     -q, --quality
       Specify the video quality (if no quality is provided, it defaults to 1080)
+    --ask-quality
+      Prompt to choose quality from the HLS master playlist when available
     -r, --recent [movies|tv]
       Lets you select from the most recent movies or tv shows (if no argument is provided, it defaults to movies)
     -s, --syncplay
@@ -167,6 +171,7 @@ configuration() {
     [ -z "$player" ] && player="mpv"
     [ -z "$download_dir" ] && download_dir="$PWD"
     [ -z "$provider" ] && provider="Vidcloud"
+    [ -z "$ask_provider" ] && ask_provider="false"
     [ -z "$subs_language" ] && subs_language="english"
     subs_language="$(printf "%s" "$subs_language" | cut -c2-)"
     [ -z "$histfile" ] && histfile="$data_dir/lobster_history.txt" && mkdir -p "$(dirname "$histfile")"
@@ -185,6 +190,7 @@ configuration() {
     fi
     [ -z "$remove_tmp_lobster" ] && remove_tmp_lobster="true"
     [ -z "$json_output" ] && json_output="false"
+    [ -z "$ask_quality" ] && ask_quality="false"
     [ -z "$discord_presence" ] && discord_presence="false"
     case "$(uname -s)" in
         MINGW* | *Msys)
@@ -400,15 +406,67 @@ EOF
         episode_title=$(printf '%s' "$ep_line" | cut -f1)
         data_id=$(printf '%s' "$ep_line" | cut -f2)
 
-        episode_id=$(
-            curl -s "https://${base}/ajax/v2/episode/servers/${data_id}" |
-                $sed ':a;N;$!ba;s/\n//g;s/class="nav-item"/\n/g' |
-                $sed -nE 's@.*data-id="([0-9]*)".*title="([^"]*)".*@\1\t\2@p' |
-                grep "$provider" | cut -f1 | head -n1
-        )
+        servers_html=$(curl -s "https://${base}/ajax/v2/episode/servers/${data_id}" | $sed ':a;N;$!ba;s/\n//g;s/class="nav-item"/\n/g')
+        if [ "$ask_provider" = "true" ]; then
+            prov_choice=$(printf "%s" "$servers_html" | $sed -nE 's@.*data-id="([0-9]*)".*title="([^"]*)".*@\2\t\1@p' | launcher "Choose provider: " "1")
+            rc=$?
+            if [ "$rc" -eq "$BACK_CODE" ]; then
+                STATE="SEASON"
+                return 0
+            elif [ "$rc" -ne 0 ] && [ "$rc" -ne "$FORWARD_CODE" ]; then
+                exit 0
+            fi
+            provider=$(printf "%s" "$prov_choice" | cut -f1)
+            episode_id=$(printf "%s" "$prov_choice" | cut -f2)
+        else
+            episode_id=$(printf "%s" "$servers_html" | $sed -nE 's@.*data-id="([0-9]*)".*title="([^"]*)".*@\1\t\2@p' | grep "$provider" | cut -f1 | head -n1)
+        fi
 
         keep_running="true"
         STATE="PLAY"
+    }
+    
+    ### Provider/Quality pickers ###
+    pick_movie_provider() {
+        page=$(curl -s "https://${base}/ajax/movie/episodes/${media_id}" | $sed ':a;N;$!ba;s/\n//g')
+        provs=$(printf "%s" "$page" | $sed -nE 's@.*href="([^"]*)"[[:space:]]*title="([^"]*)".*@\2\t\1@p')
+        [ -z "$provs" ] && return 1
+        choice=$(printf "%s" "$provs" | launcher "Choose provider: " "1") || return 1
+        provider=$(printf "%s" "$choice" | cut -f1)
+        movie_link_rel=$(printf "%s" "$choice" | cut -f2-)
+        movie_page="https://${base}${movie_link_rel}"
+        episode_id=$(printf "%s" "$movie_page" | $sed -nE 's_.*-([0-9]*)\.([0-9]*)\$_\2_p')
+        return 0
+    }
+
+    choose_quality_from_m3u8() {
+        master_url="$1"
+        content=$(curl -s "$master_url")
+        variants=$(printf "%s" "$content" | awk '
+            /#EXT-X-STREAM-INF:/ {
+                res="";
+                if (match($0, /RESOLUTION=[0-9]+x([0-9]+)/, r)) { res=r[1]; } else { res="unknown"; }
+                getline url;
+                print res "\t" url;
+            }
+        ')
+        [ -z "$variants" ] && return 1
+        choice=$(printf "%s\n" "$variants" | launcher "Choose quality (height): " "1") || return 1
+        rc=$?
+        [ "$rc" -eq "$BACK_CODE" ] && return 1
+        sel_url=$(printf "%s" "$choice" | cut -f2-)
+        case "$sel_url" in
+            http*) video_link="$sel_url" ;;
+            /*)
+                origin=$(printf "%s" "$master_url" | $sed -nE 's@^(https?://[^/]+).*@\1@p')
+                video_link="$origin$sel_url"
+                ;;
+            *)
+                base_dir="${master_url%/*}"
+                video_link="$base_dir/$sel_url"
+                ;;
+        esac
+        return 0
     }
     next_episode_exists() {
         episodes_list=$(curl -s "https://${base}/ajax/v2/season/episodes/${season_id}" | $sed ':a;N;$!ba;s/\n//g;s/class="nav-item"/\n/g' |
@@ -561,9 +619,13 @@ EOF
     get_embed() {
         if [ "$media_type" = "movie" ]; then
             # request to get the episode id
-            movie_page="https://${base}"$(curl -s "https://${base}/ajax/movie/episodes/${media_id}" |
-                $sed ':a;N;$!ba;s/\n//g;s/class="nav-item"/\n/g' | $sed -nE "s@.*href=\"([^\"]*)\"[[:space:]]*title=\"${provider}\".*@\1@p")
-            episode_id=$(printf "%s" "$movie_page" | $sed -nE "s_.*-([0-9]*)\.([0-9]*)\$_\2_p")
+            if [ "$ask_provider" = "true" ]; then
+                pick_movie_provider || true
+            else
+                movie_page="https://${base}"$(curl -s "https://${base}/ajax/movie/episodes/${media_id}" |
+                    $sed ':a;N;$!ba;s/\n//g;s/class="nav-item"/\n/g' | $sed -nE "s@.*href=\"([^\"]*)\"[[:space:]]*title=\"${provider}\".*@\1@p")
+                episode_id=$(printf "%s" "$movie_page" | $sed -nE "s_.*-([0-9]*)\.([0-9]*)\$_\2_p")
+            fi
         fi
         # request to get the embed
         embed_link=$(curl -s "https://${base}/ajax/episode/sources/${episode_id}" | $sed -nE "s_.*\"link\":\"([^\"]*)\".*_\1_p")
@@ -594,7 +656,17 @@ EOF
 
         video_link=$(printf "%s" "$json_data" | $sed -nE "s_.*\"file\":\"([^\"]*\.m3u8)\".*_\1_p" | head -1)
 
-        [ -n "$quality" ] && video_link=$(printf "%s" "$video_link" | $sed -e "s|/playlist.m3u8|/$quality/index.m3u8|")
+        if [ "$ask_quality" = "true" ]; then
+            master_link="$video_link"
+            case "$master_link" in
+                */*/index.m3u8)
+                    master_link=$(printf "%s" "$master_link" | $sed -E 's:/[0-9]+/index.m3u8:/playlist.m3u8:')
+                    ;;
+            esac
+            choose_quality_from_m3u8 "$master_link" || true
+        else
+            [ -n "$quality" ] && video_link=$(printf "%s" "$video_link" | $sed -e "s|/playlist.m3u8|/$quality/index.m3u8|")
+        fi
 
         [ "$json_output" = "true" ] && printf "%s\n" "$json_data" && exit 0
         if [ "$no_subs" = "true" ]; then
@@ -1084,6 +1156,7 @@ EOF
                 fi
                 ;;
             --rofi | --external-menu) use_external_menu="true" && shift ;;
+            --ask-provider) ask_provider="true" && shift ;;
             -p | --provider)
                 provider="$2"
                 if [ -z "$provider" ]; then
@@ -1112,6 +1185,7 @@ EOF
                     fi
                 fi
                 ;;
+            --ask-quality) ask_quality="true" && shift ;;
             -r | --recent)
                 recent="$2"
                 if [ -z "$recent" ]; then
