@@ -91,57 +91,57 @@ trap cleanup EXIT INT TERM
 ### Help Function ###
 usage() {
     printf "
-    Usage: %s [options] [query]
-    If a query is provided, it will be used to search for a Movie/TV Show
+  Usage: %s [options] [query]
+  If a query is provided, it will be used to search for a Movie/TV Show
 
-    Options:
+  Options:
     -c, --continue
-    Continue watching from current history
+      Continue watching from current history
     -d, --download [path]
-    Downloads movie or episode that is selected (if no path is provided, it defaults to the current directory)
+      Downloads movie or episode that is selected (if no path is provided, it defaults to the current directory)
     --discord, --discord-presence, --rpc, --presence
-    Enables discord rich presence (beta feature, but should work fine on Linux)
+      Enables discord rich presence (beta feature, but should work fine on Linux)
     -e, --edit
-    Edit config file using an editor defined with lobster_editor in the config (\$EDITOR by default)
+      Edit config file using an editor defined with lobster_editor in the config (\$EDITOR by default)
     -h, --help
-    Show this help message and exit
+      Show this help message and exit
     -i, --image-preview
-    Shows image previews during media selection (requires chafa, you can optionally use ueberzugpp)
+      Shows image previews during media selection (requires chafa, you can optionally use ueberzugpp)
     -j, --json
-    Outputs the json containing video links, subtitle links, referrers etc. to stdout
+      Outputs the json containing video links, subtitle links, referrers etc. to stdout
     -l, --language [language]
-    Specify the subtitle language (if no language is provided, it defaults to english)
+      Specify the subtitle language (if no language is provided, it defaults to english)
     --rofi, --external-menu
-    Use rofi instead of fzf
+      Use rofi instead of fzf
     -n, --no-subs
-    Disable subtitles
+      Disable subtitles
     -p, --provider
-    Specify the provider to watch from (if no provider is provided, it defaults to Vidcloud) (currently supported: Vidcloud, UpCloud)
+      Specify the provider to watch from (if no provider is provided, it defaults to Vidcloud) (currently supported: Vidcloud, UpCloud)
     -q, --quality
-    Specify the video quality (if no quality is provided, it defaults to 1080)
+      Specify the video quality (if no quality is provided, it defaults to 1080)
     -r, --recent [movies|tv]
-    Lets you select from the most recent movies or tv shows (if no argument is provided, it defaults to movies)
+      Lets you select from the most recent movies or tv shows (if no argument is provided, it defaults to movies)
     -s, --syncplay
-    Use Syncplay to watch with friends
+      Use Syncplay to watch with friends
     -t, --trending
-    Lets you select from the most popular movies and shows
+      Lets you select from the most popular movies and shows
     -u, -U, --update
-    Update the script
+      Update the script
     -v, -V, --version
-    Show the version of the script
+      Show the version of the script
     -x, --debug
-    Enable debug mode (prints out debug info to stdout and also saves it to \$TEMPDIR/lobster.log)
+      Enable debug mode (prints out debug info to stdout and also saves it to \$TEMPDIR/lobster.log)
 
-    Note:
+  Note:
     All arguments can be specified in the config file as well.
     If an argument is specified in both the config file and the command line, the command line argument will be used.
 
-    Some example usages:
+  Some example usages:
     ${0##*/} -i a silent voice --rofi
     ${0##*/} -l spanish -q 720 fight club -i -d
     ${0##*/} -l spanish blade runner --json
 
-    " "${0##*/}"
+" "${0##*/}"
 }
 
 ### Dependencies Check ###
@@ -346,7 +346,7 @@ EOF
             query=""
             choice=""
             return 0
-            # Don't exit on rc="$FORWARD_CODE", it means rofi kb-custom-2 was pressed
+        # Don't exit on rc="$FORWARD_CODE", it means rofi kb-custom-2 was pressed
         elif [ "$rc" -ne 0 ] && [ "$rc" -ne "$FORWARD_CODE" ]; then
             exit 0
         fi
@@ -673,14 +673,14 @@ EOF
             fi
             history_response=$(
                 awk -F'\t' '
-            {
-                title = $1
-                id    = $3
-                type  = $4
-                cover_url = (type == "tv") ? $10 : $5
-                print cover_url "\t" id "\t" type "\t" title
-            }
-        ' "$histfile"
+                {
+                    title = $1
+                    id    = $3
+                    type  = $4
+                    cover_url = (type == "tv") ? $10 : $5
+                    print cover_url "\t" id "\t" type "\t" title
+                }
+                ' "$histfile"
             )
 
             maybe_download_thumbnails "$history_response"
@@ -882,9 +882,10 @@ EOF
 
         # shellcheck disable=SC2086
         ffmpeg -loglevel error -stats -i "$1" $sub_ops -c copy "$dir.mkv"
+	export -g ffmpeg_pid=$!
     }
 
-    choose_from_trending_or_recent() {
+choose_from_trending_or_recent() {
         path=$1
         section=$2
         if [ "$path" = "home" ]; then
@@ -922,7 +923,7 @@ EOF
                         send_notification "Finished downloading" "5000" "" "$title - $season_title - $episode_title"
                     fi
                 fi
-            fi
+	    fi
             if [ "$discord_presence" = "true" ]; then
                 [ -p "$presence" ] || mkfifo "$presence"
                 rm -f "$handshook" >/dev/null
@@ -937,8 +938,9 @@ EOF
                 save_history
             fi
             if [ "$download" != "true" ]; then
-                prompt_to_continue
-            fi
+	        wait $ffmpeg_pid
+	    fi
+            prompt_to_continue
             case "$continue_choice" in
                 "Next episode")
                     resume_from=""
