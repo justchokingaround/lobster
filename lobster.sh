@@ -885,7 +885,7 @@ EOF
 	export -g ffmpeg_pid=$!
     }
 
-choose_from_trending_or_recent() {
+    choose_from_trending_or_recent() {
         path=$1
         section=$2
         if [ "$path" = "home" ]; then
@@ -938,8 +938,8 @@ choose_from_trending_or_recent() {
                 save_history
             fi
             if [ "$download" != "true" ]; then
-	        wait $ffmpeg_pid
-	    fi
+                wait $ffmpeg_pid
+            fi
             prompt_to_continue
             case "$continue_choice" in
                 "Next episode")
