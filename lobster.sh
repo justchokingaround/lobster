@@ -123,6 +123,10 @@ usage() {
       Specify the video quality (if no quality is provided, it defaults to 1080)
     --ask-quality
       Prompt to choose quality from the HLS master playlist when available
+    --auto-next
+      Automatically play the next episode without prompting (TV only)
+    --intro-skip [seconds]
+      Skip this many seconds at the start of each TV episode
     -r, --recent [movies|tv]
       Lets you select from the most recent movies or tv shows (if no argument is provided, it defaults to movies)
     -s, --syncplay
@@ -192,6 +196,8 @@ configuration() {
     [ -z "$json_output" ] && json_output="false"
     [ -z "$ask_quality" ] && ask_quality="false"
     [ -z "$discord_presence" ] && discord_presence="false"
+    [ -z "$auto_next" ] && auto_next="false"
+    [ -z "$intro_skip" ] && intro_skip="0"
     case "$(uname -s)" in
         MINGW* | *Msys)
             if [ -z "$watchlater_dir" ]; then
@@ -468,6 +474,63 @@ EOF
         esac
         return 0
     }
+
+    provider_fallback() {
+        # Attempts to switch to another provider if current one produced no video_link
+        case "$media_type" in
+            tv)
+                servers_html=$(curl -s "https://${base}/ajax/v2/episode/servers/${data_id}" | $sed ':a;N;$!ba;s/\n//g;s/class="nav-item"/\n/g') || return 1
+                [ -z "$servers_html" ] && return 1
+                if [ "$ask_provider" = "true" ]; then
+                    prov_choice=$(printf "%s" "$servers_html" | $sed -nE 's@.*data-id="([0-9]*)".*title="([^"]*)".*@\2\t\1@p' | launcher "Choose another provider (previous failed): " "1") || return 1
+                    provider=$(printf "%s" "$prov_choice" | cut -f1)
+                    episode_id=$(printf "%s" "$prov_choice" | cut -f2)
+                    return 0
+                else
+                    # Preference order; skip current provider
+                    pref="Vidcloud\nUpCloud\nAKCloud"
+                    while read -r p; do
+                        [ "$p" = "$provider" ] && continue
+                        id=$(printf "%s" "$servers_html" | $sed -nE 's@.*data-id="([0-9]*)".*title="([^"]*)".*@\1\t\2@p' | grep "$p" | cut -f1 | head -n1)
+                        if [ -n "$id" ]; then
+                            provider="$p"
+                            episode_id="$id"
+                            return 0
+                        fi
+                    done <<EOF
+$pref
+EOF
+                    return 1
+                fi
+                ;;
+            movie)
+                page=$(curl -s "https://${base}/ajax/movie/episodes/${media_id}" | $sed ':a;N;$!ba;s/\n//g') || return 1
+                if [ "$ask_provider" = "true" ]; then
+                    provs=$(printf "%s" "$page" | $sed -nE 's@.*href=\"([^\"]*)\"[[:space:]]*title=\"([^\"]*)\".*@\2\t\1@p')
+                    [ -z "$provs" ] && return 1
+                    choice=$(printf "%s" "$provs" | launcher "Choose another provider (previous failed): " "1") || return 1
+                    provider=$(printf "%s" "$choice" | cut -f1)
+                    movie_link_rel=$(printf "%s" "$choice" | cut -f2-)
+                    movie_page="https://${base}${movie_link_rel}"
+                    episode_id=$(printf "%s" "$movie_page" | $sed -nE 's_.*-([0-9]*)\.([0-9]*)\$_\2_p')
+                    return 0
+                else
+                    for p in Vidcloud UpCloud AKCloud; do
+                        [ "$p" = "$provider" ] && continue
+                        rel=$(printf "%s" "$page" | $sed -nE "s@.*href=\\\"([^\\\"]*)\\\"[[:space:]]*title=\\\"$p\\\".*@\\1@p" | head -n1)
+                        if [ -n "$rel" ]; then
+                            provider="$p"
+                            movie_page="https://${base}$rel"
+                            episode_id=$(printf "%s" "$movie_page" | $sed -nE 's_.*-([0-9]*)\.([0-9]*)\$_\2_p')
+                            return 0
+                        fi
+                    done
+                    return 1
+                fi
+                ;;
+            *) return 1 ;;
+        esac
+    }
     next_episode_exists() {
         episodes_list=$(curl -s "https://${base}/ajax/v2/season/episodes/${season_id}" | $sed ':a;N;$!ba;s/\n//g;s/class="nav-item"/\n/g' |
             $sed -nE "s@.*data-id=\"([0-9]*)\".*title=\"([^\"]*)\">.*@\2\t\1@p" | $hxunent)
@@ -655,6 +718,35 @@ EOF
         fi
 
         video_link=$(printf "%s" "$json_data" | $sed -nE "s_.*\"file\":\"([^\"]*\.m3u8)\".*_\1_p" | head -1)
+
+        # Optional headers that some providers require
+        referrer=$(printf "%s" "$json_data" | $sed -nE 's_.*\"referer\":\"([^\"]*)\".*_\1_p' | head -1)
+        [ -z "$referrer" ] && referrer=$(printf "%s" "$json_data" | $sed -nE 's_.*\"referrer\":\"([^\"]*)\".*_\1_p' | head -1)
+        user_agent=$(printf "%s" "$json_data" | $sed -nE 's_.*\"user[Aa]gent\":\"([^\"]*)\".*_\1_p' | head -1)
+        header_fields=""
+        if [ -n "$referrer" ] || [ -n "$user_agent" ]; then
+            origin=$(printf "%s" "$referrer" | $sed -nE 's@^(https?://[^/]+).*@\1@p')
+            hf=""
+            [ -n "$referrer" ] && hf="Referer: $referrer"
+            if [ -n "$origin" ]; then
+                [ -n "$hf" ] && hf="$hf,"
+                hf="$hf""Origin: $origin"
+            fi
+            if [ -n "$user_agent" ]; then
+                [ -n "$hf" ] && hf="$hf,"
+                hf="$hf""User-Agent: $user_agent"
+            fi
+            header_fields="--http-header-fields='$hf'"
+        fi
+
+        # Provider-specific fallback: AKCloud streams (akmzed.cloud) often require embed referrer
+        if [ -z "$header_fields" ]; then
+            if printf "%s" "$video_link" | grep -qi "akmzed\\.cloud" || printf "%s" "$provider" | grep -qi "akcloud"; then
+                emb_origin=$(printf "%s" "$embed_link" | $sed -nE 's@^(https?://[^/]+).*@\1@p')
+                ua_fallback="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36"
+                header_fields="--http-header-fields='Referer: $embed_link, Origin: $emb_origin, User-Agent: $ua_fallback'"
+            fi
+        fi
 
         if [ "$ask_quality" = "true" ]; then
             master_link="$video_link"
@@ -888,7 +980,11 @@ EOF
             mpv | mpv.exe)
                 [ -z "$continue_choice" ] && check_history
                 player_cmd="$player"
-                [ -n "$resume_from" ] && player_cmd="$player_cmd --start='$resume_from'"
+                if [ "$media_type" = "tv" ] && [ -n "$intro_skip" ] && [ "$intro_skip" -gt 0 ] && [ -z "$resume_from" ]; then
+                    player_cmd="$player_cmd --start=${intro_skip}"
+                elif [ -n "$resume_from" ]; then
+                    player_cmd="$player_cmd --start='$resume_from'"
+                fi
                 [ -n "$subs_links" ] && player_cmd="$player_cmd $subs_arg='$subs_links'"
                 # Escape ' symbols in titles to prevent unterminated string error
                 escaped_title=$(printf "%s" "$displayed_title" | "$sed" "s/'/'\\\\''/g")
@@ -903,8 +999,24 @@ EOF
                     player_cmd="$player_cmd --input-ipc-server='$lobster_socket'"
                 fi
 
-                # Use eval to properly handle spaces in the command
-                eval "$player_cmd" >&3 &
+                # Launch Windows mpv differently to ensure a GUI window opens from WSL
+                if [ "$player" = "mpv.exe" ]; then
+                    # Inject HTTP header fields when required by providers
+                    if [ -n "$header_fields" ]; then
+                        player_cmd="$player_cmd $header_fields"
+                    fi
+                    win_cmd=$(printf "%s" "$player_cmd" | $sed "s/'/\"/g")
+                    win_args="${win_cmd#mpv.exe }"
+                    # Launch via PowerShell and wait for process to exit so our logic can continue
+                    powershell.exe -NoProfile -Command "$p=Start-Process -FilePath mpv.exe -ArgumentList '$win_args' -PassThru; Wait-Process -Id $p.Id" >&3 &
+                else
+                    # Use eval to properly handle spaces in the command
+                    if [ -n "$header_fields" ]; then
+                        eval "$player_cmd $header_fields" >&3 &
+                    else
+                        eval "$player_cmd" >&3 &
+                    fi
+                fi
 
                 if [ -z "$quality" ]; then
                     link=$(printf "%s" "$video_link" | $sed "s/\/playlist.m3u8/\/1080\/index.m3u8/g")
@@ -1005,7 +1117,21 @@ EOF
             get_embed
             [ -z "$embed_link" ] && exit 1
             extract_from_embed
-            [ -z "$video_link" ] && exit 1
+        if [ -z "$video_link" ]; then
+            send_notification "No stream from $provider" "2000" "" "Trying another provider" || true
+            if provider_fallback; then
+                send_notification "Switching to $provider" "1500" "" "Retrying" || true
+                get_embed
+                extract_from_embed
+                if [ -z "$video_link" ]; then
+                    send_notification "Still no stream" "3000" "" "All providers failed" || true
+                    exit 1
+                fi
+            else
+                send_notification "No working provider" "3000" "" "Try Vidcloud or enable --ask-provider" || true
+                exit 1
+            fi
+        fi
             if [ "$download" = "true" ]; then
                 if [ "$media_type" = "movie" ]; then
                     if [ "$image_preview" = "true" ]; then
@@ -1037,7 +1163,11 @@ EOF
             if [ -n "$position" ] && [ "$history" = "true" ]; then
                 save_history
             fi
-            prompt_to_continue
+            if [ "$media_type" = "tv" ] && [ "$auto_next" = "true" ]; then
+                continue_choice="Next episode"
+            else
+                prompt_to_continue
+            fi
             case "$continue_choice" in
                 "Next episode")
                     resume_from=""
@@ -1157,6 +1287,7 @@ EOF
                 ;;
             --rofi | --external-menu) use_external_menu="true" && shift ;;
             --ask-provider) ask_provider="true" && shift ;;
+            --auto-next) auto_next="true" && shift ;;
             -p | --provider)
                 provider="$2"
                 if [ -z "$provider" ]; then
@@ -1186,6 +1317,20 @@ EOF
                 fi
                 ;;
             --ask-quality) ask_quality="true" && shift ;;
+            --intro-skip)
+                intro_skip="$2"
+                if [ -z "$intro_skip" ]; then
+                    intro_skip="0"
+                    shift
+                else
+                    if [ "${intro_skip#-}" != "$intro_skip" ]; then
+                        intro_skip="0"
+                        shift
+                    else
+                        shift 2
+                    fi
+                fi
+                ;;
             -r | --recent)
                 recent="$2"
                 if [ -z "$recent" ]; then
