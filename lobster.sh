@@ -825,7 +825,7 @@ EOF
                 # Check if $subs_links is not empty
                 if [ -n "$subs_links" ]; then
                     first_sub=$(printf "%s" "$subs_links" | sed 's/https\\:/https:/g; s/:\([^\/]\)/#\1/g')
-                else 
+                else
                     first_sub=""
                 fi
                 printf "\e]8;;vlc-x-callback://x-callback-url/stream?url=%s&sub=%s\a~ Tap to open VLC ~\e]8;;\a\n" "$video_link" "$first_sub"
