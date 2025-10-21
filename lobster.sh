@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 
-LOBSTER_VERSION="4.5.6"
+LOBSTER_VERSION="4.5.7"
 
 ### General Variables ###
 config_file="$HOME/.config/lobster/lobster_config.sh"
@@ -781,9 +781,9 @@ EOF
                     [ "$player" = "celluloid" ] && celluloid --mpv-force-media-title="$displayed_title" "$video_link" 2>/dev/null
                 fi
                 ;;
-            vlc)
+            vlc | vlc.exe)
                 vlc_subs_links=$(printf "%s" "$subs_links" | sed 's/https\\:/https:/g; s/:\([^\/]\)/#\1/g')
-                vlc "$video_link" --meta-title "$displayed_title" --input-slave="$vlc_subs_links"
+                $player "$video_link" --meta-title "$displayed_title" --input-slave="$vlc_subs_links"
                 ;;
             mpv | mpv.exe)
                 [ -z "$continue_choice" ] && check_history
