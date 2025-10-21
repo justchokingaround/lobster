@@ -822,9 +822,13 @@ EOF
                 ;;
             mpv_android) nohup am start --user 0 -a android.intent.action.VIEW -d "$video_link" -n is.xyz.mpv/.MPVActivity -e "title" "$displayed_title" >/dev/null 2>&1 & ;;
             iSH)
-                # Only supports single subtitle file, as I don't know how to pass multiple subtitles to VLC-iOS via iSH. If subtitles are null, video should still be played.
-                # If multiple subtitles are found, subtitles will fail to load in VLC-iOS.
-                printf "\e]8;;vlc-x-callback://x-callback-url/stream?url=%s&sub=%s\a~ Tap to open VLC ~\e]8;;\a\n" "$video_link" "$subs_links"
+                # Check if $subs_links is not empty
+                if [ -n "$subs_links" ]; then
+                    first_sub=$(printf "%s" "$subs_links" | sed 's/https\\:/https:/g; s/:\([^\/]\)/#\1/g')
+                else 
+                    first_sub=""
+                fi
+                printf "\e]8;;vlc-x-callback://x-callback-url/stream?url=%s&sub=%s\a~ Tap to open VLC ~\e]8;;\a\n" "$video_link" "$first_sub"
                 sleep 5
                 ;;
             *yncpla*) nohup "syncplay" "$video_link" -- --force-media-title="${displayed_title}" >/dev/null 2>&1 & ;;
