@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 
-LOBSTER_VERSION="4.5.6"
+LOBSTER_VERSION="4.5.7"
 
 ### General Variables ###
 config_file="$HOME/.config/lobster/lobster_config.sh"
@@ -822,7 +822,13 @@ EOF
                 ;;
             mpv_android) nohup am start --user 0 -a android.intent.action.VIEW -d "$video_link" -n is.xyz.mpv/.MPVActivity -e "title" "$displayed_title" >/dev/null 2>&1 & ;;
             iSH)
-                printf "\e]8;;vlc://%s\a~~~~~~~~~~~~~~~~~~~~\n~ Tap to open VLC ~\n~~~~~~~~~~~~~~~~~~~~\e]8;;\a\n" "$video_link"
+                # Check if $subs_links is not empty
+                if [ -n "$subs_links" ]; then
+                    first_sub=$(printf "%s" "$subs_links" | sed 's/https\\:/https:/g; s/:\([^\/]\)/#\1/g')
+                else
+                    first_sub=""
+                fi
+                printf "\e]8;;vlc-x-callback://x-callback-url/stream?url=%s&sub=%s\a~ Tap to open VLC ~\e]8;;\a\n" "$video_link" "$first_sub"
                 sleep 5
                 ;;
             *yncpla*) nohup "syncplay" "$video_link" -- --force-media-title="${displayed_title}" >/dev/null 2>&1 & ;;
