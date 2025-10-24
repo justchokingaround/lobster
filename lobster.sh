@@ -1,4 +1,4 @@
-#!/usr/bin/env sh
+﻿#!/usr/bin/env sh
 
 LOBSTER_VERSION="4.5.7"
 
@@ -117,8 +117,16 @@ usage() {
       Disable subtitles
     -p, --provider
       Specify the provider to watch from (if no provider is provided, it defaults to Vidcloud) (currently supported: Vidcloud, UpCloud)
+    --ask-provider
+      Prompt to choose streaming provider per title (overrides --provider)
     -q, --quality
       Specify the video quality (if no quality is provided, it defaults to 1080)
+    --ask-quality
+      Prompt to choose quality from the HLS master playlist when available
+    --auto-next
+      Automatically play the next episode without prompting (TV only)
+    --intro-skip [seconds]
+      Skip this many seconds at the start of each TV episode
     -r, --recent [movies|tv]
       Lets you select from the most recent movies or tv shows (if no argument is provided, it defaults to movies)
     -s, --syncplay
@@ -167,6 +175,7 @@ configuration() {
     [ -z "$player" ] && player="mpv"
     [ -z "$download_dir" ] && download_dir="$PWD"
     [ -z "$provider" ] && provider="Vidcloud"
+    [ -z "$ask_provider" ] && ask_provider="false"
     [ -z "$subs_language" ] && subs_language="english"
     subs_language="$(printf "%s" "$subs_language" | cut -c2-)"
     [ -z "$histfile" ] && histfile="$data_dir/lobster_history.txt" && mkdir -p "$(dirname "$histfile")"
@@ -185,7 +194,10 @@ configuration() {
     fi
     [ -z "$remove_tmp_lobster" ] && remove_tmp_lobster="true"
     [ -z "$json_output" ] && json_output="false"
+    [ -z "$ask_quality" ] && ask_quality="false"
     [ -z "$discord_presence" ] && discord_presence="false"
+    [ -z "$auto_next" ] && auto_next="false"
+    [ -z "$intro_skip" ] && intro_skip="0"
     case "$(uname -s)" in
         MINGW* | *Msys)
             if [ -z "$watchlater_dir" ]; then
@@ -310,8 +322,10 @@ EOF
     choose_media() {
         if [ "$image_preview" = "true" ]; then
             if [ "$use_external_menu" = "false" ] && [ "$use_ueberzugpp" = "true" ]; then
-                command -v "ueberzugpp" >/dev/null || send_notification "Please install ueberzugpp if you want to use it for image previews"
-                use_ueberzugpp="false"
+                if ! command -v ueberzugpp >/dev/null 2>&1; then
+                    send_notification "Please install ueberzugpp if you want to use it for image previews"
+                    use_ueberzugpp="false"
+                fi
             fi
             maybe_download_thumbnails "$response"
             select_desktop_entry ""
@@ -398,15 +412,124 @@ EOF
         episode_title=$(printf '%s' "$ep_line" | cut -f1)
         data_id=$(printf '%s' "$ep_line" | cut -f2)
 
-        episode_id=$(
-            curl -s "https://${base}/ajax/v2/episode/servers/${data_id}" |
-                $sed ':a;N;$!ba;s/\n//g;s/class="nav-item"/\n/g' |
-                $sed -nE 's@.*data-id="([0-9]*)".*title="([^"]*)".*@\1\t\2@p' |
-                grep "$provider" | cut -f1 | head -n1
-        )
+        servers_html=$(curl -s "https://${base}/ajax/v2/episode/servers/${data_id}" | $sed ':a;N;$!ba;s/\n//g;s/class="nav-item"/\n/g')
+        if [ "$ask_provider" = "true" ]; then
+            prov_choice=$(printf "%s" "$servers_html" | $sed -nE 's@.*data-id="([0-9]*)".*title="([^"]*)".*@\2\t\1@p' | launcher "Choose provider: " "1")
+            rc=$?
+            if [ "$rc" -eq "$BACK_CODE" ]; then
+                STATE="SEASON"
+                return 0
+            elif [ "$rc" -ne 0 ] && [ "$rc" -ne "$FORWARD_CODE" ]; then
+                exit 0
+            fi
+            provider=$(printf "%s" "$prov_choice" | cut -f1)
+            episode_id=$(printf "%s" "$prov_choice" | cut -f2)
+        else
+            episode_id=$(printf "%s" "$servers_html" | $sed -nE 's@.*data-id="([0-9]*)".*title="([^"]*)".*@\1\t\2@p' | grep "$provider" | cut -f1 | head -n1)
+        fi
 
         keep_running="true"
         STATE="PLAY"
+    }
+    
+    ### Provider/Quality pickers ###
+    pick_movie_provider() {
+        page=$(curl -s "https://${base}/ajax/movie/episodes/${media_id}" | $sed ':a;N;$!ba;s/\n//g')
+        provs=$(printf "%s" "$page" | $sed -nE 's@.*href="([^"]*)"[[:space:]]*title="([^"]*)".*@\2\t\1@p')
+        [ -z "$provs" ] && return 1
+        choice=$(printf "%s" "$provs" | launcher "Choose provider: " "1") || return 1
+        provider=$(printf "%s" "$choice" | cut -f1)
+        movie_link_rel=$(printf "%s" "$choice" | cut -f2-)
+        movie_page="https://${base}${movie_link_rel}"
+        episode_id=$(printf "%s" "$movie_page" | $sed -nE 's_.*-([0-9]*)\.([0-9]*)\$_\2_p')
+        return 0
+    }
+
+    choose_quality_from_m3u8() {
+        master_url="$1"
+        content=$(curl -s "$master_url")
+        variants=$(printf "%s" "$content" | awk '
+            /#EXT-X-STREAM-INF:/ {
+                res="";
+                if (match($0, /RESOLUTION=[0-9]+x([0-9]+)/, r)) { res=r[1]; } else { res="unknown"; }
+                getline url;
+                print res "\t" url;
+            }
+        ')
+        [ -z "$variants" ] && return 1
+        choice=$(printf "%s\n" "$variants" | launcher "Choose quality (height): " "1") || return 1
+        rc=$?
+        [ "$rc" -eq "$BACK_CODE" ] && return 1
+        sel_url=$(printf "%s" "$choice" | cut -f2-)
+        case "$sel_url" in
+            http*) video_link="$sel_url" ;;
+            /*)
+                origin=$(printf "%s" "$master_url" | $sed -nE 's@^(https?://[^/]+).*@\1@p')
+                video_link="$origin$sel_url"
+                ;;
+            *)
+                base_dir="${master_url%/*}"
+                video_link="$base_dir/$sel_url"
+                ;;
+        esac
+        return 0
+    }
+
+    provider_fallback() {
+        # Attempts to switch to another provider if current one produced no video_link
+        case "$media_type" in
+            tv)
+                servers_html=$(curl -s "https://${base}/ajax/v2/episode/servers/${data_id}" | $sed ':a;N;$!ba;s/\n//g;s/class="nav-item"/\n/g') || return 1
+                [ -z "$servers_html" ] && return 1
+                if [ "$ask_provider" = "true" ]; then
+                    prov_choice=$(printf "%s" "$servers_html" | $sed -nE 's@.*data-id="([0-9]*)".*title="([^"]*)".*@\2\t\1@p' | launcher "Choose another provider (previous failed): " "1") || return 1
+                    provider=$(printf "%s" "$prov_choice" | cut -f1)
+                    episode_id=$(printf "%s" "$prov_choice" | cut -f2)
+                    return 0
+                else
+                    # Preference order; skip current provider
+                    pref="Vidcloud\nUpCloud\nAKCloud"
+                    while read -r p; do
+                        [ "$p" = "$provider" ] && continue
+                        id=$(printf "%s" "$servers_html" | $sed -nE 's@.*data-id="([0-9]*)".*title="([^"]*)".*@\1\t\2@p' | grep "$p" | cut -f1 | head -n1)
+                        if [ -n "$id" ]; then
+                            provider="$p"
+                            episode_id="$id"
+                            return 0
+                        fi
+                    done <<EOF
+$pref
+EOF
+                    return 1
+                fi
+                ;;
+            movie)
+                page=$(curl -s "https://${base}/ajax/movie/episodes/${media_id}" | $sed ':a;N;$!ba;s/\n//g') || return 1
+                if [ "$ask_provider" = "true" ]; then
+                    provs=$(printf "%s" "$page" | $sed -nE 's@.*href=\"([^\"]*)\"[[:space:]]*title=\"([^\"]*)\".*@\2\t\1@p')
+                    [ -z "$provs" ] && return 1
+                    choice=$(printf "%s" "$provs" | launcher "Choose another provider (previous failed): " "1") || return 1
+                    provider=$(printf "%s" "$choice" | cut -f1)
+                    movie_link_rel=$(printf "%s" "$choice" | cut -f2-)
+                    movie_page="https://${base}${movie_link_rel}"
+                    episode_id=$(printf "%s" "$movie_page" | $sed -nE 's_.*-([0-9]*)\.([0-9]*)\$_\2_p')
+                    return 0
+                else
+                    for p in Vidcloud UpCloud AKCloud; do
+                        [ "$p" = "$provider" ] && continue
+                        rel=$(printf "%s" "$page" | $sed -nE "s@.*href=\\\"([^\\\"]*)\\\"[[:space:]]*title=\\\"$p\\\".*@\\1@p" | head -n1)
+                        if [ -n "$rel" ]; then
+                            provider="$p"
+                            movie_page="https://${base}$rel"
+                            episode_id=$(printf "%s" "$movie_page" | $sed -nE 's_.*-([0-9]*)\.([0-9]*)\$_\2_p')
+                            return 0
+                        fi
+                    done
+                    return 1
+                fi
+                ;;
+            *) return 1 ;;
+        esac
     }
     next_episode_exists() {
         episodes_list=$(curl -s "https://${base}/ajax/v2/season/episodes/${season_id}" | $sed ':a;N;$!ba;s/\n//g;s/class="nav-item"/\n/g' |
@@ -424,6 +547,7 @@ EOF
 
     ### Image Preview ###
     maybe_download_thumbnails() {
+        test -d "$images_cache_dir" || mkdir -p "$images_cache_dir"
         # Only downloads thumbnails again if every thumbnail is not already in images_cache_dir
         need_dl=0
         tab="$(printf '\t')"
@@ -446,7 +570,9 @@ EOF
         pids=""
 
         # run the while-loop in the current shell
-        while IFS='     ' read -r cover_url id type title; do
+        tab="$(printf '\t')"
+        test -d "$images_cache_dir" || mkdir -p "$images_cache_dir"
+        while IFS="$tab" read -r cover_url id type title; do
             [ -z "$cover_url" ] && continue                    # skip empty lines
             printf '%s\n' "$cover_url" >"$tmp_dir/image_links" # For Discord rich presence
 
@@ -477,6 +603,7 @@ EOF
     # defaults to chafa
     image_preview_fzf() {
         if [ "$use_ueberzugpp" = "true" ]; then
+            [ "$debug" = "true" ] && send_notification "Using ueberzugpp preview"
             UB_PID_FILE="$tmp_dir.$(uuidgen)"
             if [ -z "$ueberzug_output" ]; then
                 ueberzugpp layer --no-stdin --silent --use-escape-codes --pid-file "$UB_PID_FILE"
@@ -498,15 +625,20 @@ EOF
             esac
             ueberzugpp cmd -s "$LOBSTER_UEBERZUG_SOCKET" -a exit
         else
-            dep_ch "chafa" || true
-            # shellcheck disable=SC2154
-            [ "$TERM_PROGRAM" = "vscode" ] && fmt="-f sixels --margin-bottom 8" || fmt=""
-            [ -n "$chafa_dims" ] && dim="-s $chafa_dims"
-            choice=$(find "$images_cache_dir" -type f -exec basename {} \; | fzf \
-                --bind "shift-right:accept" --expect=shift-left --cycle -i -q "$1" \
-                --preview-window="$preview_window_size" \
-                --preview="chafa $fmt $dim $images_cache_dir/{}" \
-                --reverse --with-nth 2 -d "  ")
+            if command -v chafa >/dev/null 2>&1; then
+                [ "$debug" = "true" ] && send_notification "Using chafa preview"
+                # shellcheck disable=SC2154
+                [ "$TERM_PROGRAM" = "vscode" ] && fmt="-f sixels --margin-bottom 8" || fmt=""
+                [ -n "$chafa_dims" ] && dim="-s $chafa_dims"
+                choice=$(find "$images_cache_dir" -type f -exec basename {} \; | fzf \
+                    --bind "shift-right:accept" --expect=shift-left --cycle -i -q "$1" \
+                    --preview-window="$preview_window_size" \
+                    --preview="chafa $fmt $dim $images_cache_dir/{}" \
+                    --reverse --with-nth 2 -d "  ")
+            else
+                [ "$debug" = "true" ] && send_notification "chafa not found; listing without previews"
+                choice=$(find "$images_cache_dir" -type f -exec basename {} \; | fzf --bind "shift-right:accept" --expect=shift-left --cycle -i -q "$1" --reverse --with-nth 2 -d "  ")
+            fi
             rc=$?
 
             case $choice in
@@ -550,9 +682,13 @@ EOF
     get_embed() {
         if [ "$media_type" = "movie" ]; then
             # request to get the episode id
-            movie_page="https://${base}"$(curl -s "https://${base}/ajax/movie/episodes/${media_id}" |
-                $sed ':a;N;$!ba;s/\n//g;s/class="nav-item"/\n/g' | $sed -nE "s@.*href=\"([^\"]*)\"[[:space:]]*title=\"${provider}\".*@\1@p")
-            episode_id=$(printf "%s" "$movie_page" | $sed -nE "s_.*-([0-9]*)\.([0-9]*)\$_\2_p")
+            if [ "$ask_provider" = "true" ]; then
+                pick_movie_provider || true
+            else
+                movie_page="https://${base}"$(curl -s "https://${base}/ajax/movie/episodes/${media_id}" |
+                    $sed ':a;N;$!ba;s/\n//g;s/class="nav-item"/\n/g' | $sed -nE "s@.*href=\"([^\"]*)\"[[:space:]]*title=\"${provider}\".*@\1@p")
+                episode_id=$(printf "%s" "$movie_page" | $sed -nE "s_.*-([0-9]*)\.([0-9]*)\$_\2_p")
+            fi
         fi
         # request to get the embed
         embed_link=$(curl -s "https://${base}/ajax/episode/sources/${episode_id}" | $sed -nE "s_.*\"link\":\"([^\"]*)\".*_\1_p")
@@ -563,10 +699,66 @@ EOF
     }
 
     extract_from_embed() {
-        json_data=$(curl -s "https://dec.eatmynerds.live/?url=${embed_link}")
+        # Prefer local decoder service if running
+        json_data=$(curl -s "http://127.0.0.1:8787/?url=${embed_link}" || true)
+        if [ -z "$json_data" ] || ! printf "%s" "$json_data" | $sed -nE 's_.*\"file\":\"([^\"]*\.m3u8)\".*_\1_p' | head -1 >/dev/null; then
+            # Remote decoder (fallback)
+            json_data=$(curl -s "https://dec.eatmynerds.live/?url=${embed_link}" || true)
+        fi
+
+        # If services return nothing or no m3u8, fall back to local decoder.js when available
+        if [ -z "$json_data" ] || ! printf "%s" "$json_data" | $sed -nE 's_.*\"file\":\"([^\"]*\.m3u8)\".*_\1_p' | head -1 >/dev/null; then
+            if command -v node >/dev/null 2>&1; then
+                if [ -f "$HOME/.config/lobster/decoder.js" ]; then
+                    json_data=$(node "$HOME/.config/lobster/decoder.js" "${embed_link}" 2>/dev/null || true)
+                elif [ -f "./decoder.js" ]; then
+                    json_data=$(node "./decoder.js" "${embed_link}" 2>/dev/null || true)
+                fi
+            fi
+        fi
+
         video_link=$(printf "%s" "$json_data" | $sed -nE "s_.*\"file\":\"([^\"]*\.m3u8)\".*_\1_p" | head -1)
 
-        [ -n "$quality" ] && video_link=$(printf "%s" "$video_link" | $sed -e "s|/playlist.m3u8|/$quality/index.m3u8|")
+        # Optional headers that some providers require
+        referrer=$(printf "%s" "$json_data" | $sed -nE 's_.*\"referer\":\"([^\"]*)\".*_\1_p' | head -1)
+        [ -z "$referrer" ] && referrer=$(printf "%s" "$json_data" | $sed -nE 's_.*\"referrer\":\"([^\"]*)\".*_\1_p' | head -1)
+        user_agent=$(printf "%s" "$json_data" | $sed -nE 's_.*\"user[Aa]gent\":\"([^\"]*)\".*_\1_p' | head -1)
+        header_fields=""
+        if [ -n "$referrer" ] || [ -n "$user_agent" ]; then
+            origin=$(printf "%s" "$referrer" | $sed -nE 's@^(https?://[^/]+).*@\1@p')
+            hf=""
+            [ -n "$referrer" ] && hf="Referer: $referrer"
+            if [ -n "$origin" ]; then
+                [ -n "$hf" ] && hf="$hf,"
+                hf="$hf""Origin: $origin"
+            fi
+            if [ -n "$user_agent" ]; then
+                [ -n "$hf" ] && hf="$hf,"
+                hf="$hf""User-Agent: $user_agent"
+            fi
+            header_fields="--http-header-fields='$hf'"
+        fi
+
+        # Provider-specific fallback: AKCloud streams (akmzed.cloud) often require embed referrer
+        if [ -z "$header_fields" ]; then
+            if printf "%s" "$video_link" | grep -qi "akmzed\\.cloud" || printf "%s" "$provider" | grep -qi "akcloud"; then
+                emb_origin=$(printf "%s" "$embed_link" | $sed -nE 's@^(https?://[^/]+).*@\1@p')
+                ua_fallback="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36"
+                header_fields="--http-header-fields='Referer: $embed_link, Origin: $emb_origin, User-Agent: $ua_fallback'"
+            fi
+        fi
+
+        if [ "$ask_quality" = "true" ]; then
+            master_link="$video_link"
+            case "$master_link" in
+                */*/index.m3u8)
+                    master_link=$(printf "%s" "$master_link" | $sed -E 's:/[0-9]+/index.m3u8:/playlist.m3u8:')
+                    ;;
+            esac
+            choose_quality_from_m3u8 "$master_link" || true
+        else
+            [ -n "$quality" ] && video_link=$(printf "%s" "$video_link" | $sed -e "s|/playlist.m3u8|/$quality/index.m3u8|")
+        fi
 
         [ "$json_output" = "true" ] && printf "%s\n" "$json_data" && exit 0
         if [ "$no_subs" = "true" ]; then
@@ -788,7 +980,11 @@ EOF
             mpv | mpv.exe)
                 [ -z "$continue_choice" ] && check_history
                 player_cmd="$player"
-                [ -n "$resume_from" ] && player_cmd="$player_cmd --start='$resume_from'"
+                if [ "$media_type" = "tv" ] && [ -n "$intro_skip" ] && [ "$intro_skip" -gt 0 ] && [ -z "$resume_from" ]; then
+                    player_cmd="$player_cmd --start=${intro_skip}"
+                elif [ -n "$resume_from" ]; then
+                    player_cmd="$player_cmd --start='$resume_from'"
+                fi
                 [ -n "$subs_links" ] && player_cmd="$player_cmd $subs_arg='$subs_links'"
                 # Escape ' symbols in titles to prevent unterminated string error
                 escaped_title=$(printf "%s" "$displayed_title" | "$sed" "s/'/'\\\\''/g")
@@ -803,8 +999,24 @@ EOF
                     player_cmd="$player_cmd --input-ipc-server='$lobster_socket'"
                 fi
 
-                # Use eval to properly handle spaces in the command
-                eval "$player_cmd" >&3 &
+                # Launch Windows mpv differently to ensure a GUI window opens from WSL
+                if [ "$player" = "mpv.exe" ]; then
+                    # Inject HTTP header fields when required by providers
+                    if [ -n "$header_fields" ]; then
+                        player_cmd="$player_cmd $header_fields"
+                    fi
+                    win_cmd=$(printf "%s" "$player_cmd" | $sed "s/'/\"/g")
+                    win_args="${win_cmd#mpv.exe }"
+                    # Launch via PowerShell and wait for process to exit so our logic can continue
+                    powershell.exe -NoProfile -Command "$p=Start-Process -FilePath mpv.exe -ArgumentList '$win_args' -PassThru; Wait-Process -Id $p.Id" >&3 &
+                else
+                    # Use eval to properly handle spaces in the command
+                    if [ -n "$header_fields" ]; then
+                        eval "$player_cmd $header_fields" >&3 &
+                    else
+                        eval "$player_cmd" >&3 &
+                    fi
+                fi
 
                 if [ -z "$quality" ]; then
                     link=$(printf "%s" "$video_link" | $sed "s/\/playlist.m3u8/\/1080\/index.m3u8/g")
@@ -894,13 +1106,15 @@ EOF
         path=$1
         section=$2
         if [ "$path" = "home" ]; then
-            response=$(curl -s "https://${base}/${path}" | $sed -n "/id=\"${section}\"/,/class=\"block_area block_area_home section-id-02\"/p" | $sed ':a;N;$!ba;s/\n//g;s/class="flw-item"/\n/g' |
+            response=$(curl -s "https://${base}/${path}" | $sed -n '/class="block_area block_area_home section-id-01"/,/<\/section>/p' | $sed ':a;N;$!ba;s/\n//g;s/class="flw-item"/\n/g' |
                 $sed -nE "s@.*img data-src=\"([^\"]*)\".*<a href=\".*/(tv|movie)/watch-.*-([0-9]*)\".*title=\"([^\"]*)\".*class=\"fdi-item\">([^<]*)</span>.*@\1\t\3\t\2\t\4 [\5]@p" | $hxunent)
         else
             response=$(curl -s "https://${base}/${path}" | $sed ':a;N;$!ba;s/\n//g;s/class="flw-item"/\n/g' |
                 $sed -nE "s@.*img data-src=\"([^\"]*)\".*<a href=\".*/(tv|movie)/watch-.*-([0-9]*)\".*title=\"([^\"]*)\".*class=\"fdi-item\">([^<]*)</span>.*@\1\t\3\t\2\t\4 [\5]@p" | $hxunent)
         fi
         main
+
+
     }
 
     ### Main ###
@@ -909,7 +1123,21 @@ EOF
             get_embed
             [ -z "$embed_link" ] && exit 1
             extract_from_embed
-            [ -z "$video_link" ] && exit 1
+        if [ -z "$video_link" ]; then
+            send_notification "No stream from $provider" "2000" "" "Trying another provider" || true
+            if provider_fallback; then
+                send_notification "Switching to $provider" "1500" "" "Retrying" || true
+                get_embed
+                extract_from_embed
+                if [ -z "$video_link" ]; then
+                    send_notification "Still no stream" "3000" "" "All providers failed" || true
+                    exit 1
+                fi
+            else
+                send_notification "No working provider" "3000" "" "Try Vidcloud or enable --ask-provider" || true
+                exit 1
+            fi
+        fi
             if [ "$download" = "true" ]; then
                 if [ "$media_type" = "movie" ]; then
                     if [ "$image_preview" = "true" ]; then
@@ -941,7 +1169,11 @@ EOF
             if [ -n "$position" ] && [ "$history" = "true" ]; then
                 save_history
             fi
-            prompt_to_continue
+            if [ "$media_type" = "tv" ] && [ "$auto_next" = "true" ]; then
+                continue_choice="Next episode"
+            else
+                prompt_to_continue
+            fi
             case "$continue_choice" in
                 "Next episode")
                     resume_from=""
@@ -1060,6 +1292,8 @@ EOF
                 fi
                 ;;
             --rofi | --external-menu) use_external_menu="true" && shift ;;
+            --ask-provider) ask_provider="true" && shift ;;
+            --auto-next) auto_next="true" && shift ;;
             -p | --provider)
                 provider="$2"
                 if [ -z "$provider" ]; then
@@ -1082,6 +1316,21 @@ EOF
                 else
                     if [ "${quality#-}" != "$quality" ]; then
                         quality="1080"
+                        shift
+                    else
+                        shift 2
+                    fi
+                fi
+                ;;
+            --ask-quality) ask_quality="true" && shift ;;
+            --intro-skip)
+                intro_skip="$2"
+                if [ -z "$intro_skip" ]; then
+                    intro_skip="0"
+                    shift
+                else
+                    if [ "${intro_skip#-}" != "$intro_skip" ]; then
+                        intro_skip="0"
                         shift
                     else
                         shift 2
