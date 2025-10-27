@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 
-LOBSTER_VERSION="4.5.7"
+LOBSTER_VERSION="4.5.8"
 
 ### General Variables ###
 config_file="$HOME/.config/lobster/lobster_config.sh"
@@ -18,6 +18,7 @@ nl='
 # These are not arbitrary, but determined by rofi kb-custom-1 and kb-custom-2 exit codes
 BACK_CODE=10
 FORWARD_CODE=11
+API_URL="https://dec.eatmynerds.live"
 
 ### Notifications ###
 command -v notify-send >/dev/null 2>&1 && notify="true" || notify="false" # check if notify-send is installed
@@ -329,7 +330,7 @@ EOF
                         rc="$BACK_CODE"
                         choice=${choice#*"$nl"}
                         ;;
-                    "$nl"*) choice=${choice#"$nl"} ;;
+                    "$nl"*) choice=${choice#*"$nl"} ;;
                     *) exit 1 ;;
                 esac
             fi
@@ -493,7 +494,7 @@ EOF
                     rc="$BACK_CODE"
                     choice=${choice#*"$nl"}
                     ;;
-                "$nl"*) choice=${choice#"$nl"} ;;
+                "$nl"*) choice=${choice#*"$nl"} ;;
                 *) exit 1 ;;
             esac
             ueberzugpp cmd -s "$LOBSTER_UEBERZUG_SOCKET" -a exit
@@ -514,7 +515,7 @@ EOF
                     rc="$BACK_CODE"
                     choice=${choice#*"$nl"}
                     ;;
-                "$nl"*) choice=${choice#"$nl"} ;;
+                "$nl"*) choice=${choice#*"$nl"} ;;
                 *) exit 1 ;;
             esac
         fi
@@ -563,23 +564,79 @@ EOF
     }
 
     extract_from_embed() {
-        json_data=$(curl -s "https://dec.eatmynerds.live/?url=${embed_link}")
+        challenge_response=$(curl -s "${API_URL}/challenge")
+
+        if [ -z "$challenge_response" ]; then
+            send_notification "ERROR: Failed to get a response from the API server."
+            return 1
+        fi
+
+        payload=$(printf "%s" "${challenge_response}" | sed -n 's/.*"payload":"\([^"]*\)".*/\1/p')
+        signature=$(printf "%s" "${challenge_response}" | sed -n 's/.*"signature":"\([^"]*\)".*/\1/p')
+        difficulty=$(printf "%s" "${challenge_response}" | sed -n 's/.*"difficulty":\([0-9]*\).*/\1/p')
+        challenge=$(printf "%s" "${payload}" | cut -d'.' -f1)
+
+        if [ -z "$payload" ] || [ -z "$signature" ] || [ -z "$difficulty" ]; then
+            send_notification "FATAL: Could not parse the API challenge response."
+            return 1
+        fi
+
+        prefix=""
+        i=0
+        while [ "$i" -lt "$difficulty" ]; do
+            prefix="${prefix}0"
+            i=$((i + 1))
+        done
+
+        nonce=0
+        while true; do
+            text_to_hash="${challenge}${nonce}"
+            hash_val=$(printf "%s" "${text_to_hash}" | sha256sum | awk '{print $1}')
+
+            case "$hash_val" in
+                "${prefix}"*)
+                    break
+                    ;;
+                *) ;;
+            esac
+
+            nonce=$((nonce + 1))
+        done
+
+        final_url="${API_URL}/?url=${embed_link}&payload=${payload}&signature=${signature}&nonce=${nonce}"
+        json_data=$(curl -s "${final_url}")
+
+        case "$json_data" in
+            *"error"*)
+                api_error_msg=$(printf "%s" "$json_data" | $sed -n 's/.*"error":"\([^"]*\)".*/\1/p')
+                send_notification "API Error: $api_error_msg"
+                return 1
+                ;;
+            *) ;;
+        esac
+
         video_link=$(printf "%s" "$json_data" | $sed -nE "s_.*\"file\":\"([^\"]*\.m3u8)\".*_\1_p" | head -1)
 
-        [ -n "$quality" ] && video_link=$(printf "%s" "$video_link" | $sed -e "s|/playlist.m3u8|/$quality/index.m3u8|")
+        [ -n "$quality" ] && video_link=$(printf "%s" "$video_link" | sed -e "s|/playlist.m3u8|/$quality/index.m3u8|")
 
         [ "$json_output" = "true" ] && printf "%s\n" "$json_data" && exit 0
+
         if [ "$no_subs" = "true" ]; then
             send_notification "Continuing without subtitles"
         else
-            subs_links=$(printf "%s" "$json_data" | tr "{}" "\n" | $sed -nE "s@.*\"file\":\"([^\"]*)\",\"label\":\"(.$subs_language)[,\"\ ].*@\1@p")
-            subs_arg="--sub-file"
-            num_subs=$(printf "%s" "$subs_links" | wc -l)
-            if [ "$num_subs" -gt 0 ]; then
-                subs_links=$(printf "%s" "$subs_links" | $sed -e "s/:/\\$path_thing:/g" -e "H;1h;\$!d;x;y/\n/$separator/" -e "s/$separator\$//")
-                subs_arg="--sub-files"
+            subs_links=$(printf "%s" "$json_data" | tr '{' '\n' | $sed -n "s/.*\"file\":\"\([^\"]*\)\".*\"label\":\"[^\"]*${subs_language}[^\"]*\".*/\1/Ip")
+
+            if [ -z "$subs_links" ]; then
+                send_notification "No subtitles found for language '$subs_language'"
+                subs_arg=""
+            else
+                subs_arg="--sub-file"
+                num_subs=$(printf "%s" "$subs_links" | wc -l)
+                if [ "$num_subs" -gt 0 ]; then
+                    subs_links=$(printf "%s" "$subs_links" | sed -e "s/:/\\$path_thing:/g" -e "H;1h;\$!d;x;y/\n/$separator/" -e "s/$separator\$//")
+                    subs_arg="--sub-files"
+                fi
             fi
-            [ -z "$subs_links" ] && send_notification "No subtitles found"
         fi
     }
 
@@ -921,7 +978,7 @@ EOF
                     fi
                 else
                     if [ "$image_preview" = "true" ]; then
-                        download_video "$video_link" "$title - $season_title - $episode_title" "$download_dir" "$json_data" "$images_cache_dir/  $title ($media_type)  $media_id.jpg" &
+                        download_video "$video_link" "$title - $season_title - $episode_title" "$download_dir" "$json_data" "$images_cache_dir/  $title - $season_title - $episode_title ($media_type)  $media_id.jpg" &
                         send_notification "Finished downloading" "5000" "$images_cache_dir/  $title - $season_title - $episode_title ($media_type)  $media_id.jpg" "$title - $season_title - $episode_title"
                     else
                         download_video "$video_link" "$title - $season_title - $episode_title" "$download_dir" "$json_data" &
