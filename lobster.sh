@@ -605,16 +605,6 @@ EOF
 
         final_url="${API_URL}/?url=${embed_link}&payload=${payload}&signature=${signature}&nonce=${nonce}"
         json_data=$(curl -s "${final_url}")
-
-        case "$json_data" in
-            *"error"*)
-                api_error_msg=$(printf "%s" "$json_data" | $sed -n 's/.*"error":"\([^"]*\)".*/\1/p')
-                send_notification "API Error: $api_error_msg"
-                return 1
-                ;;
-            *) ;;
-        esac
-
         video_link=$(printf "%s" "$json_data" | $sed -nE "s_.*\"file\":\"([^\"]*\.m3u8)\".*_\1_p" | head -1)
 
         [ -n "$quality" ] && video_link=$(printf "%s" "$video_link" | sed -e "s|/playlist.m3u8|/$quality/index.m3u8|")
