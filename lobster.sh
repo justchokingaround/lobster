@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 
-LOBSTER_VERSION="4.5.9"
+LOBSTER_VERSION="4.6.0"
 
 ### General Variables ###
 config_file="$HOME/.config/lobster/lobster_config.sh"
@@ -564,47 +564,8 @@ EOF
     }
 
     extract_from_embed() {
-        challenge_response=$(curl -s "${API_URL}/challenge")
-
-        if [ -z "$challenge_response" ]; then
-            send_notification "ERROR: Failed to get a response from the API server."
-            return 1
-        fi
-
-        payload=$(printf "%s" "${challenge_response}" | sed -n 's/.*"payload":"\([^"]*\)".*/\1/p')
-        signature=$(printf "%s" "${challenge_response}" | sed -n 's/.*"signature":"\([^"]*\)".*/\1/p')
-        difficulty=$(printf "%s" "${challenge_response}" | sed -n 's/.*"difficulty":\([0-9]*\).*/\1/p')
-        challenge=$(printf "%s" "${payload}" | cut -d'.' -f1)
-
-        if [ -z "$payload" ] || [ -z "$signature" ] || [ -z "$difficulty" ]; then
-            send_notification "FATAL: Could not parse the API challenge response."
-            return 1
-        fi
-
-        prefix=""
-        i=0
-        while [ "$i" -lt "$difficulty" ]; do
-            prefix="${prefix}0"
-            i=$((i + 1))
-        done
-
-        nonce=0
-        while true; do
-            text_to_hash="${challenge}${nonce}"
-            hash_val=$(printf "%s" "${text_to_hash}" | sha256sum | awk '{print $1}')
-
-            case "$hash_val" in
-                "${prefix}"*)
-                    break
-                    ;;
-                *) ;;
-            esac
-
-            nonce=$((nonce + 1))
-        done
-
-        final_url="${API_URL}/?url=${embed_link}&payload=${payload}&signature=${signature}&nonce=${nonce}"
-        json_data=$(curl -s "${final_url}")
+        api_url="${API_URL}/?url=${embed_link}"
+        json_data=$(curl -s "${api_url}")
         video_link=$(printf "%s" "$json_data" | $sed -nE "s_.*\"file\":\"([^\"]*\.m3u8)\".*_\1_p" | head -1)
 
         [ -n "$quality" ] && video_link=$(printf "%s" "$video_link" | sed -e "s|/playlist.m3u8|/$quality/index.m3u8|")
