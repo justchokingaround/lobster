@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 
-LOBSTER_VERSION="4.6.0"
+LOBSTER_VERSION="4.6.1"
 
 ### General Variables ###
 config_file="$HOME/.config/lobster/lobster_config.sh"
@@ -19,6 +19,7 @@ nl='
 BACK_CODE=10
 FORWARD_CODE=11
 API_URL="https://dec.eatmynerds.live"
+API_FALLBACK_URL="https://decrypt.broggl.farm"
 
 ### Notifications ###
 command -v notify-send >/dev/null 2>&1 && notify="true" || notify="false" # check if notify-send is installed
@@ -568,6 +569,19 @@ EOF
         json_data=$(curl -s "${api_url}")
         video_link=$(printf "%s" "$json_data" | $sed -nE "s_.*\"file\":\"([^\"]*\.m3u8)\".*_\1_p" | head -1)
 
+        if [ -z "$video_link" ]; then
+            send_notification "Using ${API_URL} failed using ${API_FALLBACK_URL} instead"
+            api_url="${API_FALLBACK_URL}/?url=${embed_link}"
+            json_data=$(curl -s "${api_url}")
+            video_link=$(printf "%s" "$json_data" | $sed -nE "s_.*\"file\":\"([^\"]*\.m3u8)\".*_\1_p" | head -1)
+        fi
+
+        # Exit if both sources failed
+        if [ -z "$video_link" ] && [ "$json_output" != "true" ]; then
+            send_notification "Error" "3000" "" "No sources returned, please try again later"
+            exit 1
+        fi
+
         [ -n "$quality" ] && video_link=$(printf "%s" "$video_link" | sed -e "s|/playlist.m3u8|/$quality/index.m3u8|")
 
         [ "$json_output" = "true" ] && printf "%s\n" "$json_data" && exit 0
@@ -591,7 +605,6 @@ EOF
         fi
     }
 
-    ### History ###
     check_history() {
         if [ ! -f "$histfile" ]; then
             [ "$image_preview" = "true" ] && send_notification "Now Playing" "5000" "$images_cache_dir/  $title ($media_type)  $media_id.jpg" "$title"
@@ -621,6 +634,7 @@ EOF
 
         esac
     }
+
     save_history() {
         [ -z "$image_link" ] && image_link="$(grep "$media_id" "$tmp_dir/image_links" | cut -f1)"
         case $media_type in
