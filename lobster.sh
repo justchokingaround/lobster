@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 
-LOBSTER_VERSION="4.6.1"
+LOBSTER_VERSION="4.6.2"
 
 ### General Variables ###
 config_file="$HOME/.config/lobster/lobster_config.sh"
@@ -501,9 +501,8 @@ EOF
             ueberzugpp cmd -s "$LOBSTER_UEBERZUG_SOCKET" -a exit
         else
             dep_ch "chafa" || true
-            # shellcheck disable=SC2154
-            [ "$TERM_PROGRAM" = "vscode" ] && fmt="-f sixels --margin-bottom 8" || fmt=""
-            [ -n "$chafa_dims" ] && dim="-s $chafa_dims"
+            [ "$TERM_PROGRAM" = "vscode" ] && fmt="--margin-bottom 8"
+            dim="-s ${chafa_dims:-40x30}"
             choice=$(find "$images_cache_dir" -type f -exec basename {} \; | fzf \
                 --bind "shift-right:accept" --expect=shift-left --cycle -i -q "$1" \
                 --preview-window="$preview_window_size" \
