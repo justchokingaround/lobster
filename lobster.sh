@@ -165,7 +165,7 @@ configuration() {
     [ ! -d "$data_dir" ] && mkdir -p "$data_dir"
     #shellcheck disable=1090
     [ -f "$config_file" ] && . "${config_file}" # source the user's config file
-    [ -z "$base" ] && base="flixhq.to"
+    [ -z "$base" ] && base="flixhq.tw"
     [ -z "$player" ] && player="mpv"
     [ -z "$download_dir" ] && download_dir="$PWD"
     [ -z "$provider" ] && provider="Vidcloud"
