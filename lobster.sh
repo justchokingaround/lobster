@@ -18,8 +18,7 @@ nl='
 # These are not arbitrary, but determined by rofi kb-custom-1 and kb-custom-2 exit codes
 BACK_CODE=10
 FORWARD_CODE=11
-API_URL="https://dec.eatmynerds.live"
-API_FALLBACK_URL="https://decrypt.broggl.farm"
+API_URL="https://decrypt.broggl.farm"
 
 ### Notifications ###
 command -v notify-send >/dev/null 2>&1 && notify="true" || notify="false" # check if notify-send is installed
