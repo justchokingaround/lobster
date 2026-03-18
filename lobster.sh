@@ -556,7 +556,6 @@ EOF
             episode_id=$(printf "%s" "$movie_page" | $sed -nE "s_.*-([0-9]*)\.([0-9]*)\$_\2_p")
         fi
 
-        # request to get the embed
         embed_link=$(curl -s "https://${base}/ajax/episode/sources/${episode_id}" | $sed -nE "s_.*\"link\":\"([^\"]*)\".*_\1_p")
         if [ -z "$embed_link" ]; then
             send_notification "Error" "Could not get embed link"
@@ -565,12 +564,10 @@ EOF
     }
 
     extract_from_embed() {
-        # Fire the POST request with valid JSON syntax and double quotes around variables
         json_data=$(curl -s -X POST "${API_URL}" \
             -H "Content-Type: application/json" \
             -d "{\"url\": \"${embed_link}\", \"mediaId\": \"${api_media_id}\"}")
 
-        # Using POSIX head -n 1
         video_link=$(printf "%s" "$json_data" | $sed -nE "s_.*\"file\":\"([^\"]*\.m3u8)\".*_\1_p" | head -n 1)
 
         if [ -z "$video_link" ]; then
@@ -581,7 +578,6 @@ EOF
             video_link=$(printf "%s" "$json_data" | $sed -nE "s_.*\"file\":\"([^\"]*\.m3u8)\".*_\1_p" | head -n 1)
         fi
 
-        # Exit if both sources failed
         if [ -z "$video_link" ] && [ "$json_output" != "true" ]; then
             send_notification "Error" "3000" "" "No sources returned, please try again later"
             exit 1
@@ -601,7 +597,6 @@ EOF
                 subs_arg=""
             else
                 subs_arg="--sub-file"
-                # Strip spaces from wc -l output to ensure safe POSIX arithmetic comparison
                 num_subs=$(printf "%s" "$subs_links" | wc -l | tr -d ' ')
 
                 if [ "$num_subs" -gt 0 ]; then
