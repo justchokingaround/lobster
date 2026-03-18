@@ -573,8 +573,10 @@ EOF
         if [ -z "$video_link" ]; then
             send_notification "Using ${API_URL} failed, using ${API_FALLBACK_URL} instead"
 
-            api_url="${API_FALLBACK_URL}/?url=${embed_link}"
-            json_data=$(curl -s "${api_url}")
+            json_data=$(curl -s -X POST "${API_FALLBACK_URL}" \
+                -H "Content-Type: application/json" \
+                -d "{\"url\": \"${embed_link}\", \"mediaId\": \"${api_media_id}\"}")
+                
             video_link=$(printf "%s" "$json_data" | $sed -nE "s_.*\"file\":\"([^\"]*\.m3u8)\".*_\1_p" | head -n 1)
         fi
 
