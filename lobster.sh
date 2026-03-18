@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 
-LOBSTER_VERSION="4.6.2"
+LOBSTER_VERSION="4.6.3"
 
 ### General Variables ###
 config_file="$HOME/.config/lobster/lobster_config.sh"
@@ -298,7 +298,7 @@ EOF
     }
     search() {
         response=$(curl -s "https://${base}/search/$1" | $sed ':a;N;$!ba;s/\n//g;s/class="flw-item"/\n/g' |
-            $sed -nE "s@.*img data-src=\"([^\"]*)\".*<a href=\".*/(tv|movie)/watch-.*-([0-9]*)\".*title=\"([^\"]*)\".*class=\"fdi-item\">([^<]*)</span>.*@\1\t\3\t\2\t\4 [\5]@p")
+            $sed -nE "s@.*img data-src=\"([^\"]*)\".*<a href=\"/((tv|movie)/watch-[^\"]*-([0-9]*))\".*title=\"([^\"]*)\".*class=\"fdi-item\">([^<]*)</span>.*@\1\t\4\t\3\t\5 [\6]\t\2@p")
         [ -z "$response" ] && send_notification "Error" "1000" "" "No results found" && exit 1
     }
     choose_search() {
@@ -337,8 +337,9 @@ EOF
             fi
             image_link=$(printf "%s" "$choice" | cut -f1)
             media_id=$(printf "%s" "$choice" | cut -f2)
-            title=$(printf "%s" "$choice" | $sed -nE "s@.* *(tv|movie)[[:space:]]*(.*) \[.*\]@\2@p")
-            media_type=$(printf "%s" "$choice" | $sed -nE "s@.* *(tv|movie)[[:space:]]*(.*) \[.*\]@\1@p")
+            media_type=$(printf "%s" "$choice" | cut -f3)
+            title=$(printf "%s" "$choice" | cut -f4 | $sed -nE "s@(.*) \[.*\]@\1@p")
+            api_media_id=$(printf "%s" "$choice" | cut -f5)
         fi
 
         # Check if back button pressed
@@ -550,12 +551,11 @@ EOF
     ### Scraping/Decryption ###
     get_embed() {
         if [ "$media_type" = "movie" ]; then
-            # request to get the episode id
             movie_page="https://${base}"$(curl -s "https://${base}/ajax/movie/episodes/${media_id}" |
                 $sed ':a;N;$!ba;s/\n//g;s/class="nav-item"/\n/g' | $sed -nE "s@.*href=\"([^\"]*)\"[[:space:]]*title=\"${provider}\".*@\1@p")
             episode_id=$(printf "%s" "$movie_page" | $sed -nE "s_.*-([0-9]*)\.([0-9]*)\$_\2_p")
         fi
-        # request to get the embed
+
         embed_link=$(curl -s "https://${base}/ajax/episode/sources/${episode_id}" | $sed -nE "s_.*\"link\":\"([^\"]*)\".*_\1_p")
         if [ -z "$embed_link" ]; then
             send_notification "Error" "Could not get embed link"
@@ -564,18 +564,20 @@ EOF
     }
 
     extract_from_embed() {
-        api_url="${API_URL}/?url=${embed_link}"
-        json_data=$(curl -s "${api_url}")
-        video_link=$(printf "%s" "$json_data" | $sed -nE "s_.*\"file\":\"([^\"]*\.m3u8)\".*_\1_p" | head -1)
+        json_data=$(curl -s -X POST "${API_URL}" \
+            -H "Content-Type: application/json" \
+            -d "{\"url\": \"${embed_link}\", \"mediaId\": \"${api_media_id}\"}")
+        video_link=$(printf "%s" "$json_data" | $sed -nE "s_.*\"file\":\"([^\"]*\.m3u8)\".*_\1_p" | head -n 1)
 
         if [ -z "$video_link" ]; then
-            send_notification "Using ${API_URL} failed using ${API_FALLBACK_URL} instead"
-            api_url="${API_FALLBACK_URL}/?url=${embed_link}"
-            json_data=$(curl -s "${api_url}")
-            video_link=$(printf "%s" "$json_data" | $sed -nE "s_.*\"file\":\"([^\"]*\.m3u8)\".*_\1_p" | head -1)
+            send_notification "Using ${API_URL} failed, using ${API_FALLBACK_URL} instead"
+
+            json_data=$(curl -s -X POST "${API_FALLBACK_URL}" \
+                -H "Content-Type: application/json" \
+                -d "{\"url\": \"${embed_link}\", \"mediaId\": \"${api_media_id}\"}")
+            video_link=$(printf "%s" "$json_data" | $sed -nE "s_.*\"file\":\"([^\"]*\.m3u8)\".*_\1_p" | head -n 1)
         fi
 
-        # Exit if both sources failed
         if [ -z "$video_link" ] && [ "$json_output" != "true" ]; then
             send_notification "Error" "3000" "" "No sources returned, please try again later"
             exit 1
@@ -595,7 +597,8 @@ EOF
                 subs_arg=""
             else
                 subs_arg="--sub-file"
-                num_subs=$(printf "%s" "$subs_links" | wc -l)
+                num_subs=$(printf "%s" "$subs_links" | wc -l | tr -d ' ')
+
                 if [ "$num_subs" -gt 0 ]; then
                     subs_links=$(printf "%s" "$subs_links" | sed -e "s/:/\\$path_thing:/g" -e "H;1h;\$!d;x;y/\n/$separator/" -e "s/$separator\$//")
                     subs_arg="--sub-files"
