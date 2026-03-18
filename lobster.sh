@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 
-LOBSTER_VERSION="4.6.3"
+LOBSTER_VERSION="4.6.4"
 
 ### General Variables ###
 config_file="$HOME/.config/lobster/lobster_config.sh"
@@ -646,10 +646,10 @@ EOF
                     send_notification "Deleted from history" "5000" "" "$title"
                 else
                     if grep -q -- "$media_id" "$histfile" 2>/dev/null; then
-                        $sed -i "s|\t[0-9:]*\t$media_id|\t$position\t$media_id|1" "$histfile"
+                        $sed -i "s|^.*\t$media_id\t.*$|$title\t$position\t$media_id\t$media_type\t$image_link\t$api_media_id|" "$histfile"
                         send_notification "Saved to history" "5000" "" "$title"
                     else
-                        printf "%s\t%s\t%s\t%s\t%s\n" "$title" "$position" "$media_id" "$media_type" "$image_link" >>"$histfile"
+                        printf "%s\t%s\t%s\t%s\t%s\t%s\n" "$title" "$position" "$media_id" "$media_type" "$image_link" "$api_media_id" >>"$histfile"
                         send_notification "Saved to history" "5000" "$images_cache_dir/  $title ($media_type)  $media_id.jpg" "$title"
                     fi
                 fi
@@ -675,10 +675,10 @@ EOF
 
                 # If entry exists in hist file then update it, otherwise append new line
                 if grep -q -- "$media_id" "$histfile" 2>/dev/null; then
-                    $sed -i "s|^.*\t$media_id\t.*$|$title\t$position\t$media_id\t$media_type\t$season_id\t$episode_id\t$season_title\t$episode_title\t$data_id\t$image_link|" "$histfile"
+                    $sed -i "s|^.*\t$media_id\t.*$|$title\t$position\t$media_id\t$media_type\t$season_id\t$episode_id\t$season_title\t$episode_title\t$data_id\t$image_link\t$api_media_id|" "$histfile"
                 else
-                    printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n" "$title" "$position" "$media_id" "$media_type" \
-                        "$season_id" "$episode_id" "$season_title" "$episode_title" "$data_id" "$image_link" >>"$histfile"
+                    printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n" "$title" "$position" "$media_id" "$media_type" \
+                        "$season_id" "$episode_id" "$season_title" "$episode_title" "$data_id" "$image_link" "$api_media_id" >>"$histfile"
                 fi
                 ;;
             *) notify-send "Error" "Unknown media type" ;;
@@ -709,14 +709,17 @@ EOF
 
             maybe_download_thumbnails "$history_response"
             select_desktop_entry ""
+            line=$(grep -m1 -F "$media_id" "$histfile")
             if [ "$media_type" = "tv" ]; then
-                line=$(grep -m1 -F "$media_id" "$histfile")
                 season_id=$(printf "%s" "$line" | cut -f5)
                 episode_id=$(printf "%s" "$line" | cut -f6)
                 season_title=$(printf "%s" "$line" | cut -f7)
                 episode_title=$(printf "%s" "$line" | cut -f8)
                 data_id=$(printf "%s" "$line" | cut -f9)
                 image_link=$(printf "%s" "$line" | cut -f10)
+                api_media_id=$(printf "%s" "$line" | cut -f11)
+            else
+                api_media_id=$(printf "%s" "$line" | cut -f6)
             fi
         else
             choice=$($sed -n "1h;1!{x;H;};\${g;p;}" "$histfile" | nl -w 1 | nth "Choose an entry: ")
@@ -732,6 +735,9 @@ EOF
                 episode_title=$(printf "%s" "$choice" | cut -f8)
                 data_id=$(printf "%s" "$choice" | cut -f9)
                 image_link=$(printf "%s" "$choice" | cut -f10)
+                api_media_id=$(printf "%s" "$choice" | cut -f11)
+            else
+                api_media_id=$(printf "%s" "$choice" | cut -f6)
             fi
         fi
 
