@@ -567,7 +567,6 @@ EOF
         json_data=$(curl -s -X POST "${API_URL}" \
             -H "Content-Type: application/json" \
             -d "{\"url\": \"${embed_link}\", \"mediaId\": \"${api_media_id}\"}")
-
         video_link=$(printf "%s" "$json_data" | $sed -nE "s_.*\"file\":\"([^\"]*\.m3u8)\".*_\1_p" | head -n 1)
 
         if [ -z "$video_link" ]; then
@@ -576,7 +575,6 @@ EOF
             json_data=$(curl -s -X POST "${API_FALLBACK_URL}" \
                 -H "Content-Type: application/json" \
                 -d "{\"url\": \"${embed_link}\", \"mediaId\": \"${api_media_id}\"}")
-                
             video_link=$(printf "%s" "$json_data" | $sed -nE "s_.*\"file\":\"([^\"]*\.m3u8)\".*_\1_p" | head -n 1)
         fi
 
