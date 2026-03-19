@@ -622,16 +622,16 @@ EOF
         encoded_query=$(printf "%s" "$title" | $sed 's/ /%20/g; s/:/%3A/g; s/\//%2F/g')
         send_notification "Searching OpenSubtitles for \"$title\" with language \"$language\"..."
         json=$(curl -s -L --request GET --url "https://api.opensubtitles.com/api/v1/subtitles?type=${media_type}&query=${encoded_query}&languages=${language}&year=${year}" -A "lobster" -H "Api-Key: ${opensubtitles_api_key}" -H "Accept: application/json")
-        
-        entries=$(printf "%s" "$json" | tr -d '\n' | \
-            $sed 's/\[{"id"/\n{"id"/g; s/},{"id"/\n{"id"/g' | \
+
+        entries=$(printf "%s" "$json" | tr -d '\n' |
+            $sed 's/\[{"id"/\n{"id"/g; s/},{"id"/\n{"id"/g' |
             while IFS= read -r record; do
                 file_id=$(printf "%s" "$record" | $sed -nE 's/.*"file_id":([0-9]+).*/\1/p' | head -1)
                 language=$(printf "%s" "$record" | $sed -nE 's/.*"language":"([^"]+)".*/\1/p' | head -1)
                 release=$(printf "%s" "$record" | $sed -nE 's/.*"release":"([^"]+)".*/\1/p' | head -1)
                 downloads=$(printf "%s" "$record" | $sed -nE 's/.*"download_count":([0-9]+).*/\1/p' | head -1)
                 [ -z "$downloads" ] && downloads="?"
-                [ -n "$file_id" ] && [ -n "$language" ] && \
+                [ -n "$file_id" ] && [ -n "$language" ] &&
                     printf "%s\t[%s] %s (%s downloads)\n" "$file_id" "$language" "$release" "$downloads"
             done)
 
