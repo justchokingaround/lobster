@@ -958,7 +958,7 @@ EOF
         ffmpeg_meta=""
         ffmpeg_maps=""
 
-        if [ "$no_subs" = "true" || "$use_opensubtitles" = "false" ]; then
+        if [ "$no_subs" = "true" ] || [ "$use_opensubtitles" = "false" ]; then
             # no subtitles
             sub_ops=""
         else
