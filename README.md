@@ -677,3 +677,6 @@ rm "$(brew --prefix)"/bin/lobster
 ```sh
 rm /usr/bin/lobster
 ```
+
+## References
+https://github.com/dylanaraps/pure-sh-bible
