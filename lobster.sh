@@ -503,7 +503,7 @@ EOF
             ueberzugpp cmd -s "$LOBSTER_UEBERZUG_SOCKET" -a exit
         else
             dep_ch "chafa" || true
-            [ "$TERM_PROGRAM" = "vscode" ] && fmt="--margin-bottom 8"
+            [ "${TERM_PROGRAM:-}" = "vscode" ] && fmt="--margin-bottom 8"
             dim="-s ${chafa_dims:-40x30}"
             choice=$(find "$images_cache_dir" -type f -exec basename {} \; | fzf \
                 --bind "shift-right:accept" --expect=shift-left --cycle -i -q "$1" \
