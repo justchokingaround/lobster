@@ -432,7 +432,7 @@ EOF
         tab="$(printf '\t')"
 
         # keep the while-loop in the current shell
-        while IFS="$tab" read -r cover_url id type title; do
+        while IFS="$tab" read -r cover_url id type title _; do
             [ -z "$cover_url" ] && continue # skip empty lines
             poster="$images_cache_dir/  $title ($type)  $id.jpg"
             [ ! -f "$poster" ] && need_dl=1 && break # one miss is enough
@@ -447,9 +447,10 @@ EOF
     }
     download_thumbnails() {
         pids=""
+        tab="$(printf '\t')"
 
         # run the while-loop in the current shell
-        while IFS='     ' read -r cover_url id type title; do
+        while IFS="$tab" read -r cover_url id type title _; do
             [ -z "$cover_url" ] && continue                    # skip empty lines
             printf '%s\n' "$cover_url" >"$tmp_dir/image_links" # For Discord rich presence
 
