@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 
-LOBSTER_VERSION="4.6.4"
+LOBSTER_VERSION="4.6.5"
 
 ### General Variables ###
 config_file="$HOME/.config/lobster/lobster_config.sh"
@@ -432,7 +432,7 @@ EOF
         tab="$(printf '\t')"
 
         # keep the while-loop in the current shell
-        while IFS="$tab" read -r cover_url id type title; do
+        while IFS="$tab" read -r cover_url id type title _; do
             [ -z "$cover_url" ] && continue # skip empty lines
             poster="$images_cache_dir/  $title ($type)  $id.jpg"
             [ ! -f "$poster" ] && need_dl=1 && break # one miss is enough
@@ -447,9 +447,10 @@ EOF
     }
     download_thumbnails() {
         pids=""
+        tab="$(printf '\t')"
 
         # run the while-loop in the current shell
-        while IFS='     ' read -r cover_url id type title; do
+        while IFS="$tab" read -r cover_url id type title _; do
             [ -z "$cover_url" ] && continue                    # skip empty lines
             printf '%s\n' "$cover_url" >"$tmp_dir/image_links" # For Discord rich presence
 
@@ -502,7 +503,7 @@ EOF
             ueberzugpp cmd -s "$LOBSTER_UEBERZUG_SOCKET" -a exit
         else
             dep_ch "chafa" || true
-            [ "$TERM_PROGRAM" = "vscode" ] && fmt="--margin-bottom 8"
+            [ "${TERM_PROGRAM:-}" = "vscode" ] && fmt="--margin-bottom 8"
             dim="-s ${chafa_dims:-40x30}"
             choice=$(find "$images_cache_dir" -type f -exec basename {} \; | fzf \
                 --bind "shift-right:accept" --expect=shift-left --cycle -i -q "$1" \
