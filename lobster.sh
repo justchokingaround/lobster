@@ -617,8 +617,11 @@ EOF
 
     check_history() {
         if [ ! -f "$histfile" ]; then
-            [ "$image_preview" = "true" ] && send_notification "Now Playing" "5000" "$images_cache_dir/  $title ($media_type)  $media_id.jpg" "$title"
-            [ "$json_output" != "true" ] && send_notification "Now Playing" "5000" "" "$title"
+            if [ "$image_preview" = "true" ]; then
+                send_notification "Now Playing" "5000" "$images_cache_dir/  $title ($media_type)  $media_id.jpg" "$title"
+            elif [ "$json_output" != "true" ]; then
+                send_notification "Now Playing" "5000" "" "$title"
+            fi
             return
         fi
         case $media_type in
@@ -933,10 +936,10 @@ EOF
         section=$2
         if [ "$path" = "home" ]; then
             response=$(curl -s "https://${base}/${path}" | $sed -n "/id=\"${section}\"/,/class=\"block_area block_area_home section-id-02\"/p" | $sed ':a;N;$!ba;s/\n//g;s/class="flw-item"/\n/g' |
-                $sed -nE "s@.*img data-src=\"([^\"]*)\".*<a href=\".*/(tv|movie)/watch-.*-([0-9]*)\".*title=\"([^\"]*)\".*class=\"fdi-item\">([^<]*)</span>.*@\1\t\3\t\2\t\4 [\5]@p" | $hxunent)
+                $sed -nE "s@.*img data-src=\"([^\"]*)\".*<a href=\".*/((tv|movie)/watch-[^\"]*-([0-9]*))\".*title=\"([^\"]*)\".*class=\"fdi-item\">([^<]*)</span>.*@\1\t\4\t\3\t\5 [\6]\t\2@p" | $hxunent)
         else
             response=$(curl -s "https://${base}/${path}" | $sed ':a;N;$!ba;s/\n//g;s/class="flw-item"/\n/g' |
-                $sed -nE "s@.*img data-src=\"([^\"]*)\".*<a href=\".*/(tv|movie)/watch-.*-([0-9]*)\".*title=\"([^\"]*)\".*class=\"fdi-item\">([^<]*)</span>.*@\1\t\3\t\2\t\4 [\5]@p" | $hxunent)
+                $sed -nE "s@.*img data-src=\"([^\"]*)\".*<a href=\".*/((tv|movie)/watch-[^\"]*-([0-9]*))\".*title=\"([^\"]*)\".*class=\"fdi-item\">([^<]*)</span>.*@\1\t\4\t\3\t\5 [\6]\t\2@p" | $hxunent)
         fi
         main
     }
