@@ -318,6 +318,13 @@ EOF
             maybe_download_thumbnails "$response"
             select_desktop_entry ""
             rc=$?
+
+            choice=$(printf "%s\n" "$response" | awk -F '\t' -v id="$media_id" '$2 == id { print; exit }')
+            image_link=$(printf "%s" "$choice" | cut -f1)
+            media_id=$(printf "%s" "$choice" | cut -f2)
+            media_type=$(printf "%s" "$choice" | cut -f3)
+            title=$(printf "%s" "$choice" | cut -f4 | $sed -nE "s@(.*) \[.*\]@\1@p")
+            api_media_id=$(printf "%s" "$choice" | cut -f5)
         else
             if [ "$use_external_menu" = "true" ]; then
                 choice=$(printf "%s" "$response" | rofi -kb-mode-next "" -kb-mode-previous "" -kb-custom-1 Shift+Left -kb-custom-2 Shift+Right -dmenu -i -p "" -mesg "Choose a Movie or TV Show" -display-columns 4)
