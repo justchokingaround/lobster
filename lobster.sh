@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 
-LOBSTER_VERSION="4.6.5"
+LOBSTER_VERSION="4.6.6"
 
 ### General Variables ###
 config_file="$HOME/.config/lobster/lobster_config.sh"
@@ -318,6 +318,13 @@ EOF
             maybe_download_thumbnails "$response"
             select_desktop_entry ""
             rc=$?
+
+            choice=$(printf "%s\n" "$response" | awk -F '\t' -v id="$media_id" '$2 == id { print; exit }')
+            image_link=$(printf "%s" "$choice" | cut -f1)
+            media_id=$(printf "%s" "$choice" | cut -f2)
+            media_type=$(printf "%s" "$choice" | cut -f3)
+            title=$(printf "%s" "$choice" | cut -f4 | $sed -nE "s@(.*) \[.*\]@\1@p")
+            api_media_id=$(printf "%s" "$choice" | cut -f5)
         else
             if [ "$use_external_menu" = "true" ]; then
                 choice=$(printf "%s" "$response" | rofi -kb-mode-next "" -kb-mode-previous "" -kb-custom-1 Shift+Left -kb-custom-2 Shift+Right -dmenu -i -p "" -mesg "Choose a Movie or TV Show" -display-columns 4)
@@ -610,8 +617,11 @@ EOF
 
     check_history() {
         if [ ! -f "$histfile" ]; then
-            [ "$image_preview" = "true" ] && send_notification "Now Playing" "5000" "$images_cache_dir/  $title ($media_type)  $media_id.jpg" "$title"
-            [ "$json_output" != "true" ] && send_notification "Now Playing" "5000" "" "$title"
+            if [ "$image_preview" = "true" ]; then
+                send_notification "Now Playing" "5000" "$images_cache_dir/  $title ($media_type)  $media_id.jpg" "$title"
+            elif [ "$json_output" != "true" ]; then
+                send_notification "Now Playing" "5000" "" "$title"
+            fi
             return
         fi
         case $media_type in
@@ -926,10 +936,10 @@ EOF
         section=$2
         if [ "$path" = "home" ]; then
             response=$(curl -s "https://${base}/${path}" | $sed -n "/id=\"${section}\"/,/class=\"block_area block_area_home section-id-02\"/p" | $sed ':a;N;$!ba;s/\n//g;s/class="flw-item"/\n/g' |
-                $sed -nE "s@.*img data-src=\"([^\"]*)\".*<a href=\".*/(tv|movie)/watch-.*-([0-9]*)\".*title=\"([^\"]*)\".*class=\"fdi-item\">([^<]*)</span>.*@\1\t\3\t\2\t\4 [\5]@p" | $hxunent)
+                $sed -nE "s@.*img data-src=\"([^\"]*)\".*<a href=\".*/((tv|movie)/watch-[^\"]*-([0-9]*))\".*title=\"([^\"]*)\".*class=\"fdi-item\">([^<]*)</span>.*@\1\t\4\t\3\t\5 [\6]\t\2@p" | $hxunent)
         else
             response=$(curl -s "https://${base}/${path}" | $sed ':a;N;$!ba;s/\n//g;s/class="flw-item"/\n/g' |
-                $sed -nE "s@.*img data-src=\"([^\"]*)\".*<a href=\".*/(tv|movie)/watch-.*-([0-9]*)\".*title=\"([^\"]*)\".*class=\"fdi-item\">([^<]*)</span>.*@\1\t\3\t\2\t\4 [\5]@p" | $hxunent)
+                $sed -nE "s@.*img data-src=\"([^\"]*)\".*<a href=\".*/((tv|movie)/watch-[^\"]*-([0-9]*))\".*title=\"([^\"]*)\".*class=\"fdi-item\">([^<]*)</span>.*@\1\t\4\t\3\t\5 [\6]\t\2@p" | $hxunent)
         fi
         main
     }
