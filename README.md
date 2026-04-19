@@ -412,6 +412,16 @@ For `fzf` you will need to either install
 [chafa](https://github.com/hpjansson/chafa/) or
 [ueberzugpp](https://github.com/jstkdng/ueberzugpp/).
 
+When using `chafa`, lobster defaults to a portable symbol-mode preview because
+it is the most reliable across terminals. If you want to opt into higher
+quality `chafa` rendering, add the following line to `lobster_config.sh`:
+
+```sh
+high_quality_image_preview=true
+```
+
+This may look better, but its behavior depends on terminal support.
+
 <details>
 <summary>Showcase</summary>
 

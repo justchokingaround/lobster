@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 
-LOBSTER_VERSION="4.6.6"
+LOBSTER_VERSION="4.6.7"
 
 ### General Variables ###
 config_file="$HOME/.config/lobster/lobster_config.sh"
@@ -175,6 +175,7 @@ configuration() {
     [ -z "$history" ] && history=false
     [ -z "$use_external_menu" ] && use_external_menu="false"
     [ -z "$image_preview" ] && image_preview="false"
+    [ -z "$high_quality_image_preview" ] && high_quality_image_preview="false"
     [ -z "$debug" ] && debug="false"
     [ -z "$preview_window_size" ] && preview_window_size=right:60%:wrap
     if [ -z "$use_ueberzugpp" ]; then
@@ -452,6 +453,9 @@ EOF
             download_thumbnails "$1"
         fi
     }
+    poster_path_for_media() {
+        printf "%s/  %s (%s)  %s.jpg\n" "$images_cache_dir" "$1" "$2" "$3"
+    }
     download_thumbnails() {
         pids=""
         tab="$(printf '\t')"
@@ -465,7 +469,7 @@ EOF
             cover_url=$(printf '%s\n' "$cover_url" |
                 sed -E 's:/[0-9]+x[0-9]+/:/1000x1000/:')
 
-            poster_path="$images_cache_dir/  $title ($type)  $id.jpg"
+            poster_path=$(poster_path_for_media "$title" "$type" "$id")
             curl -s -o "$poster_path" "$cover_url" &
             pids="$pids $!"
 
@@ -487,6 +491,17 @@ EOF
     }
     # defaults to chafa
     image_preview_fzf() {
+        preview_input=$(
+            printf "%s\n" "$response" |
+                while IFS="$(printf '\t')" read -r cover_url id type title _; do
+                    [ -z "$cover_url" ] && continue
+                    poster_path=$(poster_path_for_media "$title" "$type" "$id")
+                    printf "%s\t%s (%s)\t%s\t%s\t%s\n" \
+                        "$poster_path" \
+                        "$title" "$type" "$id" "$type" "$title"
+                done
+        )
+
         if [ "$use_ueberzugpp" = "true" ]; then
             UB_PID_FILE="$tmp_dir.$(uuidgen)"
             if [ -z "$ueberzug_output" ]; then
@@ -496,7 +511,7 @@ EOF
             fi
             UB_PID="$(cat "$UB_PID_FILE")"
             LOBSTER_UEBERZUG_SOCKET="$ueberzugpp_tmp_dir/ueberzugpp-$UB_PID.socket"
-            choice=$(find "$images_cache_dir" -type f -exec basename {} \; | fzf --bind "shift-right:accept" --expect=shift-left --cycle -i -q "$1" --cycle --preview-window="$preview_window_size" --preview="ueberzugpp cmd -s $LOBSTER_UEBERZUG_SOCKET -i fzfpreview -a add -x $ueberzug_x -y $ueberzug_y --max-width $ueberzug_max_width --max-height $ueberzug_max_height -f $images_cache_dir/{}" --reverse --with-nth 2 -d "  ")
+            choice=$(printf "%s\n" "$preview_input" | fzf --bind "shift-right:accept" --expect=shift-left --cycle -i -q "$1" --cycle --preview-window="$preview_window_size" --preview="ueberzugpp cmd -s $LOBSTER_UEBERZUG_SOCKET -i fzfpreview -a add -x $ueberzug_x -y $ueberzug_y --max-width $ueberzug_max_width --max-height $ueberzug_max_height -f {1}" --reverse --with-nth 2 -d "$(printf '\t')")
             rc=$?
 
             case $choice in
@@ -512,11 +527,16 @@ EOF
             dep_ch "chafa" || true
             [ "${TERM_PROGRAM:-}" = "vscode" ] && fmt="--margin-bottom 8"
             dim="-s ${chafa_dims:-40x30}"
-            choice=$(find "$images_cache_dir" -type f -exec basename {} \; | fzf \
+            if [ "$high_quality_image_preview" = "true" ]; then
+                chafa_cmd="chafa --animate off $fmt $dim"
+            else
+                chafa_cmd="chafa --format symbols --polite on --animate off $fmt $dim"
+            fi
+            choice=$(printf "%s\n" "$preview_input" | fzf \
                 --bind "shift-right:accept" --expect=shift-left --cycle -i -q "$1" \
                 --preview-window="$preview_window_size" \
-                --preview="chafa $fmt $dim $images_cache_dir/{}" \
-                --reverse --with-nth 2 -d "  ")
+                --preview="$chafa_cmd {1}" \
+                --reverse --with-nth 2 -d "$(printf '\t')")
             rc=$?
 
             case $choice in
@@ -549,9 +569,9 @@ EOF
             image_preview_fzf "$1"
             rc=$?
             tput reset
-            media_id=$(printf "%s" "$choice" | $sed -nE 's@.* ([0-9]+)\.jpg@\1@p')
-            title=$(printf "%s" "$choice" | $sed -nE 's@^[[:space:]]*(.*) \((tv|movie)\)  [0-9]+\.jpg@\1@p')
-            media_type=$(printf "%s" "$choice" | $sed -nE 's@^[[:space:]]*(.*) \((tv|movie)\)  [0-9]+\.jpg@\2@p')
+            media_id=$(printf "%s" "$choice" | cut -f3)
+            media_type=$(printf "%s" "$choice" | cut -f4)
+            title=$(printf "%s" "$choice" | cut -f5)
         fi
         return "$rc"
     }
