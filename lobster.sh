@@ -949,6 +949,7 @@ EOF
 
         # shellcheck disable=SC2086
         ffmpeg -loglevel error -stats -i "$1" $sub_ops -c copy "$dir.mkv"
+	export -g ffmpeg_pid=$!
     }
 
     choose_from_trending_or_recent() {
@@ -989,18 +990,22 @@ EOF
                         send_notification "Finished downloading" "5000" "" "$title - $season_title - $episode_title"
                     fi
                 fi
-                exit
-            fi
+	    fi
             if [ "$discord_presence" = "true" ]; then
                 [ -p "$presence" ] || mkfifo "$presence"
                 rm -f "$handshook" >/dev/null
                 tail -f "$presence" | nc -U "$discord_ipc" >"$ipclog" &
                 update_rich_presence "00:00:00" &
             fi
-            play_video
+            if [ "$download" != "true" ]; then
+                play_video
+            fi
             next_episode=""
             if [ -n "$position" ] && [ "$history" = "true" ]; then
                 save_history
+            fi
+            if [ "$download" != "true" ]; then
+                wait $ffmpeg_pid
             fi
             prompt_to_continue
             case "$continue_choice" in
