@@ -13,8 +13,10 @@ trap cleanup EXIT INT TERM HUP
 
 flash() {
     for i in $(seq "${1:-2}"); do
-        printf '\e[?5h'; sleep 0.1
-        printf '\e[?5l'; sleep 0.1
+        printf '\e[?5h'
+        sleep 0.1
+        printf '\e[?5l'
+        sleep 0.1
     done
 }
 
@@ -60,9 +62,12 @@ EOF
 }
 
 query=$(printf "%s\n" "$*" | tr ' ' '+')
-response=$(curl_safe "$tmdb_base/search?query=$query")
+response=$(curl -sL -H 'accept-language: en-US' "$tmdb_base/search?query=$query")
 
-results=$(printf "%s\n" "$response" | sed -nE "s@.*href=\"/movie/([^\"]+)\".*src=\"([^\"]+\.jpg)\".*<span>([^<]*)</span>.*\"release_date\">([^<]*)<.*@\1\t\2\t\4\t\3@p")
+results=$(printf "%s\n" "$response" |
+    sed 's/class="comp:media-card/\
+/g' |
+    sed -nE 's@.*href="/movie/([0-9]+)[^"]*".*<img alt="([^"]+)".*src="([^"]+)".*<span class="release_date[^>]*">([^<]+)</span>.*@\1\t\3\t\4\t\2@p')
 [ -z "$results" ] && die "No results were found, something went wrong with your network or query"
 
 download_thumbnails "$results"
@@ -70,7 +75,8 @@ download_thumbnails "$results"
 found=$(find "$thumbnails_dir" -name "*.jpg" 2>/dev/null | head -1)
 [ -z "$found" ] && die "No thumbnails were downloaded, something went wrong with your network or query"
 
-user_choice=$(find "$thumbnails_dir" -name "*.jpg" -exec basename {} \; | fzf -d "  " --with-nth 1 --preview "chafa $thumbnails_dir/{}")
+file_list=$(printf "%s\n" "$results" | sed -E 's/([^\t]+)\t[^\t]+\t[^\t]+\t(.*)/\2  \1.jpg/')
+user_choice=$(printf "%s\n" "$file_list" | fzf -d "  " --with-nth 1 --preview "chafa $thumbnails_dir/{}")
 rc=$?
 [ "$rc" -ne 0 ] && die "No selection made"
 [ -z "$user_choice" ] && die "No selection made"
