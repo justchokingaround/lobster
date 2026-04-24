@@ -262,6 +262,10 @@ Options:
       Specify the subtitle language (if no language is provided, it defaults to english)
     --rofi, --external-menu
       Use rofi instead of fzf
+    -n, --no-subs
+      Disable subtitles
+    -O, --opensubtitles
+      Search and select subtitles from OpenSubtitles.org (requires opensubtitles_api_key in config)
     -p, --provider
       Specify the provider to watch from (if no provider is provided, it defaults to Vidcloud) (currently supported: Vidcloud, UpCloud)
     -q, --quality
@@ -550,6 +554,20 @@ Example use case:
 ```sh
 lobster -n
 ```
+
+### `-O` / `--opensubtitles` argument
+Flag: Use -O or --opensubtitles when launching lobster, or set use_opensubtitles="true" in your config file.
+After selecting a movie/episode and getting the video link, lobster searches OpenSubtitles.com for subtitles
+using the movie title. A fzf/rofi selection appears showing each result as:
+[en] Movie.Title.2021.1080p.BluRay (5000 downloads)
+Download: The selected subtitle is downloaded to the temp dir and passed to the player via --sub-file.
+
+```
+Setup required — you need a free API key from https://www.opensubtitles.com/consumers. Add it to your config
+(~/.config/lobster/lobster_config.sh):
+opensubtitles_api_key="your_key_here"                                                                              use_opensubtitles="true" # optional, or use -O flag
+```
+The free tier allows 5 subtitle downloads/day. Searching has no limit.
 
 ### `-r` / `--recent` `<tv|movie>` argument
 

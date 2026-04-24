@@ -117,6 +117,8 @@ usage() {
       Use rofi instead of fzf
     -n, --no-subs
       Disable subtitles
+    -O, --opensubtitles
+      Search and select subtitles from OpenSubtitles.org (requires opensubtitles_api_key in config)
     -p, --provider
       Specify the provider to watch from (if no provider is provided, it defaults to Vidcloud) (currently supported: Vidcloud, UpCloud)
     -q, --quality
@@ -169,8 +171,11 @@ configuration() {
     [ -z "$player" ] && player="mpv"
     [ -z "$download_dir" ] && download_dir="$PWD"
     [ -z "$provider" ] && provider="Vidcloud"
-    [ -z "$subs_language" ] && subs_language="english"
+    [ -z "$language" ] && language="pt-br"
+    [ -z "$subs_language" ] && subs_language="portuguese"
     subs_language="$(printf "%s" "$subs_language" | cut -c2-)"
+    [ -z "$opensubtitles_api_key" ] && opensubtitles_api_key=""
+    [ -z "$use_opensubtitles" ] && use_opensubtitles="false"
     [ -z "$histfile" ] && histfile="$data_dir/lobster_history.txt" && mkdir -p "$(dirname "$histfile")"
     [ -z "$history" ] && history=false
     [ -z "$use_external_menu" ] && use_external_menu="false"
@@ -346,6 +351,7 @@ EOF
             image_link=$(printf "%s" "$choice" | cut -f1)
             media_id=$(printf "%s" "$choice" | cut -f2)
             media_type=$(printf "%s" "$choice" | cut -f3)
+            year=$(printf "%s" "$choice" | cut -f4 | $sed -nE "s@.*\[(.*)\]@\1@p")
             title=$(printf "%s" "$choice" | cut -f4 | $sed -nE "s@(.*) \[.*\]@\1@p")
             api_media_id=$(printf "%s" "$choice" | cut -f5)
         fi
@@ -632,6 +638,59 @@ EOF
                     subs_arg="--sub-files"
                 fi
             fi
+        fi
+    }
+
+    choose_opensubtitles() {
+        if [ -z "$opensubtitles_api_key" ]; then
+            send_notification "Set opensubtitles_api_key in config to use OpenSubtitles"
+            return 1
+        fi
+        send_notification "Searching OpenSubtitles..."
+        encoded_query=$(printf "%s" "$title" | $sed 's/ /%20/g; s/:/%3A/g; s/\//%2F/g')
+        send_notification "Searching OpenSubtitles for \"$title\" with language \"$language\"..."
+        json=$(curl -s -L --request GET --url "https://api.opensubtitles.com/api/v1/subtitles?type=${media_type}&query=${encoded_query}&languages=${language}&year=${year}" -A "lobster" -H "Api-Key: ${opensubtitles_api_key}" -H "Accept: application/json")
+
+        entries=$(printf "%s" "$json" | tr -d '\n' |
+            $sed 's/\[{"id"/\n{"id"/g; s/},{"id"/\n{"id"/g' |
+            while IFS= read -r record; do
+                file_id=$(printf "%s" "$record" | $sed -nE 's/.*"file_id":([0-9]+).*/\1/p' | head -1)
+                language=$(printf "%s" "$record" | $sed -nE 's/.*"language":"([^"]+)".*/\1/p' | head -1)
+                release=$(printf "%s" "$record" | $sed -nE 's/.*"release":"([^"]+)".*/\1/p' | head -1)
+                downloads=$(printf "%s" "$record" | $sed -nE 's/.*"download_count":([0-9]+).*/\1/p' | head -1)
+                [ -z "$downloads" ] && downloads="?"
+                [ -n "$file_id" ] && [ -n "$language" ] &&
+                    printf "%s\t[%s] %s (%s downloads)\n" "$file_id" "$language" "$release" "$downloads"
+            done)
+
+        [ -z "$entries" ] && send_notification "No subtitles found on OpenSubtitles" && return 1
+
+        chosen=$(printf "%s" "$entries" | launcher "Select subtitle from OpenSubtitles: " "2")
+        [ $? -ne 0 ] && return 1
+        [ -z "$chosen" ] && return 1
+
+        file_id=$(printf "%s" "$chosen" | cut -f1)
+        [ -z "$file_id" ] && return 1
+
+        dl_response=$(curl -s -X POST "https://api.opensubtitles.com/api/v1/download" \
+            -H "Api-Key: ${opensubtitles_api_key}" \
+            -H "User-Agent: lobster v${LOBSTER_VERSION}" \
+            -H "Content-Type: application/json" \
+            -d "{\"file_id\": ${file_id}}")
+
+        link=$(printf "%s" "$dl_response" | $sed -nE 's/.*"link":"([^"]+)".*/\1/p')
+        [ -z "$link" ] && send_notification "Failed to get subtitle link from OpenSubtitles" && return 1
+
+        sub_file="$tmp_dir/opensubtitles_${file_id}.srt"
+        curl -s -L "$link" -o "$sub_file" -H "User-Agent: lobster v${LOBSTER_VERSION}"
+
+        if [ -f "$sub_file" ]; then
+            subs_arg="--sub-file"
+            subs_links="$sub_file"
+            send_notification "Subtitle loaded from OpenSubtitles"
+        else
+            send_notification "Failed to download subtitle from OpenSubtitles"
+            return 1
         fi
     }
 
@@ -930,7 +989,7 @@ EOF
         ffmpeg_meta=""
         ffmpeg_maps=""
 
-        if [ "$no_subs" = "true" ]; then
+        if [ "$no_subs" = "true" ] || [ "$use_opensubtitles" = "false" ]; then
             # no subtitles
             sub_ops=""
         else
@@ -971,6 +1030,7 @@ EOF
             [ -z "$embed_link" ] && exit 1
             extract_from_embed
             [ -z "$video_link" ] && exit 1
+            [ "$use_opensubtitles" = "true" ] && [ "$no_subs" != "true" ] && choose_opensubtitles
             if [ "$download" = "true" ]; then
                 if [ "$media_type" = "movie" ]; then
                     if [ "$image_preview" = "true" ]; then
@@ -1174,6 +1234,9 @@ EOF
                 ;;
             -n | --no-subs)
                 no_subs="true" && shift
+                ;;
+            -O | --opensubtitles)
+                use_opensubtitles="true" && shift
                 ;;
             *)
                 if [ "${1#-}" != "$1" ]; then
