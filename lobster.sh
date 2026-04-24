@@ -824,10 +824,13 @@ EOF
     }
     save_progress() {
         position=$(cat "$watchlater_dir/"* 2>/dev/null | grep -A1 "$video_link" | $sed -nE "s@start=([0-9.]*)@\1@p" | cut -d'.' -f1)
-        if [ -n "$position" ]; then
+        if [ -n "$position" -a -n "$total_duration" -a "$total_duration" != "0" ] ; then
             progress=$((position * 100 / total_duration))
             position=$(printf "%02d:%02d:%02d" $((position / 3600)) $((position / 60 % 60)) $((position % 60)))
             send_notification "Stopped at" "5000" "$images_cache_dir/  $title ($media_type)  $media_id.jpg" "$position"
+        else
+            progess=0  # a fake position so that save_history at least can save the current episode
+            position="00:00:00"
         fi
     }
     play_video() {
