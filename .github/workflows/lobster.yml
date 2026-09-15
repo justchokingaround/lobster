@@ -6,6 +6,7 @@ on:
   pull_request:
     paths:
       - "lobster.sh"
+      - "tests/**"
 
 jobs:
   sh-checker:
@@ -18,6 +19,14 @@ jobs:
         env:
           SHELLCHECK_OPTS: -s sh -o all -e 2250
           SHFMT_OPTS: -i 4 -ci -d
+
+  smoke-test:
+    name: Smoke tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Run tests/smoke.sh
+        run: sh tests/smoke.sh
 
   check-exec:
     name: Executable Bit

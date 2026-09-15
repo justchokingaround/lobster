@@ -8,15 +8,13 @@
   gnugrep,
   gnupatch,
   gnused,
-  html-xml-utils,
   lib,
   makeWrapper,
   mpv,
-  openssl,
 }:
 stdenvNoCC.mkDerivation (finalAttrs: {
   pname = "lobster";
-  version = "4.3.0";
+  version = "5.0.0";
 
   src = builtins.path {
     name = "${finalAttrs.pname}-${finalAttrs.version}";
@@ -34,9 +32,7 @@ stdenvNoCC.mkDerivation (finalAttrs: {
     gnugrep
     gnupatch
     gnused
-    html-xml-utils
     mpv
-    openssl
   ];
 
   dontBuild = true;

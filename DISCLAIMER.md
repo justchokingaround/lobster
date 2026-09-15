@@ -32,4 +32,4 @@ This project has no control on the content it is serving, using copyrighted cont
 A browser is a tool, and the maliciousness of the tool is directly based on the user.
 </b>
 
-This project uses client-side content access mechanisms. Hence, the copyright infrigements or DMCA in this project's regards are to be forwarded to the associated site by the associated notifier of any such claims. As of writing this is flixhq.to
+This project bundles no built-in content source. Metadata (titles, search, artwork) comes from [TMDB](https://www.themoviedb.org/), a licensed metadata API; playback is resolved by a `resolve_stream` function the user supplies themselves in their own configuration. Any copyright infringement or DMCA notice concerning content served through a user's `resolve_stream` implementation should be forwarded to whatever source that implementation points at, not to this project.

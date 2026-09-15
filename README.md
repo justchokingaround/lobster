@@ -1,110 +1,101 @@
-### Showcase
+# lobster
+
+watch movies and tv shows in your terminal. no account, no api key, no
+electron app eating 900mb of ram to show you a grid of posters.
+
+it's one posix shell script. you search, you pick, mpv opens.
 
 https://github.com/justchokingaround/lobster/assets/44473782/d597335c-42a9-4e45-8948-122744aa5ca9
 
-## Join the discord server (it is bridged to the matrix space)
+discord: https://discord.gg/JTDS2CKjQU (bridged to matrix)
+matrix: https://matrix.to/#/#lobster-and-jerry:matrix.org (i'm more active there)
 
-### https://discord.gg/JTDS2CKjQU
+---
 
-## Join the matrix server (I am more active there)
-
-### https://matrix.to/#/#lobster-and-jerry:matrix.org
-
-## Overview
-
-- [Install](#install)
-  - [Arch linux](#arch)
-  - [Debian linux](#debian-using-makedeb-and-mist)
-  - [Linux](#linux-from-source)
-  - [Android](#android-requires-termux-and-mpv-android)
-  - [NixOS](#nixos-flake)
-  - [Mac](#mac)
-  - [iOS](#ios)
-  - [Windows](#windows)
-- [Usage](#usage)
-  - [`-c` / `--continue`](#-c----continue-argument)
-  - [`--clear-history / --delete-history`](#--clear-history----delete-history-argument)
-  - [`-d` / `--download`](#-d----download-path-argument)
-  - [`--discord` / `--discord-presence` / `--rpc` / `--presence`](#--discord----discord-presence----rpc----presence-argument)
-  - [`-e` / `--edit`](#-e----edit-argument)
-  - [`-i` / `--image-preview`](#-i----image-preview-argument)
-  - [`-j` / `--json`](#-j----json-argument)
-  - [`-l` / `--language`](#-l----language-language-argument)
-  - [`--rofi` / `--external-menu`](#--rofi----external-menu-argument)
-  - [`-p` / `--provider`](#-p----provider-provider-argument)
-  - [`-q` / `--quality`](#-q----quality-quality-argument)
-  - [`-n` / `--no-subs`](#-n----no-subs-quality-argument)
-  - [`-r` / `--recent`](#-r----recent-tvmovie-argument)
-  - [`-s` / `--syncplay`](#-s----syncplay-argument)
-  - [`-t` / `--trending`](#-t----trending-argument)
-  - [`-u` / `-U` / `--update`](#-u---u----update-argument)
-  - [`-v` / `-V` / `--version`](#-v---v----version-argument)
-  - [`-x` / `--debug`](#-x----debug-argument)
-  - [Navigation](#navigation)
-- [Configuration](#configuration)
-- [Contributing](#contributing)
-- [Uninstall](#uninstall)
-
-## Install
-
-#### Arch
-
-Note: it is recommended to use the `lobster-git` package, as it is more up to
-date, and as the project is currently being actively maintained
+## quick start
 
 ```sh
-paru -S lobster-git
+sudo curl -sL github.com/justchokingaround/lobster/raw/main/lobster.sh -o /usr/local/bin/lobster
+sudo chmod +x /usr/local/bin/lobster
+lobster
 ```
 
-or
+you need `curl`, `sed`, `grep`, `awk` (you already have those), plus `fzf`
+and `mpv`. everything else is optional, see [dependencies](#dependencies).
+other install methods (arch, debian, nix, mac, android, ios, windows) are
+[further down](#install).
 
 ```sh
-paru -S lobster
+lobster                        # home menu: continue, search, trending, genres…
+lobster fight club             # straight to the results
+lobster -c                     # continue watching
+lobster --binge severance      # next episode auto-plays, no menu
+lobster -d ~/tv breaking bad   # download instead of play
 ```
 
-#### Debian (using makedeb and mist)
+## contents
 
-Here are the full installation instructions for Debian:
+- [what it does](#what-it-does)
+- [install](#install)
+- [flags](#flags)
+- [menus and keys](#menus-and-keys)
+- [history](#history)
+- [downloads](#downloads)
+- [where the data comes from](#where-the-data-comes-from)
+- [providers](#providers)
+- [config](#config)
+- [dependencies](#dependencies)
+- [json output](#json-output)
+- [roadmap](#roadmap)
+- [contributing](#contributing)
+- [uninstall](#uninstall)
 
-Install the dependencies:
+## what it does
 
-```sh
-sudo apt update && sudo apt upgrade && sudo apt install git wget
-```
+- **search / browse** - live search-as-you-type, trending, now playing,
+  top rated, genres, by year. metadata straight from themoviedb.org.
+- **plays in your player** - mpv by default, also vlc, iina, celluloid,
+  syncplay, mpv-android, or any command that takes a url.
+- **remembers where you stopped** - per-episode resume, progress bars,
+  watched (✓) markers, auto-advance to the next episode.
+- **subtitles + dubs** - picks your language, labels audio tracks, or skip
+  the whole thing with `-n`.
+- **downloads** - single episode or a whole season in parallel, with a live
+  progress table.
+- **posters in the terminal** - chafa, ueberzugpp or kitty graphics, if you
+  like your tui pretty.
+- **rofi mode** - bind it to a key in your wm and never open a terminal at
+  all. this is the intended endgame, honestly.
+- **discord rich presence** - let your friends know what you're watching,
+  for better or worse.
+- **copy the stream url or a ready-to-paste player command** - referer,
+  subs, resume position and all.
+- **json output** - `-j` gives you every resolved source, pipe it wherever.
 
-During this step write `makedeb` and enter, when prompted:
+## install
 
-```sh
-bash -ci "$(wget -qO - 'https://shlink.makedeb.org/install')"
-```
-
-```sh
-wget -qO - 'https://proget.makedeb.org/debian-feeds/prebuilt-mpr.pub' | gpg --dearmor | sudo tee /usr/share/keyrings/prebuilt-mpr-archive-keyring.gpg 1> /dev/null
-```
-
-```
-echo "deb [arch=amd64 signed-by=/usr/share/keyrings/prebuilt-mpr-archive-keyring.gpg] https://proget.makedeb.org prebuilt-mpr $(lsb_release -cs)" | sudo tee /etc/apt/sources.list.d/prebuilt-mpr.list
-```
-
-```
-sudo apt update && sudo apt install mist
-```
-
-During this step when prompted to `Review files for 'lobster-git'? [Y/n]`, write
-`n` and enter.
-
-```sh
-mist update && mist install lobster-git
-```
-
-#### Linux (from source)
+**linux / any unix**
 
 ```sh
 sudo curl -sL github.com/justchokingaround/lobster/raw/main/lobster.sh -o /usr/local/bin/lobster &&
 sudo chmod +x /usr/local/bin/lobster
 ```
 
-#### Android (requires Termux and [mpv-android](https://github.com/mpv-android/mpv-android))
+**arch** - `lobster-git` is the maintained one, `lobster` can sometimes lags behind
+
+```sh
+paru -S lobster-git
+```
+
+**mac**
+
+```sh
+curl -sL github.com/justchokingaround/lobster/raw/main/lobster.sh -o "$(brew --prefix)"/bin/lobster &&
+chmod +x "$(brew --prefix)"/bin/lobster
+```
+
+**android** - needs [termux](https://termux.dev) and
+[mpv-android](https://github.com/mpv-android/mpv-android)
 
 ```sh
 curl -sLO github.com/justchokingaround/lobster/raw/main/lobster.sh &&
@@ -112,568 +103,519 @@ chmod +x lobster.sh &&
 mv lobster.sh /data/data/com.termux/files/usr/bin/lobster
 ```
 
-If you're using Android 14 or newer make sure to run this before:
-```sh
-pkg install termux-am
-```
+on android 14+ run `pkg install termux-am` first.
 
-#### Nixos (Flake)
-
-Add this to you flake.nix
+**nixos (flake)**
 
 ```nix
 inputs.lobster.url = "github:justchokingaround/lobster";
+# then, in configuration.nix:
+environment.systemPackages = [ inputs.lobster.packages.<architecture>.lobster ];
 ```
 
-Add this to you configuration.nix
+or just `nix run github:justchokingaround/lobster#lobster`. if an update
+breaks, run `nix flake update` in the cloned repo and add any missing
+[dependencies](#dependencies) to `default.nix` (names via
+[nixos package search](https://search.nixos.org/packages)).
 
-```nix
-environment.systemPackages = [
-  inputs.lobster.packages.<architecture>.lobster
-];
-```
-
-##### Or for run the script once use
+<details>
+<summary><b>debian</b> (via makedeb + mist)</summary>
 
 ```sh
-nix run github:justchokingaround/lobster#lobster
+sudo apt update && sudo apt upgrade && sudo apt install git wget
+bash -ci "$(wget -qO - 'https://shlink.makedeb.org/install')"   # type: makedeb
+wget -qO - 'https://proget.makedeb.org/debian-feeds/prebuilt-mpr.pub' | gpg --dearmor | sudo tee /usr/share/keyrings/prebuilt-mpr-archive-keyring.gpg 1> /dev/null
+echo "deb [arch=amd64 signed-by=/usr/share/keyrings/prebuilt-mpr-archive-keyring.gpg] https://proget.makedeb.org prebuilt-mpr $(lsb_release -cs)" | sudo tee /etc/apt/sources.list.d/prebuilt-mpr.list
+sudo apt update && sudo apt install mist
+mist update && mist install lobster-git
 ```
 
-##### Nixos (Flake) update
+answer `n` when it asks `Review files for 'lobster-git'? [Y/n]`.
 
-When encoutering errors first run the nix flake update command in the cloned
-project and second add new/missing [dependencies](#dependencies) to the
-default.nix file. Use the
-[nixos package search](https://search.nixos.org/packages) to find the correct
-name.
+</details>
 
-```nix
-nix flake update
-```
+<details>
+<summary><b>ios</b> (iSH + VLC)</summary>
 
-#### Mac
-
-```sh
-curl -sL github.com/justchokingaround/lobster/raw/main/lobster.sh -o "$(brew --prefix)"/bin/lobster &&
-chmod +x "$(brew --prefix)"/bin/lobster
-```
-
-#### iOS
-Install iSH and VLC from the app store.
-
-<summary> Install dependencies: </summary>
+install iSH and VLC from the app store, then:
 
 ```sh
 apk update; apk add grep sed curl fzf patch
-```
-
-<summary> Install lobster: </summary>
-
-```sh
 curl -O "https://raw.githubusercontent.com/justchokingaround/lobster/main/lobster.sh"
 chmod +x lobster.sh
 mv lobster.sh /usr/local/bin/lobster
 ```
 
-#### Windows
+</details>
 
 <details>
-<summary>Windows installation instructions</summary>
+<summary><b>windows</b> (scoop + windows terminal)</summary>
 
-- This guide covers how to install and use lobster with the windows terminal,
-  you could also use a different terminal emulator, that supports fzf, like for
-  example wezterm
-- Note that the git bash terminal does _not_ have proper fzf support
+use windows terminal or wezterm. git bash's own terminal does *not* do fzf
+properly.
 
-1. Install scoop
-
-Open a PowerShell terminal
-https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell-on-windows?view=powershell-7.2#msi
-(version 5.1 or later) and run:
+1. install scoop, in powershell 5.1+:
 
 ```ps
 Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
 irm get.scoop.sh | iex
 ```
 
-2. Install git,mpv and fzf
+2. install the deps:
 
 ```ps
 scoop bucket add extras
 scoop install git mpv fzf
 ```
 
-3. Install windows terminal (you don't need to have a microsoft account for
-   that) https://learn.microsoft.com/en-us/windows/terminal/install
+3. install [windows terminal](https://learn.microsoft.com/en-us/windows/terminal/install)
+   and [git bash](https://git-scm.com/download/win) (tick the option to add it
+   to windows terminal)
 
-4. Install git bash (select the option to add it to the windows terminal during
-   installation) https://git-scm.com/download/win
-
-(The next steps are to be done in the windows terminal, in a bash shell)
-
-5. Download the script file to the current directory
+4. then, in a bash shell inside windows terminal:
 
 ```sh
 curl -O "https://raw.githubusercontent.com/justchokingaround/lobster/main/lobster.sh"
-```
-
-6. Give it executable permissions
-
-```sh
 chmod +x lobster.sh
-```
-
-7. Copy the script to path
-
-```sh
 cp lobster.sh /usr/bin/lobster
 ```
 
-8. Use lobster
-
-```sh
-lobster <args> or lobster [movie/tv show]
-```
-
 </details>
 
-## Usage
+**no fzf?**
+
+```sh
+git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf && ~/.fzf/install
+```
+
+without it lobster falls back to a numbered prompt. it works, it's just sad.
+
+## flags
+
+everything here can also live in the [config file](#config). a flag always
+wins over the config.
+
+| flag | what it does |
+| --- | --- |
+| `-c`, `--continue` | continue watching from history |
+| `--last` | resume the most recent entry, skip the picker |
+| `--binge` | auto-play next episode, no menu, no countdown |
+| `--clear-history` | delete the history file |
+| `-d`, `--download [path]` | download instead of play (default: current dir) |
+| `--discord`, `--rpc`, `--presence` | discord rich presence (linux, beta, needs bsd netcat) |
+| `-e`, `--edit` | open the config in `$lobster_editor` / `$VISUAL` / `$EDITOR` / nano |
+| `--genre <name> [movie\|tv]` | browse a tmdb genre (`action`, `sci-fi`, …) |
+| `-h`, `--help` | the help text |
+| `-i`, `--image-preview` | cover art while picking (needs chafa or ueberzugpp) |
+| `-j`, `--json` | print metadata + every resolved source, then exit |
+| `-l`, `--language <lang>` | subtitle language (default `english`) |
+| `-n`, `--no-subs` | no subtitles, anywhere, also slightly faster |
+| `--provider <name>` | pin one source backend, see [providers](#providers) |
+| `-q`, `--quality <n>` | preferred quality: `1080`, `720`, `4k`/`2160`… (default `1080`) |
+| `-r`, `--recent [movie\|tv]` | currently airing / now playing |
+| `--rofi`, `--external-menu` | rofi instead of fzf |
+| `-s`, `--syncplay` | watch in sync with friends via [syncplay](https://syncplay.pl/) |
+| `-t`, `--trending` | this week's trending |
+| `-T`, `--top-rated [movie\|tv]` | top rated titles |
+| `--year <year> [movie\|tv]` | titles from one year |
+| `-u`, `-U`, `--update` | update the script (probably needs sudo, needs `patch`) |
+| `-v`, `-V`, `--version` | version |
+| `-x`, `--debug` | stderr to terminal *and* `$TMPDIR/lobster.log` |
+
+anything that isn't a flag is the search query, so you don't have to quote
+your movie titles:
+
+```sh
+lobster -i a silent voice --rofi
+lobster -l spanish -q 720 fight club -i -d
+lobster -l spanish blade runner --json
+```
+
+the `[movie|tv]` arguments default to `movie` when you leave them off.
+`-q` and `-l` with nothing after them fall back to `1080` and `english`
+instead of yelling at you.
+
+## menus and keys
+
+with no query and no flags, you land on the home menu:
 
 ```txt
-Usage: lobster [options] [query]
-If a query is provided, it will be used to search for a Movie/TV Show
-
-Options:
-    -c, --continue
-      Continue watching from current history
-    -d, --download [path]
-      Downloads movie or episode that is selected (if no path is provided, it defaults to the current directory)
-    --discord, --discord-presence, --rpc, --presence
-      Enables discord rich presence (beta feature, but should work fine on Linux)
-    -e, --edit
-      Edit config file using an editor defined with lobster_editor in the config (\$EDITOR by default)
-    -h, --help
-      Show this help message and exit
-    -i, --image-preview
-      Shows image previews during media selection (requires chafa, you can optionally use ueberzugpp)
-    -j, --json
-      Outputs the json containing video links, subtitle links, referrers etc. to stdout
-    -l, --language [language]
-      Specify the subtitle language (if no language is provided, it defaults to english)
-    --rofi, --external-menu
-      Use rofi instead of fzf
-    -p, --provider
-      Specify the provider to watch from (if no provider is provided, it defaults to Vidcloud) (currently supported: Vidcloud, UpCloud)
-    -q, --quality
-      Specify the video quality (if no quality is provided, it defaults to 1080)
-    -r, --recent [movies|tv]
-      Lets you select from the most recent movies or tv shows (if no argument is provided, it defaults to movies)
-    -s, --syncplay
-      Use Syncplay to watch with friends
-    -t, --trending
-      Lets you select from the most popular movies and shows
-    -u, -U, --update
-      Update the script
-    -v, -V, --version
-      Show the version of the script
-    -x, --debug
-      Enable debug mode (prints out debug info to stdout and also saves it to /tmp/lobster.log)
-
-  Note:
-    All arguments can be specified in the config file as well.
-    If an argument is specified in both the config file and the command line, the command line argument will be used.
-
-  Some example usages:
-    lobster -i a silent voice --rofi
-    lobster -l spanish -q 720 fight club -i -d
-    lobster -l spanish blade runner --json
+continue watching / search / trending / now playing / top rated / genres / quit
 ```
 
-### `-c` / `--continue` argument
+search is live in fzf mode: results refresh as you type (debounced), with a
+title/genre/rating preview on the side. every query is saved to
+`~/.local/share/lobster/search_history`, so up arrow recalls the thing you
+watched last tuesday.
 
-This feature is disabled by default because it relies on history, to enable it,
-you need add the following line to the `lobster_config.sh` file:
+**keys**
+
+| key | does |
+| --- | --- |
+| enter / shift+right | confirm |
+| esc / shift+left | back one menu (quits at the top) |
+| ctrl-c | quit, obviously |
+| `?` | expand/collapse the preview pane |
+| up arrow | previous search (in the search box) |
+| ctrl-d | delete the highlighted entry (in the continue list) |
+| `q` + enter | the `quit` entry, because typing `q` is easier than `exit` |
+
+**after the video ends**
+
+shows get `next episode`, `replay episode`, `select episode`,
+`select season`, `copy stream url`, `copy player command`, `search`, `quit`.
+movies get the same minus the episode/season entries. esc goes up one level:
+the episode list for a show, out the door for a movie.
+
+`copy player command` copies a full, pasteable command for whatever player
+you've configured, referer header and subtitle files included, so you can
+send it to a friend or paste it on another machine:
 
 ```sh
-history=true
+mpv --start='412' --sub-file='https://…/en.vtt' \
+    --http-header-fields='Referer: https://…/' \
+    --demuxer-lavf-o=allowed_extensions=ALL --alang=eng \
+    --force-media-title='Show (S01E03)' 'https://…/master.m3u8'
 ```
 
-In a similar fashion to how saving your position when you watch videos on
-YouTube or Netflix works, lobster has history support and saves the last minute
-you watched for a Movie or TV Show episode. To use this feature, simply watch a
-Movie or an Episode from a TV Show, and after you quit mpv the history will be
-automatically updated. The next time you want to resume from the last position
-watched, you can just run
+`copy stream url` copies just the url. both use wl-copy / xclip / xsel /
+pbcopy / clip.exe / termux-clipboard-set, whichever exists, and print to the
+terminal when none do. these links are signed and short-lived, so a copied
+command usually rots within a few hours.
+
+when an episode ends past 90%, lobster counts down 3 seconds and rolls into
+the next one. press enter to stop it and get the menu instead.
+
+## history
+
+on by default. lobster saves your position the moment you quit the player,
+like netflix but without the subscription or the cancelled show. `lobster -c`
+gives you the picker, `lobster --last` skips straight back into the most
+recent thing.
+
+it's a local text file, nothing leaves your machine, and the first run prints
+a one-line note saying so. to opt out:
 
 ```sh
-lobster -c
+history=false
 ```
 
-which will prompt you to chose which of the saved Movies/TV Shows you'd like to
-resume from. Upon the completion of a movie or an episode, the corresponding
-entry is either deleted (in case of a movie, or the last episode of a show), or
-it is updated to the next available episode (if it's the last episode of a
-season, it will update to the first episode of the next season).
+- lives in `~/.local/share/lobster/lobster_history.txt` (`histfile` to move it)
+- past 90% watched counts as done: movies drop off the list, shows roll over
+  to the next episode, including across season boundaries
+- the continue list is newest-first with a progress bar and `SxxEyy` marker
+- the episode list marks watched (✓) and current (▶) episodes
+- ctrl-d in the continue list deletes that entry
+- `--clear-history` nukes the file
+- with `history=false`, `-c` just tells you it's off instead of pretending
+  nothing happened
+
+## downloads
+
+```sh
+lobster -d rick and morty              # current dir
+lobster -d ~/tv_shows/ rick and morty  # somewhere specific
+lobster rick and morty -d              # flag order doesn't matter
+```
+
+picking a season downloads the whole thing: `download_concurrency` episodes
+at once (default 8), a new one starting at most every `download_pace`
+seconds (default 1). you get a live table, one season-wide percentage and a
+per-episode one, finished episodes scrolling off the top. anything that
+failed gets retried once with a freshly resolved link, since these urls are
+signed and expire. a desktop notification fires when it's done.
+
+if a batch fails across the board with 4xx/429s, the backend is rate-limiting
+you by request *rate*, not by connection count (penguplay: ~15 per 15s), so
+raise `download_pace` rather than just lowering concurrency.
+
+the chain is `yt-dlp` → `ffmpeg` → `mpv --stream-record`, first one installed
+wins. yt-dlp handles obfuscated sources best; the mpv fallback exists for
+streams whose segments wear a fake `.jpg` extension, which ffmpeg refuses on
+purpose. set `downloader="aria2c"` to prefer aria2c for plain direct files.
+
+external subtitles are saved as `.vtt` next to the video (most sources
+already embed them in the mkv anyway). `-n` skips that.
+
+want something else entirely? define `custom_downloader` in the config and it
+wins over all of it. paths, season subfolders and filename sanitizing are
+already done by the time it's called:
+
+```sh
+# custom_downloader <url> <dest_file> <referer> <subs_csv> [progress_file]
+#   referer may be empty; subs_csv is comma-separated (may be empty);
+#   progress_file is only set for batch downloads and can be ignored
+# exit non-zero to fall back to the built-in chain
+custom_downloader() {
+    wget -O "$2" "$1"
+}
+```
+
+## where the data comes from
+
+search, trending, seasons, episodes: all scraped from
+[themoviedb.org](https://www.themoviedb.org/)'s public pages. no account, no
+api key, nothing to sign up for. downside of reading html instead of the v3
+api: a tmdb redesign can break browsing overnight. if that happens it's a
+`lobster.sh` bug, not something you misconfigured.
+
+playing is a separate step, see [providers](#providers).
+
+lobster does not host, decrypt or upload anything. it talks to the same json
+backends third-party players do. see
+[docs/stream-resolution.md](docs/stream-resolution.md) for the
+reverse-engineered flow and `contrib/resolve-streams.mjs` for a js
+reference implementation.
+
+## providers
+
+six backends, tried best-first until one coughs up a stream. the default
+order is:
+
+| provider | backend | notes |
+| --- | --- | --- |
+| `videasy` | `api.speedracelight.com` | needs `node`, skipped without it |
+| `rivestream` | `scrapper.rivestream.app` | queries its sub-providers in parallel |
+| `cinezo` | `proxy1.flikhub.net` | direct files |
+| `vidlove` | `api.shows.st` | direct files, hls master fallback |
+| `penguplay` | your [penguplay](https://pengu.uk/) stremio addon | needs `penguplay_url` |
+| `aiostreams` | your aiostreams addon | needs `aiostreams_url` |
+
+**which one to use.** configure `aiostreams` if you have a debrid service or
+can torrent, and put it first - it's the best source. otherwise configure
+`penguplay` and put it first. the scraped backends (`videasy`, `rivestream`,
+`cinezo`, `vidlove`) work but aren't as good; keep them behind the addon as
+fallbacks.
+
+change the order with `provider_order` in the config, best first. names not
+listed are never tried, unknown names are skipped with a warning (so an old
+config keeps working when a backend is added or retired):
+
+```sh
+# default
+provider_order="aiostreams penguplay videasy rivestream cinezo vidlove"
+
+# only scraped backends, vidlove first
+provider_order="vidlove rivestream cinezo"
+```
+
+the stremio addons lead the default order for the reason above: an addon you
+configured is a deliberate source choice, not a last resort. an addon with no
+url configured is skipped, so the default works untouched either way.
+
+pin a single one with `--provider rivestream` or `provider=` in the config;
+that ignores `provider_order` entirely:
+
+```sh
+penguplay_url="https://pengu.uk/<your-token>/manifest.json"
+aiostreams_url="https://<your-host>/<your-token>/manifest.json"
+provider="penguplay"   # optional
+```
+
+either url can be the full `manifest.json` or just the base path. the stremio
+backends resolve `tmdb:*` ids through the addon's own `/stream` and
+`/subtitles` resources (series ids carry `:season:episode`), so whatever
+source/quality/audio filters you set up in the addon still apply. picking
+`provider="penguplay"` without the url is a hard error, not a silent
+fallback.
+
+**your own resolver.** none of the above required, if you'd rather plug in a
+self-hosted extractor, a yt-dlp plugin, your own api. define this in the
+config and lobster uses it instead:
+
+```sh
+# resolve_stream <type> <tmdb_id> [season] [episode]
+#   type is "movie" or "tv"
+# stdout, one tab-separated line:
+#   <video_url>\t<referer>\t<sub_url,sub_url,...>
+#   referer and the subtitle list may both be empty
+# exit non-zero if nothing could be resolved
+resolve_stream() {
+    ...
+}
+```
+
+`$quality`, `$subs_language` and `$no_subs` are set as globals by then, if
+your resolver cares.
+
+## config
+
+plain shell, sourced before arguments are parsed, so flags always override
+it. lives at `~/.config/lobster/lobster_config.sh` (or
+`$XDG_CONFIG_HOME/lobster/…`). open it with `lobster -e`.
+
+on first run lobster writes that file for you: every option below, grouped
+and commented out, with its default next to it. uncomment what you want to
+change. since nothing in the generated file is active, defaults keep coming
+from the script itself, so upgrading never fights your config. delete the
+file and run lobster again to get a fresh template, or run
+`lobster --config-regenerate` (your old one is kept as `.bak`).
+
+| option | default | what it does |
+| --- | --- | --- |
+| `player` | `mpv` | `mpv`, `vlc`, `iina`, `celluloid`, `syncplay`, or any command taking a url |
+| `quality` | `1080` | preferred quality: `1080`, `720`, `4k`/`2160`… |
+| `provider` | (empty) | pin one backend, ignores `provider_order` |
+| `provider_order` | `aiostreams penguplay videasy rivestream cinezo vidlove` | which backends are tried, best first |
+| `penguplay_url` / `aiostreams_url` | (empty) | stremio addon manifest urls |
+| `subs_language` | `english` | subtitle language |
+| `audio_language` | `english` | preferred dub / audio track |
+| `blocked_audio_languages` | (empty) | never pick these, e.g. `"hindi"` |
+| `max_subs` | `5` | subtitle tracks handed to the player (`0` = all) |
+| `max_audio_tracks` | `5` | audio candidates probed before picking (`0` = all) |
+| `no_subs` | `false` | skip subtitles entirely |
+| `history` | `true` | watch history, `-c`, `--last` |
+| `histfile` | `$XDG_DATA_HOME/lobster/lobster_history.txt` | where history lives |
+| `binge` | `false` | auto-play next episode, no menu |
+| `download_dir` | `$PWD` | where `-d` saves |
+| `downloader` | `ffmpeg` | `aria2c` to prefer it for plain direct links |
+| `download_concurrency` | `8` | episodes at once in a batch |
+| `download_pace` | `1` | minimum seconds between episode starts |
+| `live_search` | `true` | search-as-you-type in fzf |
+| `use_external_menu` | `false` | rofi instead of fzf |
+| `image_preview` | `false` | cover art in the picker |
+| `images_cache_dir` | `<data dir>/posters` | where downloaded cover art is kept |
+| `use_ueberzugpp` | `false` | ueberzugpp instead of chafa |
+| `preview_window_size` | `right:70%:wrap` | fzf preview geometry |
+| `ueberzug_x` / `ueberzug_y` / `ueberzug_max_width` / `ueberzug_max_height` | `10` / `3` / half the terminal | ueberzugpp placement |
+| `ueberzug_output` | (auto) | ueberzugpp backend (`x11`, `wayland`, …) |
+| `image_config_path` | (empty) | rofi theme for the image picker |
+| `rofi_prompt_config` | (empty) | rofi theme for the search prompt |
+| `discord_presence` | `false` | discord rich presence (linux, beta) |
+| `lr_continue_back` | `exit` | what esc does in the continue list |
+| `watchlater_dir` | temp dir | mpv resume data (auto-detected on windows) |
+| `remove_tmp_lobster` | `true` | wipe the temp dir on exit |
+| `json_output` | `false` | same as `-j` |
+| `debug` | `false` | same as `-x` |
+| `lobster_editor` | `$VISUAL` / `$EDITOR` | editor for `-e` |
+
+plus the two functions you can redefine: `resolve_stream`
+([providers](#providers)) and `custom_downloader` ([downloads](#downloads)).
+
+rofi theming and other cosmetics live in the
+[wiki](https://github.com/justchokingaround/lobster/wiki/Configuration).
+
+## dependencies
+
+posix `sh`, runs under dash, busybox ash, bash and zsh.
+
+**required:** `curl`, `sed`, `grep`, `awk`, and a player (`mpv` by default).
+
+**optional, and lobster degrades instead of dying:**
+
+| tool | needed for | without it |
+| --- | --- | --- |
+| `fzf` | the normal picker | numbered `read` prompt |
+| `rofi` | `--rofi` | that flag only |
+| `patch` | `--update` | that flag only |
+| `chafa` | `-i` image preview | that flag only (unless `use_ueberzugpp=true`) |
+| `ueberzugpp` | `use_ueberzugpp=true` | falls back to chafa |
+| `kitten` | posters in kitty/ghostty | falls back to chafa |
+| `node` | the videasy backend | that backend is skipped |
+| `nc` | live position over mpv's ipc socket | per-episode `watch_later` files |
+| `ffprobe` | naming audio tracks by language | tracks show as "track N" |
+| `yt-dlp` | best downloader for awkward hls | ffmpeg, then `mpv --stream-record` |
+| `aria2c` | `downloader=aria2c` | falls back to ffmpeg |
+| `notify-send` / `osascript` | desktop notifications | a terminal line |
+| `wl-copy` / `xclip` / `xsel` / `pbcopy` / `clip.exe` / `termux-clipboard-set` | the copy menu entries | prints the text instead |
+
+two non-posix things are assumed anyway, because every shell lobster actually
+runs on has them: fractional `sleep` (spinner, search debounce) and `read -t`
+(the 3s "press enter to stop" window; without it the episode just advances
+with no cancel window).
+
+image previews need chafa or ueberzugpp:
 
 <details>
-<summary>Showcase</summary>
+<summary>installing chafa / ueberzugpp</summary>
 
-![image](https://github.com/justchokingaround/lobster/assets/44473782/5ed98fb9-008d-4068-a854-577245cfe1ee)
-
-![image](https://github.com/justchokingaround/lobster/assets/44473782/cd59329e-a1c8-408a-be48-690db2d52642)
-
-![image](https://github.com/justchokingaround/lobster/assets/44473782/fae5ea52-4dc4-41ee-b7a2-cbb2476f5819)
-
-</details>
-
-#### Please note:
-
-- The history file can be found at `~/.local/share/lobster/lobster_history.txt`
-- A movie or TV show episode is automatically marked as completed/updated after
-  the user watches more than 90% of its content
-
-### --`clear-history` / `--delete-history` argument
-
-This argument allows you to delete the history file
-
-### `-d` / `--download` `<path>` argument
-
-This option lets you use lobster as you normally would, with the exception that
-instead of playing the video in your player of choice, it will instead download
-the video. If no path is specified when passing this argument, then it will
-download to the current working directory, as an example, it would look like
-this:
+arch:
 
 ```sh
-lobster -d '.' rick and morty
+paru -S chafa      # or: paru -S ueberzugpp
 ```
 
-or
-
-```sh
-lobster rick and morty -d
-```
-
-If you want to specify a path to which you would like to download the video, you
-can do so by passing an additional parameter to the `-d` or `--download`
-argument, for instance: using a full path:
-
-```sh
-lobster -d "/home/chomsky/tv_shows/rick_and_morty/" rick and morty
-```
-
-or using a relative path:
-
-```sh
-lobster -d "../rick_and_morty/" rick and morty
-```
-
-### `--discord` / `--discord-presence` / `--rpc` / `--presence` argument
-
-#### Note: beta feature
-
-By passing this argument you make use of discord rich presence so you can let
-your friends know what you are watching.
-
-This argument requires BSD netcat to be installed.
-
-On Arch Linux you can install it using either pacman or your aur helper of
-choice with:
-
-```sh
-paru -S openbsd-netcat
-```
-
-### `-e` / `--edit` argument
-
-By passing this argument you can edit the config file using an editor of your
-choice. By default it will use the editor defined in the `lobster_config.sh`
-file, but if you don't have one defined, it will use the `$EDITOR` environment
-variable (if it's not set, it will default to `vim`).
-
-### `-i` / `--image-preview` argument
-
-By passing this argument you can see image previews when selecting an entry.
-
-For `rofi` it will work out of the box, if you have icons enabled in your
-default configuration.
-
-Example using my custom rofi configuration (to customize how your rofi image
-preview looks, please check the [configuration](#configuration) section)
-
-<details>
-<summary>Showcase</summary>
-
-![image](https://github.com/justchokingaround/lobster/assets/44473782/a8850f00-9491-4f86-939d-2f63bcb36e96)
-
-</details>
-
-For `fzf` you will need to either install
-[chafa](https://github.com/hpjansson/chafa/) or
-[ueberzugpp](https://github.com/jstkdng/ueberzugpp/).
-
-<details>
-<summary>Showcase</summary>
-
-![image](https://github.com/justchokingaround/lobster/assets/44473782/8d8057d8-4d85-4f0e-b6c0-3b7dd5dce557)
-
-</details>
-
-<details>
-<summary>Installation instructions for chafa/ueberzugpp</summary>
-
-On Arch Linux you can install it using your aur helper of choice with:
-
-```sh
-paru -S chafa
-```
-
-or
-
-```sh
-paru -S ueberzugpp
-```
-
-On Mac you can install it using homebrew with:
+mac:
 
 ```sh
 curl -s -O "https://raw.githubusercontent.com/jstkdng/ueberzugpp/master/homebrew/ueberzugpp.rb"
 brew install ./ueberzugpp
-rm ueberzugpp
+rm ueberzugpp.rb
 ```
 
-In other cases, you can build it from
-[source](https://github.com/jstkdng/ueberzugpp/#build-from-source).
-
-Using ueberzugpp is disabled by default in favor of chafa, to enable it, you
-need add the following line to the `lobster_config.sh` file:
-
-```sh
-use_ueberzugpp=true
-```
+otherwise [build from source](https://github.com/jstkdng/ueberzugpp/#build-from-source).
+chafa is the default; `use_ueberzugpp=true` switches. rofi does image
+previews out of the box if you have icons enabled.
 
 </details>
 
-### `-j` / `--json` argument
+## json output
 
-By passing this argument, you can output the json for the currently selected
-media to stdout, with the decrypted video link.
+`-j` prints everything it found and exits, instead of playing:
 
-### `-l` / `--language` `<language>` argument
-
-By passing this argument, you can specify your preferred language for the
-subtitles of a video. If no parameter is specified, it will default to
-`english`.
-
-Example use case:
-
-```sh
-lobster seven -l spanish
+```json
+{
+  "type": "movie",
+  "tmdb_id": "550",
+  "title": "Fight Club",
+  "poster": "...",
+  "video_url": "...",
+  "referer": "https://player.videasy.to/",
+  "sources": {
+    "videasy":    [ { "quality": "1080p", "url": "...", "referer": "..." } ],
+    "rivestream": [],
+    "cinezo":     [],
+    "vidlove":    []
+  },
+  "subtitles": [ "..." ]
+}
 ```
 
-This is also valid, and will use english as the defined subtitles language:
+`video_url`/`referer` is what would have played. `sources` lists every
+quality variant across the four scraped backends, narrowed to `--provider`
+if you set one. stremio addons contribute the chosen `video_url` only, no
+listing.
+
+## roadmap
+
+not built yet, listed here so it's tracked in public instead of in someone's
+head:
+
+- **mpv next-episode hotkey** - advance without leaving the player. needs a
+  small mpv script + ipc back to lobster.
+- **watchlist / favorites** - save titles, jump to the next unwatched episode.
+- **skip intro** - via mpv chapters/scripts.
+- **recommendations** - blocked: tmdb's `/recommendations` and `/similar`
+  pages are client-side only (404 to a scraper), unlike everything else
+  lobster reads. revisit if a scrapeable source shows up.
+- **cast to tv** - chromecast/dlna.
+- **subtitle fallback** - fetch subs externally when the backends return none.
+
+there's also a
+[project board](https://github.com/users/justchokingaround/projects/2/views/1?query=is%3Aopen+sort%3Aupdated-desc).
+
+## contributing
+
+all of it welcome, typo fixes included. you don't have to be a programmer:
+opening issues and reporting bugs counts. you don't have to be good at shell
+either, ask and i'll help.
+
+if you're writing code:
+
+- posix compliant, no bashisms
+- passes `shellcheck`
+- formatted with `shfmt`
+- new features configurable via config file and/or flag
+- unsure about something? open an issue or message me first
+
+## uninstall
 
 ```sh
-lobster -l weathering with you
+paru -R lobster                     # arch
+sudo rm $(which lobster)            # linux
+rm "$(brew --prefix)"/bin/lobster   # mac
+rm /usr/bin/lobster                 # windows
 ```
 
-### `--rofi` / `--external-menu` argument
-
-By passing this argument, you can use rofi instead of fzf to interact with the
-lobster script.
-
-This is the recommended way to use lobster, and is a core philosophy of this
-script. My use case is that I have a keybind in my WM configuration that calls
-lobster, that way I can watch Movies and TV Shows without ever even opening the
-terminal.
-
-Here is an example of that looks like (without image preview):
-
-<details>
-<summary>Showcase</summary>
-
-![image](https://github.com/justchokingaround/lobster/assets/44473782/d1243c17-0ef1-44b3-99a8-f2c4a4ab5da9)
-
-</details>
-
-### `-p` / `--provider` `<provider>` argument
-
-By passing this argument, you can specify a preferred provider. The script
-currently supports the following providers: `UpCloud`, `Vidcloud`. If you don't
-pass any provider in the parameters, it will default to `UpCloud`.
-
-Example use case:
-
-```sh
-lobster -p Vidcloud shawshank redemption
-```
-
-This is also valid, but will use `UpCloud` instead:
-
-```sh
-lobster -p shawshank redemption
-```
-
-### `-q` / `--quality` `<quality>` argument
-
-By passing this argument, you can specify a preferred quality for the video (if
-those are present in the source). If you don't pass any quality in the
-parameters, it will default to `1080`.
-
-Example use case:
-
-```sh
-lobster -q 720 the godfather
-```
-
-This is also valid, but will use `1080` instead:
-
-```sh
-lobster the godfather -q
-```
-
-### `-n` / `--no-subs` `<quality>` argument
-By passing this argument, you can specify if you want to use subtitles.
-This will disable subtitles whenever you're downloading aswell.
-
-Example use case:
-```sh
-lobster -n
-```
-
-### `-r` / `--recent` `<tv|movie>` argument
-
-By passing this argument, you can see watch most recently released movies and TV
-shows. You can specify if you want to see movies or TV shows by passing the `tv`
-or `movie` parameter. If you don't pass any parameter, it will default to
-`movie`.
-
-Example use case:
-
-```sh
-lobster -r tv
-```
-
-This is also valid, but will use `movie` instead:
-
-```sh
-lobster -r
-```
-
-### `-s` / `--syncplay` argument
-
-By passing this argument, you can use [syncplay](https://syncplay.pl/) to watch
-videos with your friends. This will only work if you have syncplay installed and
-configured.
-
-### `-t` / `--trending` argument
-
-By passing this argument, you can see the most trending movies and TV shows.
-
-### `-u` / `-U` / `--update` argument
-
-By passing this argument, you can update the script to the latest version.
-
-Note: you will most likely need to run this with `sudo`
-
-Example use case:
-
-```sh
-sudo lobster -u
-```
-
-### `-v` / `-V` / `--version` argument
-
-By passing this argument, you can see the current version of the script. This is
-useful if you want to check if you have the latest version installed.
-
-### `-x` / `--debug` argument
-
-By passing this argument, you can see the debug output of the script. This will
-redirect all the stderr output to stdout, printing it to the terminal, while
-also saving it to a log file: `/tmp/lobter.log`
-
-Note: fzf prints the finder to stderr, so this will also be redirected to
-stdout, and by extension printed to the terminal and saved to the log file.
-
-### Navigation
-- Shift+Left: Go to previous menu
-- Shift+Right / Enter: Confirm
-## Configuration
-
-Please refer to the
-[wiki](https://github.com/justchokingaround/lobster/wiki/Configuration) for
-information on how to configure the script using the config file.
-
-## Contributing
-
-All contributions are welcome, and I will to review them as soon as possible. If
-you want to contribute, please follow the following recommendations:
-
-- All help is appreciated, even if it's just a typo fix, or a small improvement
-- You do not need to be a programmer to contribute, you can also help by opening
-  issues, or by testing the script and reporting bugs
-- You do not need to be very experienced with shell scripting to contribute, I
-  will gladly help you with any questions you might have, and I will also review
-  your code
-- If you are unsure about something, please open an issue first, start a
-  discussion or message me personally
-- Please make sure that your code is POSIX compliant (no bashisms)
-- Please make sure that your code passes `shellcheck`
-- Please use `shfmt` to format your code
-- If you are adding a new feature, please make sure that it is configurable
-  (either through the config file and/or through command line arguments)
-- I recommend reading the philosophy section of the README, to get a better
-  understanding of the project (TODO)
-
-You can find the current roadmap here, which contains TODOs and the current
-progress of the project:
-https://github.com/users/justchokingaround/projects/2/views/1?query=is%3Aopen+sort%3Aupdated-desc
-
-## Dependencies
-
-- fzf
-- curl
-- grep
-- sed
-- patch
-- awk
-- mpv
-- html-xml-utils (for fixing html encoded characters) (optional)
-- rofi (external menu)
-- socat (for getting the player position from the mpv socket)
-- vlc (optional)
-- iina (optional)
-
-### In case you don't have fzf installed, you can install it like this:
-
-```sh
-git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf
-~/.fzf/install
-```
-
-## Uninstall
-
-### Arch Linux
-
-```sh
-paru -R lobster
-```
-
-### Linux
-
-```sh
-sudo rm $(which lobster)
-```
-
-### Mac
-
-```sh
-rm "$(brew --prefix)"/bin/lobster
-```
-
-### Windows
-
-```sh
-rm /usr/bin/lobster
-```
+see [DISCLAIMER.md](DISCLAIMER.md). lobster hosts nothing, it just reads
+public pages, same as your browser would.
